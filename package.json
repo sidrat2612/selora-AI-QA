@@ -1,0 +1,48 @@
+{
+  "name": "selora",
+  "private": true,
+  "packageManager": "pnpm@10.7.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.cjs",
+    "dev:raw": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @selora/database db:generate",
+    "db:migrate:dev": "pnpm --filter @selora/database db:migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @selora/database db:migrate:deploy",
+    "db:studio": "pnpm --filter @selora/database db:studio",
+    "db:clean:dev": "pnpm --filter @selora/database db:clean:dev",
+    "db:seed": "pnpm --filter @selora/database db:seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v",
+    "ollama:check": "node scripts/ollama-e2e.cjs",
+    "regression:smoke": "pnpm --filter @selora/database regression:smoke",
+    "regression": "node scripts/regression.cjs",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma",
+      "sharp"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "MetricType" ADD VALUE 'API_REQUESTS_PER_MINUTE';

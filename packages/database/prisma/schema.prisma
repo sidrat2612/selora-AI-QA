@@ -1,0 +1,631 @@
+// ──────────────────────────────────────────────────────────────
+// Selora – Prisma Schema
+// Generated from: docs/data/prisma-data-design.md
+//                  docs/data/domain-schema.md
+// ──────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────── Enums ────────────────
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum WorkspaceStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DISABLED
+}
+
+enum MembershipRole {
+  PLATFORM_ADMIN
+  TENANT_ADMIN
+  WORKSPACE_OPERATOR
+  WORKSPACE_VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  REVOKED
+}
+
+enum EnvironmentStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum RecordingSourceType {
+  PLAYWRIGHT_CODEGEN_TS
+}
+
+enum RecordingStatus {
+  UPLOADED
+  PROCESSING
+  NORMALIZED
+  FAILED
+  ARCHIVED
+}
+
+enum TestStatus {
+  INGESTED
+  GENERATED
+  VALIDATING
+  VALIDATED
+  AUTO_REPAIRED
+  NEEDS_HUMAN_REVIEW
+  ARCHIVED
+}
+
+enum GeneratedTestStatus {
+  CREATED
+  VALIDATING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum RunType {
+  MANUAL
+}
+
+enum RunStatus {
+  QUEUED
+  VALIDATING
+  REPAIRING
+  READY
+  RUNNING
+  PASSED
+  FAILED
+  CANCELED
+  TIMED_OUT
+}
+
+enum ArtifactType {
+  LOG
+  SCREENSHOT
+  TRACE
+  VIDEO
+  GENERATED_TEST
+  REPAIR_DIFF
+}
+
+enum RepairMode {
+  RULE_BASED
+  LLM_ASSISTED
+}
+
+enum RepairStatus {
+  SUGGESTED
+  APPLIED
+  RERUN_PASSED
+  RERUN_FAILED
+  ABANDONED
+  HUMAN_REVIEW_REQUIRED
+}
+
+enum MetricType {
+  RUN_COUNT
+  EXECUTION_MINUTES
+  ARTIFACT_STORAGE_BYTES
+  CONCURRENT_EXECUTIONS
+  AI_REPAIR_ATTEMPTS
+  API_REQUESTS_PER_MINUTE
+  USER_SEATS
+  WORKSPACE_COUNT
+}
+
+enum FeedbackCategory {
+  BUG
+  UX
+  PERFORMANCE
+  INTEGRATION
+  FEATURE_REQUEST
+  OTHER
+}
+
+enum FeedbackPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FeedbackStatus {
+  SUBMITTED
+  REVIEWED
+  PLANNED
+  DEFERRED
+  CLOSED
+}
+
+// ──────────────── Ownership & Auth Models ────────────────
+
+model Tenant {
+  id        String       @id @default(uuid())
+  slug      String       @unique
+  name      String
+  status    TenantStatus @default(ACTIVE)
+  suspendedAt DateTime?
+  archivedAt DateTime?
+  softDeleteRequestedAt DateTime?
+  softDeleteScheduledFor DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  workspaces  Workspace[]
+  memberships Membership[]
+  auditEvents AuditEvent[]
+  usageMeters UsageMeter[]
+  quotas      TenantQuota[]
+  testRuns    TestRun[]
+  betaFeedback BetaFeedback[]
+
+  @@map("tenants")
+}
+
+model TenantQuota {
+  id        String     @id @default(uuid())
+  tenantId  String
+  metricType MetricType
+  limitValue Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, metricType])
+  @@map("tenant_quotas")
+}
+
+model Workspace {
+  id       String          @id @default(uuid())
+  tenantId String
+  slug     String
+  name     String
+  status   WorkspaceStatus @default(ACTIVE)
+  concurrentExecutionLimit Int @default(5)
+  maxTestsPerRun           Int @default(25)
+  runCooldownSeconds       Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  memberships            Membership[]
+  environments           Environment[]
+  recordingAssets        RecordingAsset[]
+  canonicalTests         CanonicalTest[]
+  generatedTestArtifacts GeneratedTestArtifact[]
+  testRuns               TestRun[]
+  artifacts              Artifact[]
+  auditEvents            AuditEvent[]
+  aiRepairAttempts       AIRepairAttempt[]
+  retentionSetting       RetentionSetting?
+  activeSessions         UserSession[]
+  betaFeedback           BetaFeedback[]
+
+  @@unique([tenantId, slug])
+  @@map("workspaces")
+}
+
+model User {
+  id               String     @id @default(uuid())
+  email            String     @unique
+  name             String
+  avatarUrl        String?
+  passwordHash     String
+  passwordVersion  Int        @default(1)
+  emailVerifiedAt  DateTime?
+  resetRequestedAt DateTime?
+  lastLoginAt      DateTime?
+  status           UserStatus @default(INVITED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      Membership[]
+  recordingAssets  RecordingAsset[]     @relation("UploadedByUser")
+  generatedTests   GeneratedTestArtifact[] @relation("CreatedByUser")
+  triggeredRuns    TestRun[]            @relation("TriggeredByUser")
+  auditEvents      AuditEvent[]         @relation("ActorUser")
+  sessions         UserSession[]
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+  submittedFeedback BetaFeedback[]      @relation("SubmittedByUser")
+
+  @@map("users")
+}
+
+model UserSession {
+  id                String    @id @default(uuid())
+  userId            String
+  sessionTokenHash  String    @unique
+  activeWorkspaceId String?
+  passwordVersion   Int
+  ipAddress         String?
+  userAgent         String?
+  lastActivityAt    DateTime
+  expiresAt         DateTime
+  revokedAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeWorkspace Workspace? @relation(fields: [activeWorkspaceId], references: [id], onDelete: SetNull)
+
+  @@index([userId, expiresAt])
+  @@index([activeWorkspaceId])
+  @@map("user_sessions")
+}
+
+model EmailVerificationToken {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model Membership {
+  id          String           @id @default(uuid())
+  tenantId    String
+  workspaceId String?
+  userId      String
+  role        MembershipRole
+  status      MembershipStatus @default(INVITED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, workspaceId, role])
+  @@map("memberships")
+}
+
+// ──────────────── Environment ────────────────
+
+model Environment {
+  id                 String            @id @default(uuid())
+  workspaceId        String
+  name               String
+  baseUrl            String
+  secretRef          String
+  encryptedSecretJson String?
+  isDefault          Boolean           @default(false)
+  status             EnvironmentStatus @default(ACTIVE)
+  testTimeoutMs      Int               @default(120000)
+  runTimeoutMs       Int               @default(3600000)
+  maxRetries         Int               @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  testRuns  TestRun[]
+
+  @@map("environments")
+}
+
+// ──────────────── Recording & Test Models ────────────────
+
+model RecordingAsset {
+  id             String              @id @default(uuid())
+  workspaceId    String
+  sourceType     RecordingSourceType @default(PLAYWRIGHT_CODEGEN_TS)
+  filename       String
+  originalPath   String?
+  storageKey     String
+  checksum       String
+  version        Int                 @default(1)
+  metadataJson   Json?
+  status         RecordingStatus     @default(UPLOADED)
+  uploadedByUserId String
+
+  createdAt DateTime @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  uploadedBy   User      @relation("UploadedByUser", fields: [uploadedByUserId], references: [id])
+  canonicalTests CanonicalTest[]
+
+  @@map("recording_assets")
+}
+
+model CanonicalTest {
+  id               String     @id @default(uuid())
+  workspaceId      String
+  recordingAssetId String
+  name             String
+  description      String?
+  tagsJson         Json       @default("[]")
+  canonicalVersion Int        @default(1)
+  definitionJson   Json
+  status           TestStatus @default(INGESTED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recordingAsset RecordingAsset @relation(fields: [recordingAssetId], references: [id])
+  generatedArtifacts GeneratedTestArtifact[]
+  testRunItems   TestRunItem[]
+  aiRepairAttempts AIRepairAttempt[]
+
+  @@index([workspaceId, status, updatedAt])
+  @@map("canonical_tests")
+}
+
+model GeneratedTestArtifact {
+  id               String              @id @default(uuid())
+  workspaceId      String
+  canonicalTestId  String
+  version          Int                 @default(1)
+  fileName         String
+  storageKey       String
+  checksum         String
+  generatorVersion String
+  status           GeneratedTestStatus @default(CREATED)
+  createdByUserId  String?
+  metadataJson     Json?
+  validationStartedAt DateTime?
+  validatedAt      DateTime?
+
+  createdAt DateTime @default(now())
+
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id])
+  createdBy     User?         @relation("CreatedByUser", fields: [createdByUserId], references: [id])
+  testRunItems  TestRunItem[]
+  aiRepairAttempts AIRepairAttempt[]
+  artifacts     Artifact[]
+
+  @@map("generated_test_artifacts")
+}
+
+// ──────────────── Run Models ────────────────
+
+model TestRun {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  workspaceId        String
+  environmentId      String
+  triggeredByUserId  String
+  runType            RunType   @default(MANUAL)
+  status             RunStatus @default(QUEUED)
+  totalCount         Int       @default(0)
+  queuedCount        Int       @default(0)
+  runningCount       Int       @default(0)
+  passedCount        Int       @default(0)
+  failedCount        Int       @default(0)
+  canceledCount      Int       @default(0)
+  timedOutCount      Int       @default(0)
+  startedAt          DateTime?
+  finishedAt         DateTime?
+
+  createdAt DateTime @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  environment Environment @relation(fields: [environmentId], references: [id])
+  triggeredBy User        @relation("TriggeredByUser", fields: [triggeredByUserId], references: [id])
+  items       TestRunItem[]
+  artifacts   Artifact[]
+  aiRepairAttempts AIRepairAttempt[]
+
+  @@index([workspaceId, createdAt, status])
+  @@map("test_runs")
+}
+
+model TestRunItem {
+  id                       String    @id @default(uuid())
+  testRunId                String
+  canonicalTestId          String
+  generatedTestArtifactId  String
+  sequence                 Int
+  status                   RunStatus @default(QUEUED)
+  startedAt                DateTime?
+  finishedAt               DateTime?
+  failureSummary           String?
+  workerJobId              String?
+  retryCount               Int       @default(0)
+
+  testRun                TestRun               @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  canonicalTest          CanonicalTest         @relation(fields: [canonicalTestId], references: [id])
+  generatedTestArtifact  GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id])
+  artifacts              Artifact[]
+  aiRepairAttempts       AIRepairAttempt[]
+
+  @@index([testRunId, status])
+  @@map("test_run_items")
+}
+
+// ──────────────── Artifacts ────────────────
+
+model Artifact {
+  id             String       @id @default(uuid())
+  workspaceId    String
+  testRunId      String?
+  testRunItemId  String?
+  generatedTestArtifactId String?
+  artifactType   ArtifactType
+  fileName       String
+  storageKey     String
+  contentType    String
+  sizeBytes      BigInt
+  checksum       String
+
+  createdAt DateTime @default(now())
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  testRun     TestRun?     @relation(fields: [testRunId], references: [id])
+  testRunItem TestRunItem? @relation(fields: [testRunItemId], references: [id])
+  generatedTestArtifact GeneratedTestArtifact? @relation(fields: [generatedTestArtifactId], references: [id])
+
+  @@index([workspaceId, testRunId, artifactType])
+  @@index([workspaceId, generatedTestArtifactId, artifactType])
+  @@map("artifacts")
+}
+
+// ──────────────── Audit ────────────────
+
+model AuditEvent {
+  id           String   @id @default(uuid())
+  tenantId     String
+  workspaceId  String?
+  actorUserId  String?
+  eventType    String
+  entityType   String
+  entityId     String
+  requestId    String?
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  actor     User?      @relation("ActorUser", fields: [actorUserId], references: [id])
+
+  @@index([tenantId, workspaceId, createdAt, eventType])
+  @@map("audit_events")
+}
+
+// ──────────────── AI Repair ────────────────
+
+model AIRepairAttempt {
+  id                       String        @id @default(uuid())
+  workspaceId              String
+  canonicalTestId          String
+  generatedTestArtifactId  String
+  testRunId                String?
+  testRunItemId            String?
+  attemptNumber            Int
+  repairMode               RepairMode
+  inputFailureHash         String
+  promptVersion            String
+  modelName                String?
+  status                   RepairStatus  @default(SUGGESTED)
+  diffSummary              String?
+  patchStorageKey          String?
+  sanitizationMetadataJson Json?
+  startedAt                DateTime
+  finishedAt               DateTime?
+
+  createdAt DateTime @default(now())
+
+  workspace             Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canonicalTest         CanonicalTest         @relation(fields: [canonicalTestId], references: [id])
+  generatedTestArtifact GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id])
+  testRun               TestRun?              @relation(fields: [testRunId], references: [id])
+  testRunItem           TestRunItem?          @relation(fields: [testRunItemId], references: [id])
+
+  @@unique([generatedTestArtifactId, attemptNumber])
+  @@map("ai_repair_attempts")
+}
+
+// ──────────────── Usage Metering ────────────────
+
+model UsageMeter {
+  id                String     @id @default(uuid())
+  tenantId          String
+  workspaceId       String?
+  metricType        MetricType
+  metricWindowStart DateTime
+  metricWindowEnd   DateTime
+  value             Float
+  unit              String
+
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("usage_meters")
+}
+
+model BetaFeedback {
+  id               String            @id @default(uuid())
+  tenantId         String
+  workspaceId      String
+  submittedByUserId String
+  title            String
+  summary          String
+  category         FeedbackCategory  @default(OTHER)
+  priority         FeedbackPriority  @default(MEDIUM)
+  status           FeedbackStatus    @default(SUBMITTED)
+  metadataJson     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  submittedBy User      @relation("SubmittedByUser", fields: [submittedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, priority, createdAt])
+  @@map("beta_feedback")
+}
+
+// ──────────────── Retention ────────────────
+
+model RetentionSetting {
+  id              String @id @default(uuid())
+  workspaceId     String @unique
+  logsDays        Int    @default(30)
+  screenshotsDays Int    @default(14)
+  videosDays      Int    @default(7)
+  tracesDays      Int    @default(14)
+  auditDays       Int    @default(90)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("retention_settings")
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@selora/worker-execution",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "lint": "echo 'lint ok'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.0",
+    "@selora/database": "workspace:*",
+    "@selora/executor": "workspace:*",
+    "@selora/queue": "workspace:*",
+    "@selora/storage": "workspace:*",
+    "@selora/test-validator": "workspace:*",
+    "bullmq": "^5.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

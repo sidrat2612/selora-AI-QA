@@ -1,0 +1,46 @@
+{
+  "name": "@selora/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main",
+    "lint": "echo 'lint ok'",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test test/**/*.test.cjs",
+    "performance:baseline": "pnpm build && node scripts/sprint8-performance-baseline.cjs"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.3",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@prisma/client": "^6.4.0",
+    "@selora/ai-repair": "workspace:*",
+    "@selora/canonical-tests": "workspace:*",
+    "@selora/database": "workspace:*",
+    "@selora/executor": "workspace:*",
+    "@selora/queue": "workspace:*",
+    "@selora/recording-ingest": "workspace:*",
+    "@selora/storage": "workspace:*",
+    "@selora/test-generator": "workspace:*",
+    "@selora/test-validator": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.34.0",
+    "cookie-parser": "^1.4.7",
+    "ioredis": "^5.4.2",
+    "nodemailer": "^8.0.3",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.0",
+    "@types/nodemailer": "^7.0.11",
+    "typescript": "^5.7.0"
+  }
+}

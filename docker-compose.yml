@@ -1,0 +1,236 @@
+name: selora
+
+services:
+  # ─── Infrastructure ─────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-selora}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-selora_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-selora}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-selora}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-selora}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-selora_dev_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ─── Application Services ──────────────────────
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: development
+      QUEUE_MODE: bullmq
+      DATABASE_URL: ${DATABASE_URL:-postgresql://selora:selora_dev_password@postgres:5432/selora?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-selora}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-selora_dev_password}
+      S3_BUCKET: ${S3_BUCKET:-selora-artifacts}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: "true"
+      API_PORT: "4000"
+      API_SESSION_SECRET: ${API_SESSION_SECRET:-dev-session-secret-change-in-prod}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: ${SMTP_FROM:-noreply@selora.local}
+      AI_PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-http://host.docker.internal:11434/v1}
+      AI_PROVIDER_API_URL: ${AI_PROVIDER_API_URL:-http://host.docker.internal:11434/v1}
+      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-ollama}
+      AI_MODEL: ${AI_MODEL:-qwen3.5:9b}
+      AI_REPAIR_MODEL: ${AI_REPAIR_MODEL:-qwen3.5:9b}
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  worker-execution:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker-execution.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      QUEUE_MODE: bullmq
+      DATABASE_URL: ${DATABASE_URL:-postgresql://selora:selora_dev_password@postgres:5432/selora?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-selora}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-selora_dev_password}
+      S3_BUCKET: ${S3_BUCKET:-selora-artifacts}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: "true"
+      # Docker-based Playwright validation
+      VALIDATION_HOST_ROOT: /tmp/selora-validation
+      PLAYWRIGHT_RUNNER_IMAGE: selora-playwright-runner
+      DOCKER_NETWORK: selora_default
+    volumes:
+      - ./apps/worker-execution/src:/app/apps/worker-execution/src
+      - ./packages:/app/packages
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/selora-validation:/tmp/selora-validation
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker-ingestion:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker-ingestion.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      QUEUE_MODE: bullmq
+      DATABASE_URL: ${DATABASE_URL:-postgresql://selora:selora_dev_password@postgres:5432/selora?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-selora}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-selora_dev_password}
+      S3_BUCKET: ${S3_BUCKET:-selora-artifacts}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: "true"
+      AI_PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-http://host.docker.internal:11434/v1}
+      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-ollama}
+      AI_MODEL: ${AI_MODEL:-qwen3.5:9b}
+    volumes:
+      - ./apps/worker-ingestion/src:/app/apps/worker-ingestion/src
+      - ./packages:/app/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker-ai-repair:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker-ai-repair.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      QUEUE_MODE: bullmq
+      DATABASE_URL: ${DATABASE_URL:-postgresql://selora:selora_dev_password@postgres:5432/selora?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://minio:9000}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-selora}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-selora_dev_password}
+      S3_BUCKET: ${S3_BUCKET:-selora-artifacts}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: "true"
+      AI_PROVIDER_API_URL: ${AI_PROVIDER_API_URL:-http://host.docker.internal:11434/v1}
+      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY:-ollama}
+      AI_REPAIR_MODEL: ${AI_REPAIR_MODEL:-qwen3.5:9b}
+    volumes:
+      - ./apps/worker-ai-repair/src:/app/apps/worker-ai-repair/src
+      - ./packages:/app/packages
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ─── Playwright Runner (build-only, not a long-running service) ──
+  # Pre-builds the image used by worker-execution for ephemeral validation runs.
+  playwright-runner:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/playwright-runner.Dockerfile
+    image: selora-playwright-runner
+    profiles:
+      - build-only
+    command: ["echo", "image built"]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

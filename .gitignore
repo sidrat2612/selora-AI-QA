@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+*.pen
+# Build outputs
+dist/
+.next/
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.docker.example
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+packages/database/prisma/*.db
+
+# Docker volumes
+.docker-data/
+
+# Temporary / scratch
+.tmp/
+
+# Test outputs
+coverage/
+test-results/
+playwright-report/
+/test/
+/tests/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+
+
+.github/
+docs/
+infrastructure/certs
+scripts/
