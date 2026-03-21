@@ -39,6 +39,8 @@ import { TenantsController } from './tenants/tenants.controller';
 import { TenantsService } from './tenants/tenants.service';
 import { QuotaController } from './usage/quota.controller';
 import { QuotaService } from './usage/quota.service';
+import { TestRailIntegrationController } from './testrail/testrail-integration.controller';
+import { TestRailIntegrationService } from './testrail/testrail-integration.service';
 import { UsageController } from './usage/usage.controller';
 import { UsageMeterService } from './usage/usage-meter.service';
 import { WorkspacesController } from './workspaces/workspaces.controller';
@@ -62,6 +64,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     SuitesController,
     GitHubIntegrationController,
     GitHubWebhookController,
+    TestRailIntegrationController,
     RecordingsController,
     FeedbackController,
     AuditController,
@@ -80,6 +83,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     SuitesService,
     GitHubIntegrationService,
     GitHubPublicationService,
+    TestRailIntegrationService,
     AIRepairProcessor,
     AIRepairQueueService,
     RecordingIngestionProcessor,

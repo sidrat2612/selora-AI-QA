@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { SuiteGitHubIntegrationClient } from '@/components/suite-github-integration-client';
+import { SuiteTestRailIntegrationClient } from '@/components/suite-testrail-integration-client';
 import type { AutomationSuiteDetail } from '@/lib/types';
 
 export function SuiteDetailClient({
@@ -49,7 +50,11 @@ export function SuiteDetailClient({
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">TestRail</p>
-            <p className="mt-2 text-sm font-semibold text-[#999999]">Configured in later sprint</p>
+            <p className="mt-2 text-sm font-semibold text-black">
+              {suite.linkedSystems.testrail
+                ? `${suite.linkedSystems.testrail.status} · project ${suite.linkedSystems.testrail.projectId}`
+                : 'Not connected'}
+            </p>
           </div>
         </div>
       </div>
@@ -94,13 +99,19 @@ export function SuiteDetailClient({
             workspaceId={workspaceId}
           />
 
+          <SuiteTestRailIntegrationClient
+            canManage={canManage}
+            suite={suite}
+            workspaceId={workspaceId}
+          />
+
           <div className="glass-panel rounded-none p-6">
             <p className="eyebrow">Governance</p>
-            <h3 className="text-xl font-semibold">Sprint 3 status</h3>
+            <h3 className="text-xl font-semibold">Sprint 4 status</h3>
             <div className="mt-5 space-y-3 text-sm text-[var(--muted)]">
               <div className="border border-[var(--line)] bg-white p-4">GitHub publication is now governed per suite. Operators can publish READY artifacts and reconcile pull request state through suite webhook deliveries.</div>
               <div className="border border-[var(--line)] bg-white p-4">Webhook endpoint and secret rotation state are shown above so repository admins can confirm the integration without digging through logs.</div>
-              <div className="border border-[var(--line)] bg-white p-4">TestRail linkage remains disabled until Sprint 4.</div>
+              <div className="border border-[var(--line)] bg-white p-4">TestRail linkage is now managed per suite, including validation, case mapping, and metadata-only synchronization against external cases.</div>
               <div className="border border-[var(--line)] bg-white p-4">Execution-source policy remains disabled until Sprint 5.</div>
             </div>
           </div>

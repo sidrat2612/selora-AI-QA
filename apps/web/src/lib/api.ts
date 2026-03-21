@@ -49,6 +49,22 @@ export const githubIntegrationSchema = z.object({
   installationId: z.string().optional().or(z.literal('')),
 });
 
+export const testrailIntegrationSchema = z.object({
+  baseUrl: z.string().url(),
+  projectId: z.string().min(1),
+  suiteIdExternal: z.string().optional().or(z.literal('')),
+  sectionId: z.string().optional().or(z.literal('')),
+  username: z.string().min(1),
+  secretRef: z.string().optional().or(z.literal('')),
+  apiKey: z.string().optional().or(z.literal('')),
+  syncPolicy: z.enum(['MANUAL']),
+});
+
+export const testrailCaseLinkSchema = z.object({
+  externalCaseId: z.string().optional().or(z.literal('')),
+  ownerEmail: z.string().email().optional().or(z.literal('')),
+});
+
 export function getApiBaseUrl() {
   return process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 }

@@ -70,6 +70,29 @@ enum GitHubWebhookDeliveryStatus {
   IGNORED
 }
 
+enum TestRailIntegrationStatus {
+  CONNECTED
+  INVALID
+  DISCONNECTED
+}
+
+enum TestRailSyncPolicy {
+  MANUAL
+}
+
+enum TestRailSyncRunStatus {
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+enum TestRailCaseLinkStatus {
+  MAPPED
+  SYNCED
+  FAILED
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -216,6 +239,8 @@ model Tenant {
   workspaces  Workspace[]
   automationSuites AutomationSuite[]
   githubSuiteIntegrations GitHubSuiteIntegration[]
+  testRailSuiteIntegrations TestRailSuiteIntegration[]
+  testRailSyncRuns TestRailSyncRun[]
   generatedArtifactPublications GeneratedArtifactPublication[]
   gitHubWebhookDeliveries GitHubWebhookDelivery[]
   memberships Membership[]
@@ -261,6 +286,9 @@ model Workspace {
   memberships            Membership[]
   automationSuites       AutomationSuite[]
   githubSuiteIntegrations GitHubSuiteIntegration[]
+  testRailSuiteIntegrations TestRailSuiteIntegration[]
+  externalTestCaseLinks ExternalTestCaseLink[]
+  testRailSyncRuns TestRailSyncRun[]
   generatedArtifactPublications GeneratedArtifactPublication[]
   gitHubWebhookDeliveries GitHubWebhookDelivery[]
   environments           Environment[]
@@ -296,6 +324,9 @@ model AutomationSuite {
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   canonicalTests CanonicalTest[]
   githubIntegration GitHubSuiteIntegration?
+  testRailIntegration TestRailSuiteIntegration?
+  externalTestCaseLinks ExternalTestCaseLink[]
+  testRailSyncRuns TestRailSyncRun[]
   generatedArtifactPublications GeneratedArtifactPublication[]
   gitHubWebhookDeliveries GitHubWebhookDelivery[]
 
@@ -367,6 +398,8 @@ model User {
   generatedTests   GeneratedTestArtifact[] @relation("CreatedByUser")
   generatedArtifactPublications GeneratedArtifactPublication[]
   triggeredRuns    TestRun[]            @relation("TriggeredByUser")
+  rotatedTestRailIntegrationSecrets TestRailSuiteIntegration[] @relation("TestRailIntegrationSecretRotatedBy")
+  startedTestRailSyncRuns TestRailSyncRun[] @relation("TestRailSyncRunStartedBy")
   auditEvents      AuditEvent[]         @relation("ActorUser")
   sessions         UserSession[]
   emailVerificationTokens EmailVerificationToken[]
@@ -521,6 +554,7 @@ model CanonicalTest {
   testRunItems   TestRunItem[]
   aiRepairAttempts AIRepairAttempt[]
   publications GeneratedArtifactPublication[]
+  externalCaseLink ExternalTestCaseLink?
 
   @@index([suiteId, updatedAt])
   @@index([workspaceId, status, updatedAt])
@@ -627,6 +661,97 @@ model GitHubWebhookDelivery {
   @@index([publicationId, receivedAt])
   @@index([workspaceId, status, receivedAt])
   @@map("github_webhook_deliveries")
+}
+
+model TestRailSuiteIntegration {
+  id                    String                    @id @default(uuid())
+  tenantId              String
+  workspaceId           String
+  suiteId               String                    @unique
+  baseUrl               String
+  projectId             String
+  suiteIdExternal       String?
+  sectionId             String?
+  username              String
+  secretRef             String?
+  encryptedApiKeyJson   String?
+  status                TestRailIntegrationStatus @default(DISCONNECTED)
+  syncPolicy            TestRailSyncPolicy        @default(MANUAL)
+  healthSummaryJson     Json?
+  lastValidatedAt       DateTime?
+  lastSyncedAt          DateTime?
+  secretRotatedAt       DateTime?
+  secretRotatedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  secretRotatedByUser User? @relation("TestRailIntegrationSecretRotatedBy", fields: [secretRotatedByUserId], references: [id], onDelete: SetNull)
+  caseLinks ExternalTestCaseLink[]
+  syncRuns TestRailSyncRun[]
+
+  @@index([workspaceId, status])
+  @@index([tenantId, updatedAt])
+  @@map("testrail_suite_integrations")
+}
+
+model ExternalTestCaseLink {
+  id                  String                 @id @default(uuid())
+  workspaceId         String
+  suiteId             String
+  canonicalTestId     String                 @unique
+  integrationId       String
+  externalCaseId      String
+  status              TestRailCaseLinkStatus @default(MAPPED)
+  ownerEmail          String?
+  titleSnapshot       String?
+  sectionNameSnapshot String?
+  syncSnapshotJson    Json?
+  lastSyncedAt        DateTime?
+  lastError           String?
+  retryEligible       Boolean                @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
+  integration TestRailSuiteIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, externalCaseId])
+  @@index([suiteId, status, updatedAt])
+  @@map("external_test_case_links")
+}
+
+model TestRailSyncRun {
+  id              String                 @id @default(uuid())
+  tenantId        String
+  workspaceId     String
+  suiteId         String
+  integrationId   String
+  startedByUserId String?
+  status          TestRailSyncRunStatus  @default(RUNNING)
+  scope           String                 @default("suite")
+  totalCount      Int                    @default(0)
+  syncedCount     Int                    @default(0)
+  failedCount     Int                    @default(0)
+  summary         String?
+  startedAt       DateTime               @default(now())
+  finishedAt      DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  integration TestRailSuiteIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  startedBy User? @relation("TestRailSyncRunStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, startedAt])
+  @@index([suiteId, status, startedAt])
+  @@map("testrail_sync_runs")
 }
 
 // ──────────────── Run Models ────────────────

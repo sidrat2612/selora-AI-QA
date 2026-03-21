@@ -5,6 +5,7 @@ import { badRequest, conflict, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
 import { GitHubIntegrationService } from '../github/github-integration.service';
+import { TestRailIntegrationService } from '../testrail/testrail-integration.service';
 import { ensureDefaultSuite, toSuiteSlug } from './suite-defaults';
 
 const suiteSummarySelect = {
@@ -31,6 +32,7 @@ export class SuitesService {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly githubIntegrationService: GitHubIntegrationService,
+    private readonly testRailIntegrationService: TestRailIntegrationService,
   ) {}
 
   async listSuites(workspaceId: string) {
@@ -79,12 +81,66 @@ export class SuitesService {
             updatedAt: true,
           },
         },
+        testRailIntegration: {
+          select: {
+            id: true,
+            tenantId: true,
+            workspaceId: true,
+            suiteId: true,
+            baseUrl: true,
+            projectId: true,
+            suiteIdExternal: true,
+            sectionId: true,
+            username: true,
+            secretRef: true,
+            encryptedApiKeyJson: true,
+            status: true,
+            syncPolicy: true,
+            healthSummaryJson: true,
+            lastValidatedAt: true,
+            lastSyncedAt: true,
+            secretRotatedAt: true,
+            secretRotatedByUserId: true,
+            createdAt: true,
+            updatedAt: true,
+            syncRuns: {
+              select: {
+                id: true,
+                status: true,
+                scope: true,
+                totalCount: true,
+                syncedCount: true,
+                failedCount: true,
+                summary: true,
+                startedAt: true,
+                finishedAt: true,
+              },
+              orderBy: { startedAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
         canonicalTests: {
           select: {
             id: true,
             name: true,
             status: true,
             updatedAt: true,
+            externalCaseLink: {
+              select: {
+                id: true,
+                canonicalTestId: true,
+                externalCaseId: true,
+                status: true,
+                ownerEmail: true,
+                titleSnapshot: true,
+                sectionNameSnapshot: true,
+                lastSyncedAt: true,
+                lastError: true,
+                retryEligible: true,
+                updatedAt: true,
+              },
+            },
             generatedArtifacts: {
               select: {
                 id: true,
@@ -136,13 +192,16 @@ export class SuitesService {
         github: suite.githubIntegration
           ? this.githubIntegrationService.toIntegrationSummary(suite.githubIntegration)
           : null,
-        testrail: null,
+        testrail: suite.testRailIntegration
+          ? this.testRailIntegrationService.toIntegrationSummary(suite.testRailIntegration)
+          : null,
       },
       canonicalTests: suite.canonicalTests.map((test) => ({
         id: test.id,
         name: test.name,
         status: test.status,
         updatedAt: test.updatedAt,
+        externalCaseLink: test.externalCaseLink,
         latestArtifact: test.generatedArtifacts[0] ?? null,
       })),
     };

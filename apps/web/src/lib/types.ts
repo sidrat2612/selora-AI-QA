@@ -101,6 +101,57 @@ export type GitHubWriteScope = 'READ_ONLY' | 'BRANCH_PUSH' | 'PULL_REQUESTS';
 export type PublicationStatus = 'PENDING' | 'PUBLISHED' | 'MERGED' | 'CLOSED' | 'FAILED';
 export type PublicationPullRequestState = 'OPEN' | 'CLOSED' | 'MERGED';
 export type GitHubWebhookDeliveryStatus = 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'IGNORED';
+export type TestRailIntegrationStatus = 'CONNECTED' | 'INVALID' | 'DISCONNECTED';
+export type TestRailSyncPolicy = 'MANUAL';
+export type TestRailSyncRunStatus = 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED';
+export type TestRailCaseLinkStatus = 'MAPPED' | 'SYNCED' | 'FAILED';
+
+export type TestRailSyncRunSummary = {
+  id: string;
+  status: TestRailSyncRunStatus;
+  scope: string;
+  totalCount: number;
+  syncedCount: number;
+  failedCount: number;
+  summary: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+};
+
+export type ExternalTestCaseLinkSummary = {
+  id: string;
+  canonicalTestId: string;
+  externalCaseId: string;
+  status: TestRailCaseLinkStatus;
+  ownerEmail: string | null;
+  titleSnapshot: string | null;
+  sectionNameSnapshot: string | null;
+  lastSyncedAt: string | null;
+  lastError: string | null;
+  retryEligible: boolean;
+  updatedAt: string;
+};
+
+export type TestRailSuiteIntegration = {
+  id: string;
+  suiteId: string;
+  status: TestRailIntegrationStatus;
+  baseUrl: string;
+  projectId: string;
+  suiteIdExternal: string | null;
+  sectionId: string | null;
+  username: string;
+  secretRef: string | null;
+  hasStoredSecret: boolean;
+  syncPolicy: TestRailSyncPolicy;
+  lastValidatedAt: string | null;
+  lastSyncedAt: string | null;
+  secretRotatedAt: string | null;
+  validationMessage: string | null;
+  lastSyncRun: TestRailSyncRunSummary | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type GitHubWebhookDelivery = {
   id: string;
@@ -176,13 +227,14 @@ export type GitHubSuiteIntegration = {
 export type AutomationSuiteDetail = AutomationSuiteSummary & {
   linkedSystems: {
     github: GitHubSuiteIntegration | null;
-    testrail: null;
+    testrail: TestRailSuiteIntegration | null;
   };
   canonicalTests: Array<{
     id: string;
     name: string;
     status: TestStatus;
     updatedAt: string;
+    externalCaseLink: ExternalTestCaseLinkSummary | null;
     latestArtifact: {
       id: string;
       status: GeneratedArtifactStatus;
