@@ -29,6 +29,7 @@ export type RequestAuthContext = {
 
 export type AppRequest = Request & {
   requestId: string;
+  rawBody?: Buffer;
   auth?: RequestAuthContext;
   resourceRole?: MembershipRole;
   resourceTenantId?: string;

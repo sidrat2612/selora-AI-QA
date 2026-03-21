@@ -98,6 +98,49 @@ export type AutomationSuiteSummary = {
 export type GitHubCredentialMode = 'PAT' | 'GITHUB_APP';
 export type GitHubIntegrationStatus = 'CONNECTED' | 'INVALID' | 'DISCONNECTED';
 export type GitHubWriteScope = 'READ_ONLY' | 'BRANCH_PUSH' | 'PULL_REQUESTS';
+export type PublicationStatus = 'PENDING' | 'PUBLISHED' | 'MERGED' | 'CLOSED' | 'FAILED';
+export type PublicationPullRequestState = 'OPEN' | 'CLOSED' | 'MERGED';
+export type GitHubWebhookDeliveryStatus = 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'IGNORED';
+
+export type GitHubWebhookDelivery = {
+  id: string;
+  deliveryId: string;
+  eventName: string;
+  action: string | null;
+  status: GitHubWebhookDeliveryStatus;
+  processingAttempts: number;
+  lastError: string | null;
+  receivedAt: string;
+  processedAt: string | null;
+  replayedAt: string | null;
+};
+
+export type GeneratedArtifactPublication = {
+  id: string;
+  generatedTestArtifactId: string;
+  status: PublicationStatus;
+  targetPath: string;
+  branchName: string;
+  defaultBranch: string;
+  pullRequestNumber: number | null;
+  pullRequestUrl: string | null;
+  pullRequestState: PublicationPullRequestState | null;
+  headCommitSha: string | null;
+  mergeCommitSha: string | null;
+  lastError: string | null;
+  lastAttemptedAt: string | null;
+  publishedAt: string | null;
+  mergedAt: string | null;
+  lastWebhookEventAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  recentDeliveries: GitHubWebhookDelivery[];
+  deliveryStats: {
+    total: number;
+    failed: number;
+    processed: number;
+  };
+};
 
 export type GitHubSuiteIntegration = {
   id: string;
@@ -115,6 +158,9 @@ export type GitHubSuiteIntegration = {
   appId: string | null;
   appSlug: string | null;
   installationId: string | null;
+  webhookEndpoint: string;
+  hasWebhookSecret: boolean;
+  webhookSecretRotatedAt: string | null;
   secretRotatedAt: string | null;
   lastValidatedAt: string | null;
   validationMessage: string | null;
@@ -310,6 +356,7 @@ export type GeneratedTestArtifactSummary = {
   validationStartedAt?: string | null;
   validatedAt?: string | null;
   artifacts?: ValidationArtifactSummary[];
+  publication?: GeneratedArtifactPublication | null;
 };
 
 export type PaginatedResult<T> = {
@@ -420,6 +467,7 @@ export type GeneratedArtifactDetail = GeneratedTestArtifactSummary & {
   validationStartedAt: string | null;
   validatedAt: string | null;
   artifacts: ValidationArtifactSummary[];
+  publication: GeneratedArtifactPublication | null;
 };
 
 export type RepairAttemptSummary = {

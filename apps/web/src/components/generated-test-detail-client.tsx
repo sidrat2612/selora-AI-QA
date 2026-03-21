@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { buildApiUrl, parseApiResponse } from '@/lib/api';
-import type { CanonicalTestDetail, GeneratedArtifactDetail, RepairAttemptSummary } from '@/lib/types';
+import type {
+  CanonicalTestDetail,
+  GeneratedArtifactDetail,
+  RepairAttemptSummary,
+} from '@/lib/types';
 
 function formatDate(value: string | null | undefined) {
   if (!value) {
@@ -32,6 +36,14 @@ function readFailureContext(record: Record<string, unknown> | null | undefined) 
     : null;
 }
 
+function formatSha(value: string | null | undefined) {
+  if (!value) {
+    return 'Not available';
+  }
+
+  return value.slice(0, 10);
+}
+
 export function GeneratedTestDetailClient({
   workspaceId,
   canManage,
@@ -49,6 +61,8 @@ export function GeneratedTestDetailClient({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [replaying, setReplaying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,8 +107,75 @@ export function GeneratedTestDetailClient({
     }
   }
 
+  async function publish() {
+    if (!canManage || !selectedArtifact) {
+      return;
+    }
+
+    setPublishing(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const publication = await parseApiResponse<{ status: string }>(
+        await fetch(
+          buildApiUrl(
+            `/workspaces/${workspaceId}/tests/${test.id}/generated-artifacts/${selectedArtifact.id}/publish`,
+          ),
+          {
+            method: 'POST',
+            credentials: 'include',
+          },
+        ),
+      );
+
+      setMessage(`Publication updated. Current state: ${publication.status}.`);
+      router.refresh();
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : 'Unable to publish generated artifact.');
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function replayPublication() {
+    if (!canManage || !selectedArtifact?.publication) {
+      return;
+    }
+
+    setReplaying(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const result = await parseApiResponse<{ replayedCount: number }>(
+        await fetch(
+          buildApiUrl(
+            `/workspaces/${workspaceId}/tests/${test.id}/generated-artifacts/${selectedArtifact.id}/publication/replay`,
+          ),
+          {
+            method: 'POST',
+            credentials: 'include',
+          },
+        ),
+      );
+
+      setMessage(
+        result.replayedCount > 0
+          ? `Replayed ${result.replayedCount} failed webhook deliver${result.replayedCount === 1 ? 'y' : 'ies'}.`
+          : 'No failed webhook deliveries were available to replay.',
+      );
+      router.refresh();
+    } catch (replayError) {
+      setError(replayError instanceof Error ? replayError.message : 'Unable to replay webhook deliveries.');
+    } finally {
+      setReplaying(false);
+    }
+  }
+
   const failureContext = readFailureContext(selectedArtifact?.metadataJson ?? null);
   const validation = readValidation(selectedArtifact?.metadataJson ?? null);
+  const publication = selectedArtifact?.publication ?? null;
   const needsHumanReview = test.status === 'NEEDS_HUMAN_REVIEW';
   const autoRepaired = test.status === 'AUTO_REPAIRED';
   const statusTone =
@@ -137,9 +218,21 @@ export function GeneratedTestDetailClient({
         <div className="flex flex-wrap items-center gap-3">
           <span className={`status-pill ${statusTone}`}>{test.status}</span>
           {canManage ? (
-            <button className="primary-button" disabled={submitting} type="button" onClick={() => void generate()}>
-              {submitting ? 'Generating...' : test.generatedArtifacts.length > 0 ? 'Regenerate test' : 'Generate test'}
-            </button>
+            <>
+              <button className="primary-button" disabled={submitting} type="button" onClick={() => void generate()}>
+                {submitting ? 'Generating...' : test.generatedArtifacts.length > 0 ? 'Regenerate test' : 'Generate test'}
+              </button>
+              {selectedArtifact?.status === 'READY' ? (
+                <button className="secondary-button" disabled={publishing} type="button" onClick={() => void publish()}>
+                  {publishing ? 'Publishing...' : publication ? 'Republish artifact' : 'Publish artifact'}
+                </button>
+              ) : null}
+              {publication && publication.deliveryStats.failed > 0 ? (
+                <button className="secondary-button" disabled={replaying} type="button" onClick={() => void replayPublication()}>
+                  {replaying ? 'Replaying...' : 'Replay failed deliveries'}
+                </button>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
@@ -214,6 +307,7 @@ export function GeneratedTestDetailClient({
                   <p>Generated: {formatDate(selectedArtifact.createdAt)}</p>
                   <p>Validation started: {formatDate(selectedArtifact.validationStartedAt)}</p>
                   <p>Validated: {formatDate(selectedArtifact.validatedAt)}</p>
+                  <p>Publication: <span className="status-pill ml-2">{publication?.status ?? 'UNPUBLISHED'}</span></p>
                   {validation?.['summary'] ? <p>Summary: {String(validation['summary'])}</p> : null}
                 </div>
               ) : null}
@@ -240,6 +334,73 @@ export function GeneratedTestDetailClient({
           </section>
 
           <section className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <div className="glass-panel rounded-none p-6">
+              <div className="mb-5 space-y-2">
+                <p className="eyebrow">Publication</p>
+                <h2 className="section-title text-2xl font-semibold">GitHub publication</h2>
+              </div>
+              {publication ? (
+                <div className="space-y-4 text-sm text-[var(--muted)]">
+                  <div className="rounded-none border border-[var(--line)] bg-[var(--bg)] p-4">
+                    <p>Status: <span className="status-pill ml-2">{publication.status}</span></p>
+                    <p className="mt-2">Branch: <span className="font-medium text-[var(--text)]">{publication.branchName}</span></p>
+                    <p>Target path: <span className="font-medium text-[var(--text)]">{publication.targetPath}</span></p>
+                    <p>Base branch: {publication.defaultBranch}</p>
+                    <p>Head commit: {formatSha(publication.headCommitSha)}</p>
+                    <p>Merge commit: {formatSha(publication.mergeCommitSha)}</p>
+                    <p>Last attempted: {formatDate(publication.lastAttemptedAt)}</p>
+                    <p>Published: {formatDate(publication.publishedAt)}</p>
+                    <p>Merged: {formatDate(publication.mergedAt)}</p>
+                    <p>Last webhook event: {formatDate(publication.lastWebhookEventAt)}</p>
+                    {publication.pullRequestNumber ? (
+                      <p>
+                        Pull request: {' '}
+                        {publication.pullRequestUrl ? (
+                          <a className="font-medium text-[var(--brand)] underline-offset-4 hover:underline" href={publication.pullRequestUrl} rel="noreferrer" target="_blank">
+                            #{publication.pullRequestNumber} · {publication.pullRequestState ?? 'OPEN'}
+                          </a>
+                        ) : (
+                          <span className="font-medium text-[var(--text)]">#{publication.pullRequestNumber} · {publication.pullRequestState ?? 'OPEN'}</span>
+                        )}
+                      </p>
+                    ) : null}
+                    {publication.lastError ? <p className="mt-2 text-[var(--danger)]">{publication.lastError}</p> : null}
+                  </div>
+
+                  <div className="rounded-none border border-[var(--line)] bg-[var(--bg)] p-4">
+                    <p className="font-medium text-[var(--text)]">Webhook delivery health</p>
+                    <p className="mt-2">Recent deliveries: {publication.deliveryStats.total}</p>
+                    <p>Processed: {publication.deliveryStats.processed} · Failed: {publication.deliveryStats.failed}</p>
+                  </div>
+
+                  {publication.recentDeliveries.length > 0 ? (
+                    <div className="space-y-3">
+                      {publication.recentDeliveries.map((delivery) => (
+                        <div key={delivery.id} className="rounded-none border border-[var(--line)] bg-[var(--bg)] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="font-medium text-[var(--text)]">{delivery.eventName}{delivery.action ? ` · ${delivery.action}` : ''}</p>
+                            <span className="status-pill">{delivery.status}</span>
+                          </div>
+                          <p className="mt-2 font-mono text-[11px] text-[#999999]">{delivery.deliveryId}</p>
+                          <p className="mt-2">Received: {formatDate(delivery.receivedAt)}</p>
+                          <p>Processed: {formatDate(delivery.processedAt)}</p>
+                          <p>Replay: {formatDate(delivery.replayedAt)}</p>
+                          <p>Attempts: {delivery.processingAttempts}</p>
+                          {delivery.lastError ? <p className="mt-2 text-[var(--danger)]">{delivery.lastError}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty-state min-h-[10rem]">No webhook deliveries have been recorded for this publication yet.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="empty-state min-h-[10rem]">
+                  Publish the selected READY artifact to create a governed GitHub branch and PR workflow for this test.
+                </div>
+              )}
+            </div>
+
             <div className="glass-panel rounded-none p-6">
               <div className="mb-5 space-y-2">
                 <p className="eyebrow">Validation</p>

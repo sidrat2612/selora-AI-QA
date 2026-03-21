@@ -15,6 +15,8 @@ function emptyFormState() {
     pullRequestRequired: true,
     secretRef: '',
     secretValue: '',
+    webhookSecretRef: '',
+    webhookSecretValue: '',
     appId: '',
     appSlug: '',
     installationId: '',
@@ -36,6 +38,8 @@ function toFormState(integration: GitHubSuiteIntegration | null) {
     pullRequestRequired: integration.pullRequestRequired,
     secretRef: integration.secretRef ?? '',
     secretValue: '',
+    webhookSecretRef: '',
+    webhookSecretValue: '',
     appId: integration.appId ?? '',
     appSlug: integration.appSlug ?? '',
     installationId: integration.installationId ?? '',
@@ -89,7 +93,12 @@ export function SuiteGitHubIntegrationClient({
 
       startTransition(() => {
         setIntegration(saved);
-        setFormState((current) => ({ ...current, secretValue: '', defaultBranch: saved.defaultBranch }));
+        setFormState((current) => ({
+          ...current,
+          secretValue: '',
+          webhookSecretValue: '',
+          defaultBranch: saved.defaultBranch,
+        }));
       });
       setMessage(saved.validationMessage ?? 'GitHub integration saved.');
     } catch (submitError) {
@@ -166,7 +175,7 @@ export function SuiteGitHubIntegrationClient({
           <p className="eyebrow">GitHub</p>
           <h3 className="text-xl font-semibold">Repository linkage</h3>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Configure the one approved repository target for this suite. Publication stays disabled until Sprint 3.
+            Configure the repository target, publication permissions, and webhook secret used to reconcile pull request state.
           </p>
         </div>
         <span className="status-pill">{statusLabel}</span>
@@ -204,6 +213,8 @@ export function SuiteGitHubIntegrationClient({
         <input className="form-input" disabled={!canManage} placeholder="Workflow path" value={formState.workflowPath} onChange={(event) => setFormState((current) => ({ ...current, workflowPath: event.target.value }))} />
         <input className="form-input md:col-span-2" disabled={!canManage} placeholder={formState.credentialMode === 'PAT' ? 'Secret reference' : 'Installation token secret reference'} value={formState.secretRef} onChange={(event) => setFormState((current) => ({ ...current, secretRef: event.target.value }))} />
         <input className="form-input md:col-span-2" disabled={!canManage} placeholder={formState.credentialMode === 'PAT' ? 'Secret value (optional for encrypted local storage)' : 'Installation token value (optional for encrypted local storage)'} type="password" value={formState.secretValue} onChange={(event) => setFormState((current) => ({ ...current, secretValue: event.target.value }))} />
+        <input className="form-input md:col-span-2" disabled={!canManage} placeholder="Webhook secret reference" value={formState.webhookSecretRef} onChange={(event) => setFormState((current) => ({ ...current, webhookSecretRef: event.target.value }))} />
+        <input className="form-input md:col-span-2" disabled={!canManage} placeholder="Webhook secret value" type="password" value={formState.webhookSecretValue} onChange={(event) => setFormState((current) => ({ ...current, webhookSecretValue: event.target.value }))} />
         {formState.credentialMode === 'GITHUB_APP' ? (
           <>
             <input className="form-input" disabled={!canManage} placeholder="GitHub App ID" value={formState.appId} onChange={(event) => setFormState((current) => ({ ...current, appId: event.target.value }))} />
@@ -235,15 +246,24 @@ export function SuiteGitHubIntegrationClient({
             <p className="mt-2">{integration.validationMessage ?? 'No validation summary recorded yet.'}</p>
             <p className="mt-2">Last validated: {integration.lastValidatedAt ? new Date(integration.lastValidatedAt).toLocaleString() : 'Never'}</p>
             <p>Secret rotated: {integration.secretRotatedAt ? new Date(integration.secretRotatedAt).toLocaleString() : 'Not recorded'}</p>
+            <p>Webhook secret rotated: {integration.webhookSecretRotatedAt ? new Date(integration.webhookSecretRotatedAt).toLocaleString() : 'Not recorded'}</p>
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-medium text-[var(--text)]">Repository policy</p>
             <p className="mt-2">{integration.repoOwner}/{integration.repoName} · {integration.defaultBranch}</p>
             <p>Write scope: {integration.allowedWriteScope} · PR required: {integration.pullRequestRequired ? 'Yes' : 'No'}</p>
             <p>Stored credential: {integration.hasStoredSecret ? 'Yes' : 'No'}{integration.secretRef ? ` · Ref ${integration.secretRef}` : ''}</p>
+            <p>Webhook secret stored: {integration.hasWebhookSecret ? 'Yes' : 'No'}</p>
             {integration.permissions ? (
               <p>Permissions: pull {integration.permissions.pull ? 'yes' : 'no'} · push {integration.permissions.push ? 'yes' : 'no'} · admin {integration.permissions.admin ? 'yes' : 'no'}</p>
             ) : null}
+          </div>
+          <div className="border border-[var(--line)] bg-white p-4">
+            <p className="font-medium text-[var(--text)]">Webhook endpoint</p>
+            <p className="mt-2 break-all">{integration.webhookEndpoint}</p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
+              Configure this URL in the target GitHub repository with the same webhook secret value entered above. Replay remains available from generated artifact publication detail.
+            </p>
           </div>
         </div>
       ) : (

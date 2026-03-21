@@ -13,6 +13,8 @@ import { PrismaService } from '../database/prisma.service';
 
 const githubIntegrationSelect = {
   id: true,
+  tenantId: true,
+  workspaceId: true,
   suiteId: true,
   credentialMode: true,
   status: true,
@@ -30,6 +32,9 @@ const githubIntegrationSelect = {
   healthSummaryJson: true,
   lastValidatedAt: true,
   secretRotatedAt: true,
+  webhookSecretRef: true,
+  webhookSecretEncryptedJson: true,
+  webhookSecretRotatedAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -106,6 +111,11 @@ export class GitHubIntegrationService {
             lastValidatedAt: new Date(),
             secretRotatedAt: rotatedAt,
             secretRotatedByUserId: parsed.credentialChanged ? auth.user.id : existing.secretRotatedAt ? auth.user.id : null,
+            webhookSecretRef: parsed.webhookSecretRef,
+            webhookSecretEncryptedJson: parsed.webhookSecretEncryptedJson,
+            webhookSecretRotatedAt: parsed.webhookSecretChanged
+              ? new Date()
+              : existing.webhookSecretRotatedAt ?? null,
           },
           select: githubIntegrationSelect,
         })
@@ -131,6 +141,9 @@ export class GitHubIntegrationService {
             lastValidatedAt: new Date(),
             secretRotatedAt: parsed.credentialChanged ? new Date() : null,
             secretRotatedByUserId: parsed.credentialChanged ? auth.user.id : null,
+            webhookSecretRef: parsed.webhookSecretRef,
+            webhookSecretEncryptedJson: parsed.webhookSecretEncryptedJson,
+            webhookSecretRotatedAt: parsed.webhookSecretChanged ? new Date() : null,
           },
           select: githubIntegrationSelect,
         });
@@ -150,6 +163,11 @@ export class GitHubIntegrationService {
         credentialMode: record.credentialMode,
         status: record.status,
         secretSource: parsed.secretRef ? 'external_ref' : parsed.encryptedSecretJson ? 'encrypted_store' : 'none',
+        webhookSecretSource: parsed.webhookSecretRef
+          ? 'external_ref'
+          : parsed.webhookSecretEncryptedJson
+            ? 'encrypted_store'
+            : 'none',
       },
     });
 
@@ -267,6 +285,9 @@ export class GitHubIntegrationService {
       appId: record.appId,
       appSlug: record.appSlug,
       installationId: record.installationId,
+      webhookEndpoint: this.buildWebhookEndpoint(record.suiteId),
+      hasWebhookSecret: Boolean(record.webhookSecretEncryptedJson || record.webhookSecretRef),
+      webhookSecretRotatedAt: record.webhookSecretRotatedAt,
       secretRotatedAt: record.secretRotatedAt,
       lastValidatedAt: record.lastValidatedAt,
       validationMessage: typeof health?.['message'] === 'string' ? health['message'] : null,
@@ -295,6 +316,8 @@ export class GitHubIntegrationService {
     const pullRequestRequired = this.readBoolean(body['pullRequestRequired'], existing?.pullRequestRequired ?? true);
     const secretRef = this.readOptionalString(body['secretRef']) ?? null;
     const secretValue = this.readOptionalString(body['secretValue']);
+    const webhookSecretRef = this.readOptionalString(body['webhookSecretRef']) ?? null;
+    const webhookSecretValue = this.readOptionalString(body['webhookSecretValue']);
     const appId = this.readOptionalString(body['appId']) ?? null;
     const appSlug = this.readOptionalString(body['appSlug']) ?? null;
     const installationId = this.readOptionalString(body['installationId']) ?? null;
@@ -307,9 +330,24 @@ export class GitHubIntegrationService {
       throw badRequest('GITHUB_CREDENTIAL_REQUIRED', 'Provide either a secret value or a secret reference.');
     }
 
+    if (
+      !webhookSecretValue &&
+      !webhookSecretRef &&
+      !existing?.webhookSecretEncryptedJson &&
+      !existing?.webhookSecretRef
+    ) {
+      throw badRequest(
+        'GITHUB_WEBHOOK_SECRET_REQUIRED',
+        'Provide either a webhook secret value or a webhook secret reference.',
+      );
+    }
+
     const encryptedSecretJson = secretValue
       ? encryptSecretValue(secretValue)
       : existing?.encryptedSecretJson ?? null;
+    const webhookSecretEncryptedJson = webhookSecretValue
+      ? encryptSecretValue(webhookSecretValue)
+      : existing?.webhookSecretEncryptedJson ?? null;
     const validationToken = secretValue ?? (existing?.encryptedSecretJson ? this.tryDecryptToken(existing.encryptedSecretJson) : null);
 
     return {
@@ -322,6 +360,8 @@ export class GitHubIntegrationService {
       pullRequestRequired,
       secretRef,
       encryptedSecretJson,
+      webhookSecretRef,
+      webhookSecretEncryptedJson,
       validationToken,
       appId,
       appSlug,
@@ -331,6 +371,27 @@ export class GitHubIntegrationService {
         secretRef !== (existing?.secretRef ?? null) ||
         credentialMode !== (existing?.credentialMode ?? credentialMode) ||
         installationId !== (existing?.installationId ?? null),
+      webhookSecretChanged:
+        Boolean(webhookSecretValue) || webhookSecretRef !== (existing?.webhookSecretRef ?? null),
+    };
+  }
+
+  async getOperationalIntegrationBySuiteId(suiteId: string) {
+    const integration = await this.prisma.gitHubSuiteIntegration.findUnique({
+      where: { suiteId },
+      select: githubIntegrationSelect,
+    });
+
+    if (!integration) {
+      throw notFound('GITHUB_INTEGRATION_NOT_FOUND', 'GitHub integration was not found for this suite.');
+    }
+
+    return {
+      record: integration,
+      token: integration.encryptedSecretJson ? this.tryDecryptToken(integration.encryptedSecretJson) : null,
+      webhookSecret: integration.webhookSecretEncryptedJson
+        ? this.tryDecryptToken(integration.webhookSecretEncryptedJson)
+        : null,
     };
   }
 
@@ -494,6 +555,11 @@ export class GitHubIntegrationService {
     } catch {
       return null;
     }
+  }
+
+  private buildWebhookEndpoint(suiteId: string) {
+    const baseUrl = (process.env['API_PUBLIC_ORIGIN'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000').replace(/\/$/, '');
+    return `${baseUrl}/api/v1/github/webhooks/${suiteId}`;
   }
 
   private asRecord(value: unknown) {

@@ -326,6 +326,44 @@ export class RecordingsService {
             validationStartedAt: true,
             validatedAt: true,
             createdAt: true,
+            publication: {
+              select: {
+                id: true,
+                generatedTestArtifactId: true,
+                status: true,
+                targetPath: true,
+                branchName: true,
+                defaultBranch: true,
+                pullRequestNumber: true,
+                pullRequestUrl: true,
+                pullRequestState: true,
+                headCommitSha: true,
+                mergeCommitSha: true,
+                lastError: true,
+                lastAttemptedAt: true,
+                publishedAt: true,
+                mergedAt: true,
+                lastWebhookEventAt: true,
+                createdAt: true,
+                updatedAt: true,
+                webhookDeliveries: {
+                  select: {
+                    id: true,
+                    deliveryId: true,
+                    eventName: true,
+                    action: true,
+                    status: true,
+                    processingAttempts: true,
+                    lastError: true,
+                    receivedAt: true,
+                    processedAt: true,
+                    replayedAt: true,
+                  },
+                  orderBy: { receivedAt: 'desc' },
+                  take: 5,
+                },
+              },
+            },
             artifacts: {
               select: {
                 id: true,
@@ -355,6 +393,17 @@ export class RecordingsService {
           ...validationArtifact,
           sizeBytes: Number(validationArtifact.sizeBytes),
         })),
+        publication: artifact.publication
+          ? {
+              ...artifact.publication,
+              recentDeliveries: artifact.publication.webhookDeliveries,
+              deliveryStats: {
+                total: artifact.publication.webhookDeliveries.length,
+                failed: artifact.publication.webhookDeliveries.filter((delivery) => delivery.status === 'FAILED').length,
+                processed: artifact.publication.webhookDeliveries.filter((delivery) => delivery.status === 'PROCESSED').length,
+              },
+            }
+          : null,
       })),
     };
   }
@@ -378,6 +427,44 @@ export class RecordingsService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        publication: {
+          select: {
+            id: true,
+            generatedTestArtifactId: true,
+            status: true,
+            targetPath: true,
+            branchName: true,
+            defaultBranch: true,
+            pullRequestNumber: true,
+            pullRequestUrl: true,
+            pullRequestState: true,
+            headCommitSha: true,
+            mergeCommitSha: true,
+            lastError: true,
+            lastAttemptedAt: true,
+            publishedAt: true,
+            mergedAt: true,
+            lastWebhookEventAt: true,
+            createdAt: true,
+            updatedAt: true,
+            webhookDeliveries: {
+              select: {
+                id: true,
+                deliveryId: true,
+                eventName: true,
+                action: true,
+                status: true,
+                processingAttempts: true,
+                lastError: true,
+                receivedAt: true,
+                processedAt: true,
+                replayedAt: true,
+              },
+              orderBy: { receivedAt: 'desc' },
+              take: 10,
+            },
+          },
+        },
       },
     });
 
@@ -396,6 +483,17 @@ export class RecordingsService {
         ...validationArtifact,
         sizeBytes: Number(validationArtifact.sizeBytes),
       })),
+      publication: artifact.publication
+        ? {
+            ...artifact.publication,
+            recentDeliveries: artifact.publication.webhookDeliveries,
+            deliveryStats: {
+              total: artifact.publication.webhookDeliveries.length,
+              failed: artifact.publication.webhookDeliveries.filter((delivery) => delivery.status === 'FAILED').length,
+              processed: artifact.publication.webhookDeliveries.filter((delivery) => delivery.status === 'PROCESSED').length,
+            },
+          }
+        : null,
       code,
     };
   }

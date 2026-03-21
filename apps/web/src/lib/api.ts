@@ -42,6 +42,8 @@ export const githubIntegrationSchema = z.object({
   pullRequestRequired: z.boolean(),
   secretRef: z.string().optional().or(z.literal('')),
   secretValue: z.string().optional().or(z.literal('')),
+  webhookSecretRef: z.string().optional().or(z.literal('')),
+  webhookSecretValue: z.string().optional().or(z.literal('')),
   appId: z.string().optional().or(z.literal('')),
   appSlug: z.string().optional().or(z.literal('')),
   installationId: z.string().optional().or(z.literal('')),

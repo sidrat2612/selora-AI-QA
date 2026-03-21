@@ -20,6 +20,7 @@ import { RequireRoles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
+import { GitHubPublicationService } from '../github/github-publication.service';
 import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
 import { RecordingsService } from './recordings.service';
@@ -33,7 +34,10 @@ type UploadedSourceFile = {
 
 @Controller('workspaces/:workspaceId')
 export class RecordingsController {
-  constructor(private readonly recordingsService: RecordingsService) {}
+  constructor(
+    private readonly recordingsService: RecordingsService,
+    private readonly githubPublicationService: GitHubPublicationService,
+  ) {}
 
   @Get('recordings')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
@@ -271,6 +275,60 @@ export class RecordingsController {
   ) {
     return success(
       await this.recordingsService.getGeneratedArtifact(workspaceId, testId, artifactId),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Post('tests/:testId/generated-artifacts/:artifactId/publish')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.WORKSPACE_OPERATOR,
+  )
+  async publishGeneratedArtifact(
+    @Param('workspaceId') workspaceId: string,
+    @Param('testId') testId: string,
+    @Param('artifactId') artifactId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.githubPublicationService.publishArtifact(
+        workspaceId,
+        testId,
+        artifactId,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Post('tests/:testId/generated-artifacts/:artifactId/publication/replay')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.WORKSPACE_OPERATOR,
+  )
+  async replayGeneratedArtifactPublication(
+    @Param('workspaceId') workspaceId: string,
+    @Param('testId') testId: string,
+    @Param('artifactId') artifactId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.githubPublicationService.replayPublication(
+        workspaceId,
+        testId,
+        artifactId,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
       { requestId: request.requestId },
     );
   }

@@ -49,6 +49,27 @@ enum GitHubWriteScope {
   PULL_REQUESTS
 }
 
+enum PublicationStatus {
+  PENDING
+  PUBLISHED
+  MERGED
+  CLOSED
+  FAILED
+}
+
+enum PublicationPullRequestState {
+  OPEN
+  CLOSED
+  MERGED
+}
+
+enum GitHubWebhookDeliveryStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -195,6 +216,8 @@ model Tenant {
   workspaces  Workspace[]
   automationSuites AutomationSuite[]
   githubSuiteIntegrations GitHubSuiteIntegration[]
+  generatedArtifactPublications GeneratedArtifactPublication[]
+  gitHubWebhookDeliveries GitHubWebhookDelivery[]
   memberships Membership[]
   auditEvents AuditEvent[]
   usageMeters UsageMeter[]
@@ -238,6 +261,8 @@ model Workspace {
   memberships            Membership[]
   automationSuites       AutomationSuite[]
   githubSuiteIntegrations GitHubSuiteIntegration[]
+  generatedArtifactPublications GeneratedArtifactPublication[]
+  gitHubWebhookDeliveries GitHubWebhookDelivery[]
   environments           Environment[]
   recordingAssets        RecordingAsset[]
   canonicalTests         CanonicalTest[]
@@ -271,6 +296,8 @@ model AutomationSuite {
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   canonicalTests CanonicalTest[]
   githubIntegration GitHubSuiteIntegration?
+  generatedArtifactPublications GeneratedArtifactPublication[]
+  gitHubWebhookDeliveries GitHubWebhookDelivery[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status])
@@ -300,6 +327,9 @@ model GitHubSuiteIntegration {
   lastValidatedAt   DateTime?
   secretRotatedAt   DateTime?
   secretRotatedByUserId String?
+  webhookSecretRef String?
+  webhookSecretEncryptedJson String?
+  webhookSecretRotatedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -308,6 +338,8 @@ model GitHubSuiteIntegration {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
   secretRotatedByUser User? @relation("GitHubIntegrationSecretRotatedBy", fields: [secretRotatedByUserId], references: [id], onDelete: SetNull)
+  publications GeneratedArtifactPublication[]
+  webhookDeliveries GitHubWebhookDelivery[]
 
   @@index([workspaceId, status])
   @@index([tenantId, updatedAt])
@@ -333,6 +365,7 @@ model User {
   memberships      Membership[]
   recordingAssets  RecordingAsset[]     @relation("UploadedByUser")
   generatedTests   GeneratedTestArtifact[] @relation("CreatedByUser")
+  generatedArtifactPublications GeneratedArtifactPublication[]
   triggeredRuns    TestRun[]            @relation("TriggeredByUser")
   auditEvents      AuditEvent[]         @relation("ActorUser")
   sessions         UserSession[]
@@ -487,6 +520,7 @@ model CanonicalTest {
   generatedArtifacts GeneratedTestArtifact[]
   testRunItems   TestRunItem[]
   aiRepairAttempts AIRepairAttempt[]
+  publications GeneratedArtifactPublication[]
 
   @@index([suiteId, updatedAt])
   @@index([workspaceId, status, updatedAt])
@@ -516,8 +550,83 @@ model GeneratedTestArtifact {
   testRunItems  TestRunItem[]
   aiRepairAttempts AIRepairAttempt[]
   artifacts     Artifact[]
+  publication   GeneratedArtifactPublication?
 
   @@map("generated_test_artifacts")
+}
+
+model GeneratedArtifactPublication {
+  id                    String                      @id @default(uuid())
+  tenantId              String
+  workspaceId           String
+  suiteId               String
+  githubIntegrationId   String
+  canonicalTestId       String
+  generatedTestArtifactId String                   @unique
+  createdByUserId       String?
+  idempotencyKey        String                      @unique
+  status                PublicationStatus           @default(PENDING)
+  targetPath            String
+  branchName            String
+  defaultBranch         String
+  pullRequestNumber     Int?
+  pullRequestUrl        String?
+  pullRequestState      PublicationPullRequestState?
+  headCommitSha         String?
+  mergeCommitSha        String?
+  lastError             String?
+  lastAttemptedAt       DateTime?
+  publishedAt           DateTime?
+  mergedAt              DateTime?
+  lastWebhookEventAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  githubIntegration GitHubSuiteIntegration @relation(fields: [githubIntegrationId], references: [id], onDelete: Cascade)
+  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id])
+  generatedTestArtifact GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  webhookDeliveries GitHubWebhookDelivery[]
+
+  @@index([workspaceId, status, updatedAt])
+  @@index([suiteId, createdAt])
+  @@index([githubIntegrationId, branchName])
+  @@index([githubIntegrationId, pullRequestNumber])
+  @@map("generated_artifact_publications")
+}
+
+model GitHubWebhookDelivery {
+  id                  String                      @id @default(uuid())
+  tenantId            String
+  workspaceId         String
+  suiteId             String
+  githubIntegrationId String
+  publicationId       String?
+  deliveryId          String
+  eventName           String
+  action              String?
+  status              GitHubWebhookDeliveryStatus @default(RECEIVED)
+  payloadJson         Json
+  processingAttempts  Int                         @default(0)
+  lastError           String?
+  receivedAt          DateTime                    @default(now())
+  processedAt         DateTime?
+  replayedAt          DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  githubIntegration GitHubSuiteIntegration @relation(fields: [githubIntegrationId], references: [id], onDelete: Cascade)
+  publication GeneratedArtifactPublication? @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+
+  @@unique([githubIntegrationId, deliveryId])
+  @@index([publicationId, receivedAt])
+  @@index([workspaceId, status, receivedAt])
+  @@map("github_webhook_deliveries")
 }
 
 // ──────────────── Run Models ────────────────

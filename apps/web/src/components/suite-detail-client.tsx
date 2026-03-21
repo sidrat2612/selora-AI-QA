@@ -96,9 +96,10 @@ export function SuiteDetailClient({
 
           <div className="glass-panel rounded-none p-6">
             <p className="eyebrow">Governance</p>
-            <h3 className="text-xl font-semibold">Sprint 2 status</h3>
+            <h3 className="text-xl font-semibold">Sprint 3 status</h3>
             <div className="mt-5 space-y-3 text-sm text-[var(--muted)]">
-              <div className="border border-[var(--line)] bg-white p-4">GitHub linkage and validation are active. Publication and webhook reconciliation remain gated until Sprint 3.</div>
+              <div className="border border-[var(--line)] bg-white p-4">GitHub publication is now governed per suite. Operators can publish READY artifacts and reconcile pull request state through suite webhook deliveries.</div>
+              <div className="border border-[var(--line)] bg-white p-4">Webhook endpoint and secret rotation state are shown above so repository admins can confirm the integration without digging through logs.</div>
               <div className="border border-[var(--line)] bg-white p-4">TestRail linkage remains disabled until Sprint 4.</div>
               <div className="border border-[var(--line)] bg-white p-4">Execution-source policy remains disabled until Sprint 5.</div>
             </div>

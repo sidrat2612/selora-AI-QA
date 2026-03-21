@@ -53,6 +53,8 @@ export class SuitesService {
         githubIntegration: {
           select: {
             id: true,
+            tenantId: true,
+            workspaceId: true,
             suiteId: true,
             credentialMode: true,
             status: true,
@@ -70,6 +72,9 @@ export class SuitesService {
             healthSummaryJson: true,
             lastValidatedAt: true,
             secretRotatedAt: true,
+            webhookSecretRef: true,
+            webhookSecretEncryptedJson: true,
+            webhookSecretRotatedAt: true,
             createdAt: true,
             updatedAt: true,
           },
