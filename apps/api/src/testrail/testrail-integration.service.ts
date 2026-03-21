@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { decryptSecretValue, encryptSecretValue } from '../common/secret-crypto';
+import { BadRequestException } from '@nestjs/common';
 import { badRequest, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
@@ -819,8 +820,26 @@ export class TestRailIntegrationService {
 
     try {
       const parsed = new URL(value.trim());
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        throw badRequest('TESTRAIL_BASE_URL_INVALID', 'baseUrl must use http or https.');
+      }
+      const hostname = parsed.hostname.toLowerCase();
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1' ||
+        hostname === '0.0.0.0' ||
+        hostname.startsWith('169.254.') ||
+        hostname === 'metadata.google.internal' ||
+        hostname.endsWith('.internal')
+      ) {
+        throw badRequest('TESTRAIL_BASE_URL_FORBIDDEN', 'baseUrl must not point to a local or metadata endpoint.');
+      }
       return parsed.toString().replace(/\/$/, '');
-    } catch {
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw badRequest('TESTRAIL_BASE_URL_INVALID', 'baseUrl must be a valid URL.');
     }
   }

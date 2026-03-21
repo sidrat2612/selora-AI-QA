@@ -132,8 +132,10 @@ export class AuditService {
     });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const csvContent = rows.map((row) => row.map((value) => this.escapeCsv(value)).join(',')).join('\n');
+    const bom = '\uFEFF';
     return {
-      buffer: Buffer.from(rows.map((row) => row.map((value) => this.escapeCsv(value)).join(',')).join('\n'), 'utf8'),
+      buffer: Buffer.from(bom + csvContent, 'utf8'),
       contentType: 'text/csv; charset=utf-8',
       fileName: `audit-events-${workspaceId}-${timestamp}.csv`,
     };

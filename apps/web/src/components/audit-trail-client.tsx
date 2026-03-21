@@ -33,6 +33,7 @@ export function AuditTrailClient({
   const [currentPage, setCurrentPage] = useState(initialFilters.page);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function fetchEvents(page: number, eventType: string) {
@@ -81,6 +82,7 @@ export function AuditTrailClient({
 
   async function exportEvents() {
     setExporting(true);
+    setExportError(null);
 
     try {
       const params = new URLSearchParams();
@@ -113,7 +115,7 @@ export function AuditTrailClient({
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
     } catch {
-      // keep current data visible when export fails
+      setExportError('Unable to export audit events. Check your connection and try again.');
     } finally {
       setExporting(false);
     }
@@ -134,6 +136,7 @@ export function AuditTrailClient({
           <button className="secondary-button" disabled={exporting} type="button" onClick={() => void exportEvents()}>
             {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
+          {exportError ? <span className="text-sm text-[var(--danger)]">{exportError}</span> : null}
         </div>
       </div>
 
