@@ -77,6 +77,43 @@ export type Workspace = {
   updatedAt: string;
 };
 
+export type AutomationSuiteSummary = {
+  id: string;
+  tenantId: string;
+  workspaceId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  status: 'ACTIVE' | 'ARCHIVED';
+  isDefault: boolean;
+  counts: {
+    canonicalTests: number;
+    generatedArtifacts: number;
+  };
+  latestActivityAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AutomationSuiteDetail = AutomationSuiteSummary & {
+  linkedSystems: {
+    github: null;
+    testrail: null;
+  };
+  canonicalTests: Array<{
+    id: string;
+    name: string;
+    status: TestStatus;
+    updatedAt: string;
+    latestArtifact: {
+      id: string;
+      status: GeneratedArtifactStatus;
+      version: number;
+      createdAt: string;
+    } | null;
+  }>;
+};
+
 export type Membership = {
   id: string;
   tenantId: string;
@@ -315,6 +352,7 @@ export type CanonicalTestSummary = {
   id: string;
   workspaceId: string;
   recordingAssetId: string;
+  suiteId: string | null;
   name: string;
   description: string | null;
   tagsJson: string[];
@@ -323,6 +361,12 @@ export type CanonicalTestSummary = {
   status: TestStatus;
   createdAt: string;
   updatedAt: string;
+  suite: {
+    id: string;
+    slug: string;
+    name: string;
+    isDefault: boolean;
+  } | null;
   recordingAsset: {
     id: string;
     filename: string;

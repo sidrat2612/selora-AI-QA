@@ -119,6 +119,20 @@ export function GeneratedTestDetailClient({
           <p className="max-w-3xl text-[var(--muted)]">
             Review generated Playwright artifacts, validation outcomes, repair attempts, and escalation state for this canonical test.
           </p>
+          {test.suite ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+              <span className="status-pill">Suite</span>
+              <Link
+                className="font-medium text-[var(--brand)] underline-offset-4 hover:underline"
+                href={`/app/${workspaceId}/suites/${test.suite.id}`}
+              >
+                {test.suite.name}
+              </Link>
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">
+                /{test.suite.slug}
+              </span>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className={`status-pill ${statusTone}`}>{test.status}</span>

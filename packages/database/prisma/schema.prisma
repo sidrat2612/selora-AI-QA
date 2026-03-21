@@ -27,6 +27,11 @@ enum WorkspaceStatus {
   ARCHIVED
 }
 
+enum SuiteStatus {
+  ACTIVE
+  ARCHIVED
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -171,6 +176,7 @@ model Tenant {
   updatedAt DateTime     @updatedAt
 
   workspaces  Workspace[]
+  automationSuites AutomationSuite[]
   memberships Membership[]
   auditEvents AuditEvent[]
   usageMeters UsageMeter[]
@@ -212,6 +218,7 @@ model Workspace {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   memberships            Membership[]
+  automationSuites       AutomationSuite[]
   environments           Environment[]
   recordingAssets        RecordingAsset[]
   canonicalTests         CanonicalTest[]
@@ -226,6 +233,29 @@ model Workspace {
 
   @@unique([tenantId, slug])
   @@map("workspaces")
+}
+
+model AutomationSuite {
+  id          String      @id @default(uuid())
+  tenantId    String
+  workspaceId String
+  slug        String
+  name        String
+  description String?
+  status      SuiteStatus @default(ACTIVE)
+  isDefault   Boolean     @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canonicalTests CanonicalTest[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
+  @@index([tenantId, createdAt])
+  @@map("automation_suites")
 }
 
 model User {
@@ -381,6 +411,7 @@ model RecordingAsset {
 model CanonicalTest {
   id               String     @id @default(uuid())
   workspaceId      String
+  suiteId          String?
   recordingAssetId String
   name             String
   description      String?
@@ -393,11 +424,13 @@ model CanonicalTest {
   updatedAt DateTime @updatedAt
 
   workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite          AutomationSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
   recordingAsset RecordingAsset @relation(fields: [recordingAssetId], references: [id])
   generatedArtifacts GeneratedTestArtifact[]
   testRunItems   TestRunItem[]
   aiRepairAttempts AIRepairAttempt[]
 
+  @@index([suiteId, updatedAt])
   @@index([workspaceId, status, updatedAt])
   @@map("canonical_tests")
 }

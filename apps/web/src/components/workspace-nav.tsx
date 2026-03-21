@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FlaskConical, Hexagon, LayoutDashboard, MessageSquare, Play, Settings, Shield } from 'lucide-react';
+import { FlaskConical, FolderKanban, Hexagon, LayoutDashboard, MessageSquare, Play, Settings, Shield } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: 'dashboard', icon: LayoutDashboard },
+  { label: 'Suites', href: 'suites', icon: FolderKanban },
   { label: 'Tests', href: 'tests', icon: FlaskConical },
   { label: 'Runs', href: 'runs', icon: Play },
   { label: 'Feedback', href: 'feedback', icon: MessageSquare },

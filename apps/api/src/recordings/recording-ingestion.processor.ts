@@ -5,6 +5,7 @@ import { analyzeRecordingToCanonical } from '@selora/recording-ingest';
 import { getStorageConfig, readStoredText } from '@selora/storage';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
+import { ensureDefaultSuite } from '../suites/suite-defaults';
 
 @Injectable()
 export class RecordingIngestionProcessor {
@@ -48,9 +49,15 @@ export class RecordingIngestionProcessor {
       });
 
       const canonicalTest = await this.prisma.$transaction(async (transaction) => {
+        const defaultSuite = await ensureDefaultSuite(transaction, {
+          tenantId: job.tenantId,
+          workspaceId: job.workspaceId,
+        });
+
         const test = await transaction.canonicalTest.create({
           data: {
             workspaceId: job.workspaceId,
+            suiteId: defaultSuite.id,
             recordingAssetId: recording.id,
             name: analysis.definition.name,
             description: analysis.definition.description ?? null,

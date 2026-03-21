@@ -597,6 +597,20 @@ export function RecordingCatalogClient({
                     <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">
                       {item.recordingAsset.filename} · canonical v{item.canonicalVersion} · {summarizeDefinition(item.definitionJson)}
                     </p>
+                    {item.suite ? (
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                        <span className="status-pill">Suite</span>
+                        <Link
+                          className="font-medium text-[var(--brand)] underline-offset-4 hover:underline"
+                          href={`/app/${workspaceId}/suites/${item.suite.id}`}
+                        >
+                          {item.suite.name}
+                        </Link>
+                        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">
+                          /{item.suite.slug}
+                        </span>
+                      </div>
+                    ) : null}
                     {item.description ? <p className="text-sm text-[var(--muted)]">{item.description}</p> : null}
                     {item.status === 'NEEDS_HUMAN_REVIEW' ? (
                       <p className="border border-[rgba(220,38,38,0.14)] bg-[rgba(220,38,38,0.08)] px-3 py-2 text-sm font-medium text-[var(--danger)]">

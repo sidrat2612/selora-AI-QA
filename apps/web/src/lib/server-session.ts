@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { buildApiUrl } from './api';
 import type {
+  AutomationSuiteDetail,
+  AutomationSuiteSummary,
   AuditEventSummary,
   BetaFeedback,
   CanonicalTestDetail,
@@ -68,6 +70,15 @@ export async function getWorkspaceDetails(workspaceId: string) {
   return serverFetch<Workspace & { environments: Environment[]; retentionSetting: RetentionSetting | null }>(
     `/workspaces/${workspaceId}`,
   );
+}
+
+export async function getSuites(workspaceId: string) {
+  const data = await serverFetch<AutomationSuiteSummary[]>(`/workspaces/${workspaceId}/suites`);
+  return data ?? [];
+}
+
+export async function getSuiteDetail(workspaceId: string, suiteId: string) {
+  return serverFetch<AutomationSuiteDetail>(`/workspaces/${workspaceId}/suites/${suiteId}`);
 }
 
 export async function getMemberships(workspaceId: string) {

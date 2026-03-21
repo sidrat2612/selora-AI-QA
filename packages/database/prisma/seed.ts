@@ -53,6 +53,33 @@ async function main() {
   });
   console.log(`  Workspace: ${workspace.name} (${workspace.id})`);
 
+  const defaultSuite = await prisma.automationSuite.upsert({
+    where: {
+      workspaceId_slug: {
+        workspaceId: workspace.id,
+        slug: 'default',
+      },
+    },
+    update: {
+      tenantId: tenant.id,
+      name: `${workspace.name} Default Suite`,
+      description: 'Default suite created automatically for workspace-scoped migration safety.',
+      isDefault: true,
+      status: 'ACTIVE',
+    },
+    create: {
+      id: randomUUID(),
+      tenantId: tenant.id,
+      workspaceId: workspace.id,
+      slug: 'default',
+      name: `${workspace.name} Default Suite`,
+      description: 'Default suite created automatically for workspace-scoped migration safety.',
+      isDefault: true,
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`  Default Suite: ${defaultSuite.name} (${defaultSuite.id})`);
+
   // ─── Admin User ───
   const adminPasswordHash = await devPasswordHash('admin123');
   const adminUser = await prisma.user.upsert({

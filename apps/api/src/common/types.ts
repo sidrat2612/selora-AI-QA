@@ -33,4 +33,5 @@ export type AppRequest = Request & {
   resourceRole?: MembershipRole;
   resourceTenantId?: string;
   resourceWorkspaceId?: string;
+  resourceSuiteId?: string;
 };

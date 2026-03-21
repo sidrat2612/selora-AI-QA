@@ -7,6 +7,8 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { RolesGuard } from './auth/roles.guard';
 import { SessionAuthGuard } from './auth/session-auth.guard';
+import { SuitesController } from './suites/suites.controller';
+import { SuitesService } from './suites/suites.service';
 import { TenantAccessGuard } from './auth/tenant-access.guard';
 import { WorkspaceAccessGuard } from './auth/workspace-access.guard';
 import { AuditService } from './audit/audit.service';
@@ -53,6 +55,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     HealthController,
     AuthController,
     WorkspacesController,
+    SuitesController,
     RecordingsController,
     FeedbackController,
     AuditController,
@@ -68,6 +71,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     FeedbackService,
     AuthService,
     WorkspacesService,
+    SuitesService,
     AIRepairProcessor,
     AIRepairQueueService,
     RecordingIngestionProcessor,

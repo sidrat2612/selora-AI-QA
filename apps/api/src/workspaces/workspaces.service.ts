@@ -19,6 +19,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { QuotaService } from '../usage/quota.service';
+import { ensureDefaultSuite } from '../suites/suite-defaults';
 
 const environmentPublicSelect = {
   id: true,
@@ -128,6 +129,12 @@ export class WorkspacesService {
           role: MembershipRole.TENANT_ADMIN,
           status: MembershipStatus.ACTIVE,
         },
+      });
+
+      await ensureDefaultSuite(transaction, {
+        tenantId,
+        workspaceId: createdWorkspace.id,
+        workspaceName: createdWorkspace.name,
       });
 
       return createdWorkspace;

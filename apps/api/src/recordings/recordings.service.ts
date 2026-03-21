@@ -269,6 +269,9 @@ export class RecordingsService {
       this.prisma.canonicalTest.findMany({
         where,
         include: {
+          suite: {
+            select: { id: true, slug: true, name: true, isDefault: true },
+          },
           recordingAsset: {
             select: { id: true, filename: true, version: true, status: true, createdAt: true },
           },
@@ -297,6 +300,9 @@ export class RecordingsService {
     const test = await this.prisma.canonicalTest.findFirst({
       where: { id: testId, workspaceId },
       include: {
+        suite: {
+          select: { id: true, slug: true, name: true, isDefault: true },
+        },
         recordingAsset: {
           select: {
             id: true,

@@ -26,6 +26,12 @@ export const retentionSchema = z.object({
   auditDays: z.number().int().positive(),
 });
 
+export const suiteSchema = z.object({
+  name: z.string().min(2),
+  slug: z.string().min(2).optional().or(z.literal('')),
+  description: z.string().optional().or(z.literal('')),
+});
+
 export function getApiBaseUrl() {
   return process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 }

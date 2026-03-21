@@ -25,6 +25,7 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:clean:dev": "tsx prisma/cleanup-dev-data.ts",
+    "db:backfill:suites": "tsx prisma/backfill-automation-suites.ts",
     "regression:smoke": "tsx prisma/regression-smoke.ts",
     "db:seed": "prisma db seed"
   },
