@@ -14,6 +14,7 @@ type SelectedTestForExecution = {
     executionSourcePolicy: ExecutionSourceMode;
     allowBranchHeadExecution: boolean;
     allowStorageExecutionFallback: boolean;
+    gitExecutionEnabled: boolean;
   } | null;
   generatedArtifacts: Array<{
     id: string;
@@ -110,6 +111,18 @@ export class ExecutionSourceResolverService {
         'RUN_SOURCE_BRANCH_HEAD_FORBIDDEN',
         `Suite ${suite?.name ?? input.test.id} does not allow branch-head execution.`,
       );
+    }
+
+    if (!suite?.gitExecutionEnabled) {
+      return this.fallbackOrThrow({
+        artifactId: artifact.id,
+        canonicalTestId: input.test.id,
+        publicationId: publication?.id ?? null,
+        requestedGitRef: input.requestedGitRef,
+        requestedSourceMode: input.requestedSourceMode,
+        allowFallback: Boolean(suite?.allowStorageExecutionFallback ?? true),
+        reason: 'Git execution rollout is disabled for this suite. Falling back to the stored artifact.',
+      });
     }
 
     if (!suite || !input.test.suiteId || !publication) {

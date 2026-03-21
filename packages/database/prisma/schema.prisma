@@ -105,6 +105,12 @@ enum ExecutionSourceMode {
   BRANCH_HEAD
 }
 
+enum RolloutStage {
+  INTERNAL
+  PILOT
+  GENERAL
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -331,6 +337,10 @@ model AutomationSuite {
   executionSourcePolicy        ExecutionSourceMode @default(STORAGE_ARTIFACT)
   allowBranchHeadExecution     Boolean             @default(false)
   allowStorageExecutionFallback Boolean            @default(true)
+  rolloutStage                 RolloutStage        @default(INTERNAL)
+  githubPublishingEnabled      Boolean             @default(true)
+  gitExecutionEnabled          Boolean             @default(true)
+  testRailSyncEnabled          Boolean             @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

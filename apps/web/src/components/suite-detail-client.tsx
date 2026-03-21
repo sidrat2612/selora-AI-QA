@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { SuiteExecutionPolicyClient } from '@/components/suite-execution-policy-client';
 import { SuiteGitHubIntegrationClient } from '@/components/suite-github-integration-client';
+import { SuiteRolloutControlsClient } from '@/components/suite-rollout-controls-client';
 import { SuiteTestRailIntegrationClient } from '@/components/suite-testrail-integration-client';
 import type { AutomationSuiteDetail } from '@/lib/types';
 
@@ -54,6 +55,10 @@ export function SuiteDetailClient({
             <p className="mt-2 text-sm font-semibold text-black">{suite.executionPolicy.defaultMode}</p>
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Rollout stage</p>
+            <p className="mt-2 text-sm font-semibold text-black">{suite.rollout.stage}</p>
+          </div>
+          <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">TestRail</p>
             <p className="mt-2 text-sm font-semibold text-black">
               {suite.linkedSystems.testrail
@@ -97,6 +102,8 @@ export function SuiteDetailClient({
         </div>
 
         <div className="space-y-6">
+          <SuiteRolloutControlsClient canManage={canManage} suite={suite} workspaceId={workspaceId} />
+
           <SuiteExecutionPolicyClient
             canManage={canManage}
             suite={suite}
@@ -118,12 +125,12 @@ export function SuiteDetailClient({
 
           <div className="glass-panel rounded-none p-6">
             <p className="eyebrow">Governance</p>
-            <h3 className="text-xl font-semibold">Sprint 5 status</h3>
+            <h3 className="text-xl font-semibold">Sprint 6 status</h3>
             <div className="mt-5 space-y-3 text-sm text-[var(--muted)]">
-              <div className="border border-[var(--line)] bg-white p-4">GitHub publication is now governed per suite. Operators can publish READY artifacts and reconcile pull request state through suite webhook deliveries.</div>
-              <div className="border border-[var(--line)] bg-white p-4">Webhook endpoint and secret rotation state are shown above so repository admins can confirm the integration without digging through logs.</div>
-              <div className="border border-[var(--line)] bg-white p-4">TestRail linkage is now managed per suite, including validation, case mapping, and metadata-only synchronization against external cases.</div>
-              <div className="border border-[var(--line)] bg-white p-4">Execution-source policy is now set per suite, with branch-head gating and storage fallback controls visible to operators.</div>
+              <div className="border border-[var(--line)] bg-white p-4">Rollout controls are now managed per suite, so operators can move from INTERNAL to PILOT to GENERAL without changing code or relying on undocumented toggles.</div>
+              <div className="border border-[var(--line)] bg-white p-4">GitHub publication, Git-backed execution, and TestRail sync each have explicit enablement switches. Disabled capabilities fail fast with clear operator-visible errors.</div>
+              <div className="border border-[var(--line)] bg-white p-4">Audit export is available from the workspace audit trail so rollout reviews and incident investigations can be handed off without manual copy-paste from the UI.</div>
+              <div className="border border-[var(--line)] bg-white p-4">Execution-source policy remains visible here, but rollout gating now makes it possible to stage Git-backed execution separately from publication and external synchronization.</div>
             </div>
           </div>
         </div>

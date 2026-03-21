@@ -32,6 +32,7 @@ export function AuditTrailClient({
   const [eventTypeFilter, setEventTypeFilter] = useState(initialFilters.eventType);
   const [currentPage, setCurrentPage] = useState(initialFilters.page);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function fetchEvents(page: number, eventType: string) {
@@ -78,6 +79,46 @@ export function AuditTrailClient({
     void fetchEvents(1, nextEventType);
   }
 
+  async function exportEvents() {
+    setExporting(true);
+
+    try {
+      const params = new URLSearchParams();
+      if (eventTypeFilter) {
+        params.set('eventType', eventTypeFilter);
+      }
+
+      const response = await fetch(
+        buildApiUrl(`/workspaces/${workspaceId}/audit-events/export?${params.toString()}`),
+        {
+          credentials: 'include',
+          cache: 'no-store',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Unable to export audit events.');
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const header = response.headers.get('content-disposition');
+      const fileNameMatch = header?.match(/filename="?([^";]+)"?/i);
+
+      anchor.href = objectUrl;
+      anchor.download = fileNameMatch?.[1] ?? 'audit-events.csv';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // keep current data visible when export fails
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -90,6 +131,9 @@ export function AuditTrailClient({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <span className="status-pill">{events.totalCount} total events</span>
+          <button className="secondary-button" disabled={exporting} type="button" onClick={() => void exportEvents()}>
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </button>
         </div>
       </div>
 
@@ -109,6 +153,9 @@ export function AuditTrailClient({
             ))}
           </select>
         </label>
+        <p className="max-w-xl text-sm text-[var(--muted)]">
+          CSV export respects the current event-type filter and is intended for rollout reviews, incident follow-up, and operator handoff.
+        </p>
       </div>
 
       <section className="glass-panel rounded-none p-6">

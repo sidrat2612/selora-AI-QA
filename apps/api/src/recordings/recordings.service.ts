@@ -899,6 +899,7 @@ export class RecordingsService {
             executionSourcePolicy: true,
             allowBranchHeadExecution: true,
             allowStorageExecutionFallback: true,
+            gitExecutionEnabled: true,
           },
         },
         generatedArtifacts: {

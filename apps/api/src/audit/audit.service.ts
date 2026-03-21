@@ -38,26 +38,7 @@ export class AuditService {
   async listEvents(workspaceId: string, query: Record<string, string | undefined>) {
     const page = this.readPositiveInt(query['page'], 1);
     const pageSize = Math.min(this.readPositiveInt(query['pageSize'], 20), 100);
-    const eventType = query['eventType']?.trim() || undefined;
-    const entityType = query['entityType']?.trim() || undefined;
-    const actorUserId = query['actorUserId']?.trim() || undefined;
-    const startDate = this.readDate(query['startDate']);
-    const endDate = this.readDate(query['endDate']);
-
-    const where: Prisma.AuditEventWhereInput = {
-      workspaceId,
-      ...(eventType ? { eventType } : {}),
-      ...(entityType ? { entityType } : {}),
-      ...(actorUserId ? { actorUserId } : {}),
-      ...((startDate || endDate)
-        ? {
-            createdAt: {
-              ...(startDate ? { gte: startDate } : {}),
-              ...(endDate ? { lte: endDate } : {}),
-            },
-          }
-        : {}),
-    };
+    const where = this.buildWhere(workspaceId, query);
 
     const [items, totalCount] = await this.prisma.$transaction([
       this.prisma.auditEvent.findMany({
@@ -92,6 +73,101 @@ export class AuditService {
     });
 
     return results.map((row) => row.eventType);
+  }
+
+  async buildExport(
+    workspaceId: string,
+    query: Record<string, string | undefined>,
+    actorUserId: string,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const where = this.buildWhere(workspaceId, query);
+    const items = await this.prisma.auditEvent.findMany({
+      where,
+      include: {
+        actor: {
+          select: { id: true, email: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5000,
+    });
+
+    const rows = [
+      [
+        'createdAt',
+        'eventType',
+        'entityType',
+        'entityId',
+        'actorName',
+        'actorEmail',
+        'requestId',
+        'metadataJson',
+      ],
+      ...items.map((item) => [
+        item.createdAt.toISOString(),
+        item.eventType,
+        item.entityType,
+        item.entityId,
+        item.actor?.name ?? '',
+        item.actor?.email ?? '',
+        item.requestId ?? '',
+        item.metadataJson === null ? '' : JSON.stringify(item.metadataJson),
+      ]),
+    ];
+
+    await this.record({
+      tenantId,
+      workspaceId,
+      actorUserId,
+      eventType: 'audit_export.downloaded',
+      entityType: 'workspace_audit',
+      entityId: workspaceId,
+      requestId,
+      metadataJson: {
+        exportedCount: items.length,
+        filters: query,
+      },
+    });
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    return {
+      buffer: Buffer.from(rows.map((row) => row.map((value) => this.escapeCsv(value)).join(',')).join('\n'), 'utf8'),
+      contentType: 'text/csv; charset=utf-8',
+      fileName: `audit-events-${workspaceId}-${timestamp}.csv`,
+    };
+  }
+
+  private buildWhere(workspaceId: string, query: Record<string, string | undefined>): Prisma.AuditEventWhereInput {
+    const eventType = query['eventType']?.trim() || undefined;
+    const entityType = query['entityType']?.trim() || undefined;
+    const actorUserId = query['actorUserId']?.trim() || undefined;
+    const startDate = this.readDate(query['startDate']);
+    const endDate = this.readDate(query['endDate']);
+
+    return {
+      workspaceId,
+      ...(eventType ? { eventType } : {}),
+      ...(entityType ? { entityType } : {}),
+      ...(actorUserId ? { actorUserId } : {}),
+      ...((startDate || endDate)
+        ? {
+            createdAt: {
+              ...(startDate ? { gte: startDate } : {}),
+              ...(endDate ? { lte: endDate } : {}),
+            },
+          }
+        : {}),
+    };
+  }
+
+  private escapeCsv(value: string) {
+    if (/[",\n]/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+
+    return value;
   }
 
   private readPositiveInt(value: string | undefined, fallback: number) {

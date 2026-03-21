@@ -335,6 +335,7 @@ export class TestRailIntegrationService {
     requestId: string,
   ) {
     const integration = await this.requireIntegration(workspaceId, suiteId, tenantId);
+    this.assertSyncEnabled(integration);
     const apiKey = integration.encryptedApiKeyJson
       ? this.tryDecryptApiKey(integration.encryptedApiKeyJson)
       : null;
@@ -491,6 +492,7 @@ export class TestRailIntegrationService {
     requestId: string,
   ) {
     const integration = await this.requireIntegration(workspaceId, suiteId, tenantId);
+    this.assertSyncEnabled(integration);
     const apiKey = integration.encryptedApiKeyJson
       ? this.tryDecryptApiKey(integration.encryptedApiKeyJson)
       : null;
@@ -669,6 +671,13 @@ export class TestRailIntegrationService {
         secretRef: true,
         encryptedApiKeyJson: true,
         status: true,
+        suite: {
+          select: {
+            id: true,
+            rolloutStage: true,
+            testRailSyncEnabled: true,
+          },
+        },
       },
     });
 
@@ -677,6 +686,23 @@ export class TestRailIntegrationService {
     }
 
     return integration;
+  }
+
+  private assertSyncEnabled(integration: {
+    suite: {
+      id: string;
+      rolloutStage: string;
+      testRailSyncEnabled: boolean;
+    } | null;
+  }) {
+    if (integration.suite?.testRailSyncEnabled) {
+      return;
+    }
+
+    throw badRequest(
+      'TESTRAIL_SYNC_DISABLED',
+      `TestRail sync is disabled for this suite while rollout is in ${integration.suite?.rolloutStage ?? 'INTERNAL'} stage.`,
+    );
   }
 
   private readIntegrationBody(

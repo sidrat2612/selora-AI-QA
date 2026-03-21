@@ -103,6 +103,7 @@ export type PublicationPullRequestState = 'OPEN' | 'CLOSED' | 'MERGED';
 export type GitHubWebhookDeliveryStatus = 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'IGNORED';
 export type ExecutionSourceRequestMode = 'SUITE_DEFAULT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
 export type ExecutionSourceMode = 'STORAGE_ARTIFACT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
+export type RolloutStage = 'INTERNAL' | 'PILOT' | 'GENERAL';
 export type TestRailIntegrationStatus = 'CONNECTED' | 'INVALID' | 'DISCONNECTED';
 export type TestRailSyncPolicy = 'MANUAL';
 export type TestRailSyncRunStatus = 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED';
@@ -231,6 +232,12 @@ export type AutomationSuiteDetail = AutomationSuiteSummary & {
     defaultMode: ExecutionSourceMode;
     allowBranchHeadExecution: boolean;
     allowStorageExecutionFallback: boolean;
+  };
+  rollout: {
+    stage: RolloutStage;
+    githubPublishingEnabled: boolean;
+    gitExecutionEnabled: boolean;
+    testRailSyncEnabled: boolean;
   };
   linkedSystems: {
     github: GitHubSuiteIntegration | null;

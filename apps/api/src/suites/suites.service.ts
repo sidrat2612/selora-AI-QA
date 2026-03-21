@@ -1,4 +1,4 @@
-import { ExecutionSourceMode, MembershipRole, type Prisma, type SuiteStatus } from '@prisma/client';
+import { ExecutionSourceMode, MembershipRole, RolloutStage, type Prisma, type SuiteStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { badRequest, conflict, notFound } from '../common/http-errors';
@@ -193,6 +193,12 @@ export class SuitesService {
         allowBranchHeadExecution: suite.allowBranchHeadExecution,
         allowStorageExecutionFallback: suite.allowStorageExecutionFallback,
       },
+      rollout: {
+        stage: suite.rolloutStage,
+        githubPublishingEnabled: suite.githubPublishingEnabled,
+        gitExecutionEnabled: suite.gitExecutionEnabled,
+        testRailSyncEnabled: suite.testRailSyncEnabled,
+      },
       linkedSystems: {
         github: suite.githubIntegration
           ? this.githubIntegrationService.toIntegrationSummary(suite.githubIntegration)
@@ -305,6 +311,18 @@ export class SuitesService {
     const allowStorageExecutionFallback = body['allowStorageExecutionFallback'] === undefined
       ? undefined
       : this.readBoolean(body['allowStorageExecutionFallback'], 'allowStorageExecutionFallback');
+    const rolloutStage = body['rolloutStage'] === undefined
+      ? undefined
+      : this.readRolloutStage(body['rolloutStage']);
+    const githubPublishingEnabled = body['githubPublishingEnabled'] === undefined
+      ? undefined
+      : this.readBoolean(body['githubPublishingEnabled'], 'githubPublishingEnabled');
+    const gitExecutionEnabled = body['gitExecutionEnabled'] === undefined
+      ? undefined
+      : this.readBoolean(body['gitExecutionEnabled'], 'gitExecutionEnabled');
+    const testRailSyncEnabled = body['testRailSyncEnabled'] === undefined
+      ? undefined
+      : this.readBoolean(body['testRailSyncEnabled'], 'testRailSyncEnabled');
 
     if (existing.isDefault && status === 'ARCHIVED') {
       throw badRequest('SUITE_DEFAULT_ARCHIVE_FORBIDDEN', 'Default suite cannot be archived.');
@@ -330,6 +348,10 @@ export class SuitesService {
         ...(executionSourcePolicy ? { executionSourcePolicy } : {}),
         ...(allowBranchHeadExecution !== undefined ? { allowBranchHeadExecution } : {}),
         ...(allowStorageExecutionFallback !== undefined ? { allowStorageExecutionFallback } : {}),
+        ...(rolloutStage ? { rolloutStage } : {}),
+        ...(githubPublishingEnabled !== undefined ? { githubPublishingEnabled } : {}),
+        ...(gitExecutionEnabled !== undefined ? { gitExecutionEnabled } : {}),
+        ...(testRailSyncEnabled !== undefined ? { testRailSyncEnabled } : {}),
       },
       select: suiteSummarySelect,
     });
@@ -349,10 +371,14 @@ export class SuitesService {
         executionSourcePolicy: executionSourcePolicy ?? undefined,
         allowBranchHeadExecution: allowBranchHeadExecution ?? undefined,
         allowStorageExecutionFallback: allowStorageExecutionFallback ?? undefined,
+        rolloutStage: rolloutStage ?? undefined,
+        githubPublishingEnabled: githubPublishingEnabled ?? undefined,
+        gitExecutionEnabled: gitExecutionEnabled ?? undefined,
+        testRailSyncEnabled: testRailSyncEnabled ?? undefined,
       },
     });
 
-    return this.toSuiteSummary(updated);
+    return this.getSuiteDetails(workspaceId, updated.id);
   }
 
   async ensureWorkspaceDefaultSuite(workspaceId: string, tenantId: string, workspaceName?: string | null) {
@@ -461,5 +487,13 @@ export class SuitesService {
     }
 
     throw badRequest('SUITE_BOOLEAN_FIELD_INVALID', `${fieldName} must be a boolean value.`);
+  }
+
+  private readRolloutStage(value: unknown): RolloutStage {
+    if (value === RolloutStage.INTERNAL || value === RolloutStage.PILOT || value === RolloutStage.GENERAL) {
+      return value;
+    }
+
+    throw badRequest('SUITE_ROLLOUT_STAGE_INVALID', 'rolloutStage must be INTERNAL, PILOT, or GENERAL.');
   }
 }

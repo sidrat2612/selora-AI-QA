@@ -122,6 +122,8 @@ export class GitHubPublicationService {
                 id: true,
                 slug: true,
                 name: true,
+                rolloutStage: true,
+                githubPublishingEnabled: true,
               },
             },
           },
@@ -146,6 +148,8 @@ export class GitHubPublicationService {
         'Assign this canonical test to a suite before attempting publication.',
       );
     }
+
+    this.assertPublishingEnabled(artifact.canonicalTest.suite);
 
     const { record: integration, token, webhookSecret } =
       await this.githubIntegrationService.getOperationalIntegrationBySuiteId(artifact.canonicalTest.suiteId);
@@ -322,6 +326,13 @@ export class GitHubPublicationService {
         canonicalTestId: testId,
       },
       include: {
+        suite: {
+          select: {
+            id: true,
+            rolloutStage: true,
+            githubPublishingEnabled: true,
+          },
+        },
         webhookDeliveries: {
           where: { status: GitHubWebhookDeliveryStatus.FAILED },
           orderBy: { receivedAt: 'asc' },
@@ -337,6 +348,12 @@ export class GitHubPublicationService {
     if (publication.tenantId !== tenantId) {
       throw notFound('PUBLICATION_NOT_FOUND', 'Publication record was not found for this artifact.');
     }
+
+    if (!publication.suite) {
+      throw notFound('SUITE_NOT_FOUND', 'Suite was not found for this publication.');
+    }
+
+    this.assertPublishingEnabled(publication.suite);
 
     let replayedCount = 0;
     for (const delivery of publication.webhookDeliveries) {
@@ -774,6 +791,21 @@ export class GitHubPublicationService {
         },
       },
     });
+  }
+
+  private assertPublishingEnabled(suite: {
+    id: string;
+    rolloutStage: string;
+    githubPublishingEnabled: boolean;
+  }) {
+    if (suite.githubPublishingEnabled) {
+      return;
+    }
+
+    throw badRequest(
+      'GITHUB_PUBLISHING_DISABLED',
+      `GitHub publication is disabled for this suite while rollout is in ${suite.rolloutStage} stage.`,
+    );
   }
 
   private async readArtifactSource(storageKey: string) {
