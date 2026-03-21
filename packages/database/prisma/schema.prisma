@@ -93,6 +93,18 @@ enum TestRailCaseLinkStatus {
   FAILED
 }
 
+enum ExecutionSourceRequestMode {
+  SUITE_DEFAULT
+  PINNED_COMMIT
+  BRANCH_HEAD
+}
+
+enum ExecutionSourceMode {
+  STORAGE_ARTIFACT
+  PINNED_COMMIT
+  BRANCH_HEAD
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -316,6 +328,9 @@ model AutomationSuite {
   description String?
   status      SuiteStatus @default(ACTIVE)
   isDefault   Boolean     @default(false)
+  executionSourcePolicy        ExecutionSourceMode @default(STORAGE_ARTIFACT)
+  allowBranchHeadExecution     Boolean             @default(false)
+  allowStorageExecutionFallback Boolean            @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -625,6 +640,7 @@ model GeneratedArtifactPublication {
   generatedTestArtifact GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id], onDelete: Cascade)
   createdBy User? @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
   webhookDeliveries GitHubWebhookDelivery[]
+  testRunItems TestRunItem[]
 
   @@index([workspaceId, status, updatedAt])
   @@index([suiteId, createdAt])
@@ -763,6 +779,8 @@ model TestRun {
   environmentId      String
   triggeredByUserId  String
   runType            RunType   @default(MANUAL)
+  requestedSourceMode ExecutionSourceRequestMode @default(SUITE_DEFAULT)
+  requestedGitRef     String?
   status             RunStatus @default(QUEUED)
   totalCount         Int       @default(0)
   queuedCount        Int       @default(0)
@@ -793,7 +811,14 @@ model TestRunItem {
   testRunId                String
   canonicalTestId          String
   generatedTestArtifactId  String
+  publicationId            String?
   sequence                 Int
+  requestedSourceMode      ExecutionSourceRequestMode @default(SUITE_DEFAULT)
+  requestedGitRef          String?
+  resolvedSourceMode       ExecutionSourceMode        @default(STORAGE_ARTIFACT)
+  resolvedGitRef           String?
+  resolvedCommitSha        String?
+  sourceFallbackReason     String?
   status                   RunStatus @default(QUEUED)
   startedAt                DateTime?
   finishedAt               DateTime?
@@ -804,10 +829,12 @@ model TestRunItem {
   testRun                TestRun               @relation(fields: [testRunId], references: [id], onDelete: Cascade)
   canonicalTest          CanonicalTest         @relation(fields: [canonicalTestId], references: [id])
   generatedTestArtifact  GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id])
+  publication            GeneratedArtifactPublication? @relation(fields: [publicationId], references: [id], onDelete: SetNull)
   artifacts              Artifact[]
   aiRepairAttempts       AIRepairAttempt[]
 
   @@index([testRunId, status])
+  @@index([testRunId, resolvedSourceMode])
   @@map("test_run_items")
 }
 

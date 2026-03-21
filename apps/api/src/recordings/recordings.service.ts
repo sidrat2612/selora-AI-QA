@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import {
+  ExecutionSourceRequestMode,
   Prisma,
   RecordingStatus,
   type GeneratedTestStatus,
@@ -26,6 +27,7 @@ import { badRequest, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
 import { QuotaService } from '../usage/quota.service';
+import { ExecutionSourceResolverService } from './execution-source-resolver.service';
 import { RecordingIngestionQueueService } from './recording-ingestion.queue';
 import { TestExecutionQueueService } from './test-execution.queue';
 import { TestValidationQueueService } from './test-validation.queue';
@@ -67,6 +69,7 @@ export class RecordingsService {
     private readonly prisma: PrismaService,
     private readonly quotaService: QuotaService,
     private readonly auditService: AuditService,
+    private readonly executionSourceResolver: ExecutionSourceResolverService,
     private readonly recordingIngestionQueue: RecordingIngestionQueueService,
     private readonly testExecutionQueue: TestExecutionQueueService,
     private readonly testValidationQueue: TestValidationQueueService,
@@ -803,7 +806,8 @@ export class RecordingsService {
     tenantId: string,
     requestId: string,
   ) {
-    const { environmentId, testIds } = this.readRunCreationBody(body);
+    const { environmentId, testIds, requestedSourceMode, requestedGitRef } =
+      this.readRunCreationBody(body);
 
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -888,6 +892,15 @@ export class RecordingsService {
         id: { in: testIds },
       },
       include: {
+        suite: {
+          select: {
+            id: true,
+            name: true,
+            executionSourcePolicy: true,
+            allowBranchHeadExecution: true,
+            allowStorageExecutionFallback: true,
+          },
+        },
         generatedArtifacts: {
           where: { status: 'READY' },
           select: {
@@ -895,6 +908,16 @@ export class RecordingsService {
             version: true,
             fileName: true,
             createdAt: true,
+            publication: {
+              select: {
+                id: true,
+                targetPath: true,
+                branchName: true,
+                defaultBranch: true,
+                headCommitSha: true,
+                mergeCommitSha: true,
+              },
+            },
           },
           orderBy: [{ version: 'desc' }, { createdAt: 'desc' }],
           take: 1,
@@ -918,6 +941,15 @@ export class RecordingsService {
     }
 
     const orderedTests = testIds.map((id) => testsById.get(id)!);
+    const resolvedSources = await this.executionSourceResolver.resolveSources({
+      requestedSourceMode,
+      requestedGitRef,
+      tests: orderedTests,
+    });
+    const resolvedSourcesByTestId = new Map(
+      resolvedSources.map((source) => [source.canonicalTestId, source]),
+    );
+
     const createdRun = await this.prisma.$transaction(async (transaction) => {
       const run = await transaction.testRun.create({
         data: {
@@ -926,6 +958,8 @@ export class RecordingsService {
           environmentId: environment.id,
           triggeredByUserId: auth.user.id,
           runType: 'MANUAL',
+          requestedSourceMode,
+          requestedGitRef,
           status: 'QUEUED',
           totalCount: orderedTests.length,
           queuedCount: orderedTests.length,
@@ -938,13 +972,24 @@ export class RecordingsService {
       });
 
       await transaction.testRunItem.createMany({
-        data: orderedTests.map((test, index) => ({
-          testRunId: run.id,
-          canonicalTestId: test.id,
-          generatedTestArtifactId: test.generatedArtifacts[0]!.id,
-          sequence: index + 1,
-          status: 'QUEUED',
-        })),
+        data: orderedTests.map((test, index) => {
+          const resolvedSource = resolvedSourcesByTestId.get(test.id);
+
+          return {
+            testRunId: run.id,
+            canonicalTestId: test.id,
+            generatedTestArtifactId: test.generatedArtifacts[0]!.id,
+            publicationId: resolvedSource?.publicationId ?? null,
+            sequence: index + 1,
+            requestedSourceMode: resolvedSource?.requestedSourceMode ?? requestedSourceMode,
+            requestedGitRef: resolvedSource?.requestedGitRef ?? requestedGitRef,
+            resolvedSourceMode: resolvedSource?.resolvedSourceMode ?? 'STORAGE_ARTIFACT',
+            resolvedGitRef: resolvedSource?.resolvedGitRef ?? null,
+            resolvedCommitSha: resolvedSource?.resolvedCommitSha ?? null,
+            sourceFallbackReason: resolvedSource?.sourceFallbackReason ?? null,
+            status: 'QUEUED',
+          };
+        }),
       });
 
       await transaction.auditEvent.create({
@@ -960,8 +1005,14 @@ export class RecordingsService {
             environmentId: environment.id,
             environmentName: environment.name,
             baseUrl: environment.baseUrl,
+            requestedSourceMode,
+            requestedGitRef,
             testIds,
             totalCount: orderedTests.length,
+            storageFallbacks: resolvedSources.filter((source) => source.sourceFallbackReason).map((source) => ({
+              canonicalTestId: source.canonicalTestId,
+              reason: source.sourceFallbackReason,
+            })),
           } as Prisma.InputJsonValue,
         },
       });
@@ -980,16 +1031,25 @@ export class RecordingsService {
     });
 
     for (const item of runItems) {
+      const resolvedSource = resolvedSourcesByTestId.get(item.canonicalTestId);
       await this.testExecutionQueue.enqueue({
         testRunId: createdRun.id,
         testRunItemId: item.id,
         generatedTestArtifactId: item.generatedTestArtifactId,
         canonicalTestId: item.canonicalTestId,
+        suiteId: orderedTests.find((test) => test.id === item.canonicalTestId)?.suiteId ?? null,
         environmentId: environment.id,
         workspaceId,
         tenantId,
         actorUserId: auth.user.id,
         requestId,
+        requestedSourceMode: resolvedSource?.requestedSourceMode ?? requestedSourceMode,
+        requestedGitRef: resolvedSource?.requestedGitRef ?? requestedGitRef,
+        resolvedSourceMode: resolvedSource?.resolvedSourceMode ?? 'STORAGE_ARTIFACT',
+        resolvedGitRef: resolvedSource?.resolvedGitRef ?? null,
+        resolvedCommitSha: resolvedSource?.resolvedCommitSha ?? null,
+        sourceFallbackReason: resolvedSource?.sourceFallbackReason ?? null,
+        publicationId: resolvedSource?.publicationId ?? null,
       } satisfies TestExecutionJobData);
     }
 
@@ -1117,6 +1177,18 @@ export class RecordingsService {
         },
         generatedTestArtifact: {
           select: { id: true, version: true, fileName: true, status: true },
+        },
+        publication: {
+          select: {
+            id: true,
+            status: true,
+            targetPath: true,
+            branchName: true,
+            defaultBranch: true,
+            mergeCommitSha: true,
+            pullRequestNumber: true,
+            pullRequestUrl: true,
+          },
         },
         artifacts: {
           select: {
@@ -1657,6 +1729,8 @@ export class RecordingsService {
     const environmentId = typeof body['environmentId'] === 'string' ? body['environmentId'].trim() : '';
     const rawTestIds = Array.isArray(body['testIds']) ? body['testIds'] : [];
     const testIds = [...new Set(rawTestIds.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))];
+    const requestedSourceMode = this.readExecutionSourceRequestMode(body['sourceMode']);
+    const requestedGitRef = typeof body['gitRef'] === 'string' ? this.readOptionalString(body['gitRef']) ?? null : null;
 
     if (!environmentId || testIds.length === 0) {
       throw badRequest(
@@ -1665,7 +1739,23 @@ export class RecordingsService {
       );
     }
 
-    return { environmentId, testIds };
+    return { environmentId, testIds, requestedSourceMode, requestedGitRef };
+  }
+
+  private readExecutionSourceRequestMode(value: unknown): ExecutionSourceRequestMode {
+    if (
+      value === ExecutionSourceRequestMode.PINNED_COMMIT ||
+      value === ExecutionSourceRequestMode.BRANCH_HEAD ||
+      value === ExecutionSourceRequestMode.SUITE_DEFAULT ||
+      value === undefined
+    ) {
+      return (value as ExecutionSourceRequestMode | undefined) ?? ExecutionSourceRequestMode.SUITE_DEFAULT;
+    }
+
+    throw badRequest(
+      'RUN_SOURCE_MODE_INVALID',
+      'sourceMode must be SUITE_DEFAULT, PINNED_COMMIT, or BRANCH_HEAD.',
+    );
   }
 
   private readRunStatus(value: string | undefined) {

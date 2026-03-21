@@ -19,6 +19,14 @@ type PersistedArtifactSummary = {
 	sizeBytes: number;
 };
 
+type ExecutionCodeResolution = {
+	code: string;
+	sourceMode: TestExecutionJobData['resolvedSourceMode'];
+	gitRef: string | null;
+	commitSha: string | null;
+	fallbackReason: string | null;
+};
+
 function decryptSecretValue(encryptedSecretJson: string) {
 	const payload = JSON.parse(encryptedSecretJson) as {
 		version?: number;
@@ -77,6 +85,16 @@ export async function processExecutionJob(input: {
 					version: true,
 				},
 			},
+			publication: {
+				select: {
+					id: true,
+					targetPath: true,
+					branchName: true,
+					defaultBranch: true,
+					headCommitSha: true,
+					mergeCommitSha: true,
+				},
+			},
 			canonicalTest: {
 				select: {
 					name: true,
@@ -133,6 +151,7 @@ export async function processExecutionJob(input: {
 	const runStartedAt = runItem.testRun.startedAt ?? new Date();
 	let execution: ValidationResult | null = null;
 	const persistedArtifacts: PersistedArtifactSummary[] = [];
+	let executionCode: ExecutionCodeResolution | null = null;
 
 	try {
 		const runtimeSecret = resolveRuntimeSecret({
@@ -159,9 +178,12 @@ export async function processExecutionJob(input: {
 			},
 		});
 
-		const code = await readStoredText({
-			config: getStorageConfig(),
-			key: runItem.generatedTestArtifact.storageKey,
+		executionCode = await resolveExecutionCode({
+			prisma: input.prisma,
+			job: input.job,
+			runItemId: runItem.id,
+			artifactStorageKey: runItem.generatedTestArtifact.storageKey,
+			publication: runItem.publication,
 		});
 
 		const env: Record<string, string> = {
@@ -190,7 +212,7 @@ export async function processExecutionJob(input: {
 			}
 
 			execution = await runPlaywrightValidation({
-				code,
+				code: executionCode.code,
 				baseUrl: environment.baseUrl,
 				timeoutMs,
 				env,
@@ -244,6 +266,12 @@ export async function processExecutionJob(input: {
 				secretRef: environment.secretRef,
 				secretResolutionSource: runtimeSecret?.source ?? 'ref_only',
 				secretResolvedFromEnv: runtimeSecret?.source === 'env_var' ? runtimeSecret.key ?? null : null,
+				executionSourceMode: executionCode.sourceMode,
+				executionSourceGitRef: executionCode.gitRef,
+				executionSourceCommitSha: executionCode.commitSha,
+				executionSourceFallbackReason: executionCode.fallbackReason,
+				requestedSourceMode: input.job.requestedSourceMode,
+				requestedGitRef: input.job.requestedGitRef,
 				generatedArtifactVersion: runItem.generatedTestArtifact.version,
 				artifactCount: persistedArtifacts.length,
 				artifacts: persistedArtifacts,
@@ -632,6 +660,151 @@ function resolveRuntimeSecret(input: { secretRef: string; encryptedSecretJson: s
 	}
 
 	return null;
+}
+
+async function resolveExecutionCode(input: {
+	prisma: PrismaClient;
+	job: TestExecutionJobData;
+	runItemId: string;
+	artifactStorageKey: string;
+	publication: {
+		id: string;
+		targetPath: string;
+		branchName: string;
+		defaultBranch: string;
+		headCommitSha: string | null;
+		mergeCommitSha: string | null;
+	} | null;
+}): Promise<ExecutionCodeResolution> {
+	const storageCode = await readStoredText({
+		config: getStorageConfig(),
+		key: input.artifactStorageKey,
+	});
+
+	if (input.job.resolvedSourceMode === 'STORAGE_ARTIFACT') {
+		return {
+			code: storageCode,
+			sourceMode: 'STORAGE_ARTIFACT',
+			gitRef: null,
+			commitSha: null,
+			fallbackReason: input.job.sourceFallbackReason,
+		};
+	}
+
+	try {
+		const gitCode = await readGitHubExecutionCode({
+			prisma: input.prisma,
+			job: input.job,
+			publication: input.publication,
+		});
+
+		return {
+			code: gitCode,
+			sourceMode: input.job.resolvedSourceMode,
+			gitRef: input.job.resolvedGitRef,
+			commitSha: input.job.resolvedCommitSha,
+			fallbackReason: input.job.sourceFallbackReason,
+		};
+	} catch (error) {
+		const reason = error instanceof Error
+			? `${error.message} Falling back to the stored artifact during execution.`
+			: 'Git execution failed during worker startup. Falling back to the stored artifact during execution.';
+
+		await input.prisma.testRunItem.update({
+			where: { id: input.runItemId },
+			data: {
+				resolvedSourceMode: 'STORAGE_ARTIFACT',
+				resolvedGitRef: null,
+				resolvedCommitSha: null,
+				sourceFallbackReason: reason,
+			},
+		});
+
+		return {
+			code: storageCode,
+			sourceMode: 'STORAGE_ARTIFACT',
+			gitRef: null,
+			commitSha: null,
+			fallbackReason: reason,
+		};
+	}
+}
+
+async function readGitHubExecutionCode(input: {
+	prisma: PrismaClient;
+	job: TestExecutionJobData;
+	publication: {
+		id: string;
+		targetPath: string;
+		branchName: string;
+		defaultBranch: string;
+		headCommitSha: string | null;
+		mergeCommitSha: string | null;
+	} | null;
+}) {
+	if (!input.job.suiteId) {
+		throw new Error('Run item is missing a suite id for Git-backed execution.');
+	}
+
+	if (!input.publication) {
+		throw new Error('Run item is missing publication lineage for Git-backed execution.');
+	}
+
+	const integration = await input.prisma.gitHubSuiteIntegration.findUnique({
+		where: { suiteId: input.job.suiteId },
+		select: {
+			status: true,
+			repoOwner: true,
+			repoName: true,
+			secretRef: true,
+			encryptedSecretJson: true,
+		},
+	});
+
+	if (!integration || integration.status !== 'CONNECTED') {
+		throw new Error('Suite GitHub integration is unavailable for Git-backed execution.');
+	}
+
+	const tokenSecret = resolveRuntimeSecret({
+		secretRef: integration.secretRef ?? 'GITHUB_TOKEN',
+		encryptedSecretJson: integration.encryptedSecretJson,
+	});
+
+	if (!tokenSecret?.value) {
+		throw new Error('Suite GitHub integration token could not be resolved for execution.');
+	}
+
+	const commitRef = input.job.resolvedCommitSha ?? input.job.resolvedGitRef ?? input.publication.mergeCommitSha ?? input.publication.headCommitSha ?? input.publication.branchName ?? input.publication.defaultBranch;
+	if (!commitRef) {
+		throw new Error('No Git ref was available to load the published test file.');
+	}
+
+	const encodedPath = input.publication.targetPath.split('/').map(encodeURIComponent).join('/');
+	const response = await fetch(
+		`https://api.github.com/repos/${integration.repoOwner}/${integration.repoName}/contents/${encodedPath}?${new URLSearchParams({ ref: commitRef }).toString()}`,
+		{
+			headers: {
+				Accept: 'application/vnd.github+json',
+				Authorization: `Bearer ${tokenSecret.value}`,
+				'User-Agent': 'Selora-Execution-Worker',
+				'X-GitHub-Api-Version': '2022-11-28',
+			},
+		},
+	);
+
+	if (!response.ok) {
+		throw new Error(
+			`GitHub could not load ${input.publication.targetPath} at ${commitRef} (status ${response.status}).`,
+		);
+	}
+
+	const payload = (await response.json()) as Record<string, unknown>;
+	const encodedContent = typeof payload['content'] === 'string' ? payload['content'] : null;
+	if (!encodedContent) {
+		throw new Error('GitHub did not return file content for the selected execution source.');
+	}
+
+	return Buffer.from(encodedContent.replace(/\n/g, ''), 'base64').toString('utf8');
 }
 
 async function countRunItems(prisma: Prisma.TransactionClient, testRunId: string) {

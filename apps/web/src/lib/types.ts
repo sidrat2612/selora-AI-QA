@@ -101,6 +101,8 @@ export type GitHubWriteScope = 'READ_ONLY' | 'BRANCH_PUSH' | 'PULL_REQUESTS';
 export type PublicationStatus = 'PENDING' | 'PUBLISHED' | 'MERGED' | 'CLOSED' | 'FAILED';
 export type PublicationPullRequestState = 'OPEN' | 'CLOSED' | 'MERGED';
 export type GitHubWebhookDeliveryStatus = 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'IGNORED';
+export type ExecutionSourceRequestMode = 'SUITE_DEFAULT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
+export type ExecutionSourceMode = 'STORAGE_ARTIFACT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
 export type TestRailIntegrationStatus = 'CONNECTED' | 'INVALID' | 'DISCONNECTED';
 export type TestRailSyncPolicy = 'MANUAL';
 export type TestRailSyncRunStatus = 'RUNNING' | 'SUCCESS' | 'PARTIAL' | 'FAILED';
@@ -225,6 +227,11 @@ export type GitHubSuiteIntegration = {
 };
 
 export type AutomationSuiteDetail = AutomationSuiteSummary & {
+  executionPolicy: {
+    defaultMode: ExecutionSourceMode;
+    allowBranchHeadExecution: boolean;
+    allowStorageExecutionFallback: boolean;
+  };
   linkedSystems: {
     github: GitHubSuiteIntegration | null;
     testrail: TestRailSuiteIntegration | null;
@@ -577,6 +584,8 @@ export type TestRunSummary = {
   environmentId: string;
   triggeredByUserId: string;
   runType: 'MANUAL';
+  requestedSourceMode: ExecutionSourceRequestMode;
+  requestedGitRef: string | null;
   status: RunStatus;
   totalCount: number;
   queuedCount: number;
@@ -607,7 +616,14 @@ export type TestRunItemSummary = {
   testRunId: string;
   canonicalTestId: string;
   generatedTestArtifactId: string;
+  publicationId: string | null;
   sequence: number;
+  requestedSourceMode: ExecutionSourceRequestMode;
+  requestedGitRef: string | null;
+  resolvedSourceMode: ExecutionSourceMode;
+  resolvedGitRef: string | null;
+  resolvedCommitSha: string | null;
+  sourceFallbackReason: string | null;
   status: RunStatus;
   startedAt: string | null;
   finishedAt: string | null;
@@ -625,6 +641,16 @@ export type TestRunItemSummary = {
     fileName: string;
     status: GeneratedArtifactStatus;
   };
+  publication: {
+    id: string;
+    status: PublicationStatus;
+    targetPath: string;
+    branchName: string;
+    defaultBranch: string;
+    mergeCommitSha: string | null;
+    pullRequestNumber: number | null;
+    pullRequestUrl: string | null;
+  } | null;
   artifacts: ValidationArtifactSummary[];
 };
 

@@ -24,6 +24,7 @@ import { HealthController } from './health.controller';
 import { MailerService } from './mail/mailer.service';
 import { AIRepairProcessor } from './recordings/ai-repair.processor';
 import { AIRepairQueueService } from './recordings/ai-repair.queue';
+import { ExecutionSourceResolverService } from './recordings/execution-source-resolver.service';
 import { RecordingsController } from './recordings/recordings.controller';
 import { RecordingIngestionProcessor } from './recordings/recording-ingestion.processor';
 import { RecordingIngestionQueueService } from './recordings/recording-ingestion.queue';
@@ -84,6 +85,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     GitHubIntegrationService,
     GitHubPublicationService,
     TestRailIntegrationService,
+    ExecutionSourceResolverService,
     AIRepairProcessor,
     AIRepairQueueService,
     RecordingIngestionProcessor,

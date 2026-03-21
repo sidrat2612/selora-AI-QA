@@ -8,6 +8,7 @@ import { buildApiUrl, parseApiResponse } from '@/lib/api';
 import type {
   CanonicalTestSummary,
   Environment,
+  ExecutionSourceRequestMode,
   PaginatedResult,
   RunStatus,
   TestRunComparison,
@@ -30,6 +31,12 @@ const RUN_SORT_OPTIONS = [
   { value: 'duration', label: 'Longest duration' },
   { value: 'status', label: 'Status' },
 ] as const;
+
+const SOURCE_MODE_OPTIONS: Array<{ value: ExecutionSourceRequestMode; label: string }> = [
+  { value: 'SUITE_DEFAULT', label: 'Suite default' },
+  { value: 'PINNED_COMMIT', label: 'Pinned commit' },
+  { value: 'BRANCH_HEAD', label: 'Branch head' },
+];
 
 type SortBy = (typeof RUN_SORT_OPTIONS)[number]['value'];
 
@@ -81,6 +88,19 @@ function statusTone(status: TestRunSummary['status']) {
       return 'text-[var(--accent)]';
     default:
       return 'text-[var(--muted)]';
+  }
+}
+
+function formatSourceMode(mode: ExecutionSourceRequestMode | TestRunItemSummary['resolvedSourceMode']) {
+  switch (mode) {
+    case 'SUITE_DEFAULT':
+      return 'Suite default';
+    case 'PINNED_COMMIT':
+      return 'Pinned commit';
+    case 'BRANCH_HEAD':
+      return 'Branch head';
+    default:
+      return 'Storage artifact';
   }
 }
 
@@ -153,6 +173,8 @@ export function RunsClient({
     environments.find((item) => item.isDefault)?.id ?? environments[0]?.id ?? '',
   );
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
+  const [requestedSourceMode, setRequestedSourceMode] = useState<ExecutionSourceRequestMode>('SUITE_DEFAULT');
+  const [requestedGitRef, setRequestedGitRef] = useState('');
   const [statusFilter, setStatusFilter] = useState<'' | RunStatus>('');
   const [historySearch, setHistorySearch] = useState('');
   const [triggeredByFilter, setTriggeredByFilter] = useState('');
@@ -323,11 +345,14 @@ export function RunsClient({
           body: JSON.stringify({
             environmentId,
             testIds: selectedTestIds,
+            sourceMode: requestedSourceMode,
+            gitRef: requestedGitRef.trim() || undefined,
           }),
         }),
       );
 
       setSelectedTestIds([]);
+      setRequestedGitRef('');
       setSelectedRunId(createdRun.id);
       setSuccessMessage(`Run ${createdRun.id.slice(0, 8)} queued for ${selectedTestIds.length} test(s).`);
       syncRunQuery(createdRun.id);
@@ -487,10 +512,10 @@ export function RunsClient({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-3">
-          <p className="eyebrow">Sprint 7</p>
+          <p className="eyebrow">Sprint 5</p>
           <h1 className="section-title text-4xl font-semibold">Runs</h1>
           <p className="max-w-3xl text-[var(--muted)]">
-            Launch validated tests, search history by test or operator, compare two runs, and inspect logs and screenshots with dedicated viewers.
+            Launch validated tests with an explicit execution source, inspect the resolved lineage for each run item, and compare historical outcomes side by side.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -505,7 +530,7 @@ export function RunsClient({
             <p className="eyebrow">Launcher</p>
             <h2 className="section-title text-2xl font-semibold">Run selected tests</h2>
             <p className="text-sm text-[var(--muted)]">
-              Execution uses the latest READY artifact. Environment timeouts and retry policy now flow through to the worker.
+              Each request now resolves its execution source before worker startup. Choose the suite default, pin a commit, or ask for the latest branch head.
             </p>
           </div>
 
@@ -521,6 +546,37 @@ export function RunsClient({
                   ))}
                 </select>
               </label>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]">
+                <label className="block space-y-2">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">Execution source</span>
+                  <select
+                    className="form-input"
+                    value={requestedSourceMode}
+                    onChange={(event) => setRequestedSourceMode(event.target.value as ExecutionSourceRequestMode)}
+                  >
+                    {SOURCE_MODE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">Git ref or commit</span>
+                  <input
+                    className="form-input"
+                    placeholder={requestedSourceMode === 'BRANCH_HEAD' ? 'main or release/next' : 'Optional SHA, tag, or branch'}
+                    value={requestedGitRef}
+                    onChange={(event) => setRequestedGitRef(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              <p className="text-xs text-[var(--muted)]">
+                Suite default defers to the suite policy. Pinned commit resolves a concrete SHA before queueing. Branch head resolves the latest commit for the branch at launch time.
+              </p>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
@@ -677,6 +733,8 @@ export function RunsClient({
                         <span className="status-pill">{run.failedCount} failed</span>
                         <span className="status-pill">{run.timedOutCount} timed out</span>
                         <span className="status-pill">{run.runningCount} running</span>
+                        <span className="status-pill">{formatSourceMode(run.requestedSourceMode)}</span>
+                        {run.requestedGitRef ? <span className="status-pill">{run.requestedGitRef}</span> : null}
                       </div>
                     </button>
                   </div>
@@ -800,6 +858,28 @@ export function RunsClient({
               </div>
             </div>
 
+            <div className="grid gap-3 xl:grid-cols-3">
+              <div className="border border-[var(--line)] bg-[var(--bg)] p-4">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">Requested source</p>
+                <p className="mt-2 text-lg font-semibold">{formatSourceMode(selectedRun.requestedSourceMode)}</p>
+                <p className="mt-2 text-xs text-[var(--muted)]">{selectedRun.requestedGitRef ?? 'No explicit ref supplied'}</p>
+              </div>
+              <div className="border border-[var(--line)] bg-[var(--bg)] p-4">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">Resolved modes</p>
+                <p className="mt-2 text-lg font-semibold">
+                  {Array.from(new Set(selectedRunItems.map((item) => formatSourceMode(item.resolvedSourceMode)))).join(', ') || 'Pending'}
+                </p>
+                <p className="mt-2 text-xs text-[var(--muted)]">Run items may diverge if Git resolution falls back to storage.</p>
+              </div>
+              <div className="border border-[var(--line)] bg-[var(--bg)] p-4">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">Fallbacks</p>
+                <p className="mt-2 text-lg font-semibold">
+                  {selectedRunItems.filter((item) => item.sourceFallbackReason).length}
+                </p>
+                <p className="mt-2 text-xs text-[var(--muted)]">Run items that dropped back to the stored artifact.</p>
+              </div>
+            </div>
+
             <div className="space-y-3">
               {selectedRunItems.map((item) => {
                 const screenshotCount = item.artifacts.filter((artifact) => artifact.artifactType === 'SCREENSHOT').length;
@@ -815,6 +895,27 @@ export function RunsClient({
                         <p className="mt-1 text-xs text-[var(--muted)]">
                           Artifact v{item.generatedTestArtifact.version} · {item.generatedTestArtifact.fileName} · Retries used {item.retryCount}
                         </p>
+                        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                          <div className="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--muted)]">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Requested</p>
+                            <p className="mt-1 font-medium text-[var(--text)]">{formatSourceMode(item.requestedSourceMode)}</p>
+                            <p className="mt-1">{item.requestedGitRef ?? 'No explicit ref'}</p>
+                          </div>
+                          <div className="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--muted)]">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Resolved</p>
+                            <p className="mt-1 font-medium text-[var(--text)]">{formatSourceMode(item.resolvedSourceMode)}</p>
+                            <p className="mt-1">{item.resolvedGitRef ?? 'Stored artifact'}</p>
+                          </div>
+                          <div className="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--muted)]">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Commit</p>
+                            <p className="mt-1 break-all font-medium text-[var(--text)]">{item.resolvedCommitSha ?? item.publication?.mergeCommitSha ?? 'Not pinned'}</p>
+                          </div>
+                          <div className="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--muted)]">
+                            <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Publication</p>
+                            <p className="mt-1 font-medium text-[var(--text)]">{item.publication?.targetPath ?? 'Not published'}</p>
+                            <p className="mt-1">{item.publication?.pullRequestUrl ? 'PR linked' : 'No PR link'}</p>
+                          </div>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className={`font-mono text-[10px] font-medium uppercase tracking-[0.12em] ${statusTone(item.status)}`}>{item.status}</p>
@@ -825,6 +926,12 @@ export function RunsClient({
                     {item.failureSummary ? (
                       <p className="mt-3 border border-[rgba(220,38,38,0.14)] bg-[rgba(220,38,38,0.08)] px-3 py-2 text-sm text-[var(--danger)]">
                         {item.failureSummary}
+                      </p>
+                    ) : null}
+
+                    {item.sourceFallbackReason ? (
+                      <p className="mt-3 border border-[rgba(217,119,6,0.2)] bg-[rgba(245,158,11,0.08)] px-3 py-2 text-sm text-[color:#9a6700]">
+                        Fallback applied: {item.sourceFallbackReason}
                       </p>
                     ) : null}
 

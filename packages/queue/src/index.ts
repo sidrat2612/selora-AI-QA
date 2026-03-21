@@ -42,11 +42,19 @@ export type TestExecutionJobData = {
   testRunItemId: string;
   generatedTestArtifactId: string;
   canonicalTestId: string;
+  suiteId: string | null;
   environmentId: string;
   workspaceId: string;
   tenantId: string;
   actorUserId: string;
   requestId: string;
+  requestedSourceMode: 'SUITE_DEFAULT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
+  requestedGitRef: string | null;
+  resolvedSourceMode: 'STORAGE_ARTIFACT' | 'PINNED_COMMIT' | 'BRANCH_HEAD';
+  resolvedGitRef: string | null;
+  resolvedCommitSha: string | null;
+  sourceFallbackReason: string | null;
+  publicationId: string | null;
 };
 
 export function getQueueMode() {

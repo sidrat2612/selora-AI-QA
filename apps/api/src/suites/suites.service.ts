@@ -1,4 +1,4 @@
-import { MembershipRole, type Prisma, type SuiteStatus } from '@prisma/client';
+import { ExecutionSourceMode, MembershipRole, type Prisma, type SuiteStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { badRequest, conflict, notFound } from '../common/http-errors';
@@ -188,6 +188,11 @@ export class SuitesService {
         generatedArtifacts: generatedArtifactCount,
       },
       latestActivityAt,
+      executionPolicy: {
+        defaultMode: suite.executionSourcePolicy,
+        allowBranchHeadExecution: suite.allowBranchHeadExecution,
+        allowStorageExecutionFallback: suite.allowStorageExecutionFallback,
+      },
       linkedSystems: {
         github: suite.githubIntegration
           ? this.githubIntegrationService.toIntegrationSummary(suite.githubIntegration)
@@ -291,6 +296,15 @@ export class SuitesService {
     const status = this.readOptionalSuiteStatus(body['status']);
     const requestedSlug = this.readOptionalString(body['slug']);
     const slug = requestedSlug ? this.readSuiteSlug(requestedSlug, requestedSlug) : undefined;
+    const executionSourcePolicy = body['executionSourcePolicy'] === undefined
+      ? undefined
+      : this.readExecutionSourceMode(body['executionSourcePolicy']);
+    const allowBranchHeadExecution = body['allowBranchHeadExecution'] === undefined
+      ? undefined
+      : this.readBoolean(body['allowBranchHeadExecution'], 'allowBranchHeadExecution');
+    const allowStorageExecutionFallback = body['allowStorageExecutionFallback'] === undefined
+      ? undefined
+      : this.readBoolean(body['allowStorageExecutionFallback'], 'allowStorageExecutionFallback');
 
     if (existing.isDefault && status === 'ARCHIVED') {
       throw badRequest('SUITE_DEFAULT_ARCHIVE_FORBIDDEN', 'Default suite cannot be archived.');
@@ -313,6 +327,9 @@ export class SuitesService {
         ...(slug ? { slug } : {}),
         ...(body['description'] !== undefined ? { description } : {}),
         ...(status ? { status } : {}),
+        ...(executionSourcePolicy ? { executionSourcePolicy } : {}),
+        ...(allowBranchHeadExecution !== undefined ? { allowBranchHeadExecution } : {}),
+        ...(allowStorageExecutionFallback !== undefined ? { allowStorageExecutionFallback } : {}),
       },
       select: suiteSummarySelect,
     });
@@ -329,6 +346,9 @@ export class SuitesService {
         name: updated.name,
         slug: updated.slug,
         status: updated.status,
+        executionSourcePolicy: executionSourcePolicy ?? undefined,
+        allowBranchHeadExecution: allowBranchHeadExecution ?? undefined,
+        allowStorageExecutionFallback: allowStorageExecutionFallback ?? undefined,
       },
     });
 
@@ -418,5 +438,28 @@ export class SuitesService {
     }
 
     throw badRequest('SUITE_STATUS_INVALID', 'Suite status must be ACTIVE or ARCHIVED.');
+  }
+
+  private readExecutionSourceMode(value: unknown): ExecutionSourceMode {
+    if (
+      value === ExecutionSourceMode.STORAGE_ARTIFACT ||
+      value === ExecutionSourceMode.PINNED_COMMIT ||
+      value === ExecutionSourceMode.BRANCH_HEAD
+    ) {
+      return value;
+    }
+
+    throw badRequest(
+      'SUITE_EXECUTION_SOURCE_POLICY_INVALID',
+      'executionSourcePolicy must be STORAGE_ARTIFACT, PINNED_COMMIT, or BRANCH_HEAD.',
+    );
+  }
+
+  private readBoolean(value: unknown, fieldName: string) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    throw badRequest('SUITE_BOOLEAN_FIELD_INVALID', `${fieldName} must be a boolean value.`);
   }
 }
