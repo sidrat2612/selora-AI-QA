@@ -32,6 +32,21 @@ export const suiteSchema = z.object({
   description: z.string().optional().or(z.literal('')),
 });
 
+export const githubIntegrationSchema = z.object({
+  credentialMode: z.enum(['PAT', 'GITHUB_APP']),
+  repoOwner: z.string().min(1),
+  repoName: z.string().min(1),
+  defaultBranch: z.string().min(1),
+  workflowPath: z.string().optional().or(z.literal('')),
+  allowedWriteScope: z.enum(['READ_ONLY', 'BRANCH_PUSH', 'PULL_REQUESTS']),
+  pullRequestRequired: z.boolean(),
+  secretRef: z.string().optional().or(z.literal('')),
+  secretValue: z.string().optional().or(z.literal('')),
+  appId: z.string().optional().or(z.literal('')),
+  appSlug: z.string().optional().or(z.literal('')),
+  installationId: z.string().optional().or(z.literal('')),
+});
+
 export function getApiBaseUrl() {
   return process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 }

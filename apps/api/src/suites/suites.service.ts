@@ -1,14 +1,10 @@
-import {
-  MembershipRole,
-  type MembershipStatus,
-  type Prisma,
-  type SuiteStatus,
-} from '@prisma/client';
+import { MembershipRole, type Prisma, type SuiteStatus } from '@prisma/client';
 import { Injectable } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { badRequest, conflict, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
+import { GitHubIntegrationService } from '../github/github-integration.service';
 import { ensureDefaultSuite, toSuiteSlug } from './suite-defaults';
 
 const suiteSummarySelect = {
@@ -34,6 +30,7 @@ export class SuitesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly githubIntegrationService: GitHubIntegrationService,
   ) {}
 
   async listSuites(workspaceId: string) {
@@ -52,6 +49,30 @@ export class SuitesService {
       include: {
         _count: {
           select: { canonicalTests: true },
+        },
+        githubIntegration: {
+          select: {
+            id: true,
+            suiteId: true,
+            credentialMode: true,
+            status: true,
+            repoOwner: true,
+            repoName: true,
+            defaultBranch: true,
+            workflowPath: true,
+            allowedWriteScope: true,
+            pullRequestRequired: true,
+            secretRef: true,
+            encryptedSecretJson: true,
+            appId: true,
+            appSlug: true,
+            installationId: true,
+            healthSummaryJson: true,
+            lastValidatedAt: true,
+            secretRotatedAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
         },
         canonicalTests: {
           select: {
@@ -107,7 +128,9 @@ export class SuitesService {
       },
       latestActivityAt,
       linkedSystems: {
-        github: null,
+        github: suite.githubIntegration
+          ? this.githubIntegrationService.toIntegrationSummary(suite.githubIntegration)
+          : null,
         testrail: null,
       },
       canonicalTests: suite.canonicalTests.map((test) => ({

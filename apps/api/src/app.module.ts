@@ -7,6 +7,8 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { RolesGuard } from './auth/roles.guard';
 import { SessionAuthGuard } from './auth/session-auth.guard';
+import { GitHubIntegrationController } from './github/github-integration.controller';
+import { GitHubIntegrationService } from './github/github-integration.service';
 import { SuitesController } from './suites/suites.controller';
 import { SuitesService } from './suites/suites.service';
 import { TenantAccessGuard } from './auth/tenant-access.guard';
@@ -56,6 +58,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     AuthController,
     WorkspacesController,
     SuitesController,
+    GitHubIntegrationController,
     RecordingsController,
     FeedbackController,
     AuditController,
@@ -72,6 +75,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     AuthService,
     WorkspacesService,
     SuitesService,
+    GitHubIntegrationService,
     AIRepairProcessor,
     AIRepairQueueService,
     RecordingIngestionProcessor,

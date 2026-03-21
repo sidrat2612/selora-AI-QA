@@ -32,6 +32,23 @@ enum SuiteStatus {
   ARCHIVED
 }
 
+enum GitHubCredentialMode {
+  PAT
+  GITHUB_APP
+}
+
+enum GitHubIntegrationStatus {
+  CONNECTED
+  INVALID
+  DISCONNECTED
+}
+
+enum GitHubWriteScope {
+  READ_ONLY
+  BRANCH_PUSH
+  PULL_REQUESTS
+}
+
 enum UserStatus {
   ACTIVE
   INVITED
@@ -177,6 +194,7 @@ model Tenant {
 
   workspaces  Workspace[]
   automationSuites AutomationSuite[]
+  githubSuiteIntegrations GitHubSuiteIntegration[]
   memberships Membership[]
   auditEvents AuditEvent[]
   usageMeters UsageMeter[]
@@ -219,6 +237,7 @@ model Workspace {
 
   memberships            Membership[]
   automationSuites       AutomationSuite[]
+  githubSuiteIntegrations GitHubSuiteIntegration[]
   environments           Environment[]
   recordingAssets        RecordingAsset[]
   canonicalTests         CanonicalTest[]
@@ -251,11 +270,49 @@ model AutomationSuite {
   tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   canonicalTests CanonicalTest[]
+  githubIntegration GitHubSuiteIntegration?
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status])
   @@index([tenantId, createdAt])
   @@map("automation_suites")
+}
+
+model GitHubSuiteIntegration {
+  id                String                  @id @default(uuid())
+  tenantId          String
+  workspaceId       String
+  suiteId           String                  @unique
+  credentialMode    GitHubCredentialMode
+  status            GitHubIntegrationStatus @default(DISCONNECTED)
+  repoOwner         String
+  repoName          String
+  defaultBranch     String
+  workflowPath      String?
+  allowedWriteScope GitHubWriteScope        @default(READ_ONLY)
+  pullRequestRequired Boolean               @default(true)
+  secretRef         String?
+  encryptedSecretJson String?
+  appId             String?
+  appSlug           String?
+  installationId    String?
+  healthSummaryJson Json?
+  lastValidatedAt   DateTime?
+  secretRotatedAt   DateTime?
+  secretRotatedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  secretRotatedByUser User? @relation("GitHubIntegrationSecretRotatedBy", fields: [secretRotatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([tenantId, updatedAt])
+  @@index([repoOwner, repoName])
+  @@map("github_suite_integrations")
 }
 
 model User {
@@ -282,6 +339,7 @@ model User {
   emailVerificationTokens EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
   submittedFeedback BetaFeedback[]      @relation("SubmittedByUser")
+  rotatedGitHubIntegrationSecrets GitHubSuiteIntegration[] @relation("GitHubIntegrationSecretRotatedBy")
 
   @@map("users")
 }

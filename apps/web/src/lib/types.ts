@@ -95,9 +95,41 @@ export type AutomationSuiteSummary = {
   updatedAt: string;
 };
 
+export type GitHubCredentialMode = 'PAT' | 'GITHUB_APP';
+export type GitHubIntegrationStatus = 'CONNECTED' | 'INVALID' | 'DISCONNECTED';
+export type GitHubWriteScope = 'READ_ONLY' | 'BRANCH_PUSH' | 'PULL_REQUESTS';
+
+export type GitHubSuiteIntegration = {
+  id: string;
+  suiteId: string;
+  credentialMode: GitHubCredentialMode;
+  status: GitHubIntegrationStatus;
+  repoOwner: string;
+  repoName: string;
+  defaultBranch: string;
+  workflowPath: string | null;
+  allowedWriteScope: GitHubWriteScope;
+  pullRequestRequired: boolean;
+  secretRef: string | null;
+  hasStoredSecret: boolean;
+  appId: string | null;
+  appSlug: string | null;
+  installationId: string | null;
+  secretRotatedAt: string | null;
+  lastValidatedAt: string | null;
+  validationMessage: string | null;
+  permissions: {
+    admin: boolean;
+    push: boolean;
+    pull: boolean;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AutomationSuiteDetail = AutomationSuiteSummary & {
   linkedSystems: {
-    github: null;
+    github: GitHubSuiteIntegration | null;
     testrail: null;
   };
   canonicalTests: Array<{

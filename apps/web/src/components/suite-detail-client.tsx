@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SuiteGitHubIntegrationClient } from '@/components/suite-github-integration-client';
 import type { AutomationSuiteDetail } from '@/lib/types';
 
 export function SuiteDetailClient({
@@ -40,7 +41,11 @@ export function SuiteDetailClient({
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">GitHub</p>
-            <p className="mt-2 text-sm font-semibold text-[#999999]">Configured in later sprint</p>
+            <p className="mt-2 text-sm font-semibold text-black">
+              {suite.linkedSystems.github
+                ? `${suite.linkedSystems.github.status} · ${suite.linkedSystems.github.repoOwner}/${suite.linkedSystems.github.repoName}`
+                : 'Not connected'}
+            </p>
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">TestRail</p>
@@ -81,13 +86,22 @@ export function SuiteDetailClient({
           </div>
         </div>
 
-        <div className="glass-panel rounded-none p-6">
-          <p className="eyebrow">Governance</p>
-          <h3 className="text-xl font-semibold">Sprint 1 status</h3>
-          <div className="mt-5 space-y-3 text-sm text-[var(--muted)]">
-            <div className="border border-[var(--line)] bg-white p-4">GitHub publication controls remain disabled until Sprint 2 and Sprint 3.</div>
-            <div className="border border-[var(--line)] bg-white p-4">TestRail linkage remains disabled until Sprint 4.</div>
-            <div className="border border-[var(--line)] bg-white p-4">Execution-source policy remains disabled until Sprint 5.</div>
+        <div className="space-y-6">
+          <SuiteGitHubIntegrationClient
+            canManage={canManage}
+            initialIntegration={suite.linkedSystems.github}
+            suiteId={suite.id}
+            workspaceId={workspaceId}
+          />
+
+          <div className="glass-panel rounded-none p-6">
+            <p className="eyebrow">Governance</p>
+            <h3 className="text-xl font-semibold">Sprint 2 status</h3>
+            <div className="mt-5 space-y-3 text-sm text-[var(--muted)]">
+              <div className="border border-[var(--line)] bg-white p-4">GitHub linkage and validation are active. Publication and webhook reconciliation remain gated until Sprint 3.</div>
+              <div className="border border-[var(--line)] bg-white p-4">TestRail linkage remains disabled until Sprint 4.</div>
+              <div className="border border-[var(--line)] bg-white p-4">Execution-source policy remains disabled until Sprint 5.</div>
+            </div>
           </div>
         </div>
       </div>

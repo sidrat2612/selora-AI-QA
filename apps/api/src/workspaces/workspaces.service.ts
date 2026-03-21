@@ -1,4 +1,3 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import {
   EnvironmentStatus,
   MembershipRole,
@@ -19,6 +18,7 @@ import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { QuotaService } from '../usage/quota.service';
+import { encryptSecretValue } from '../common/secret-crypto';
 import { ensureDefaultSuite } from '../suites/suite-defaults';
 
 const environmentPublicSelect = {
@@ -35,26 +35,6 @@ const environmentPublicSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
-
-function encryptSecretValue(secretValue: string) {
-  const configuredKey =
-    process.env['SECRET_ENCRYPTION_KEY'] ??
-    process.env['API_SESSION_SECRET'] ??
-    'selora-dev-secret-encryption-key';
-  const key = createHash('sha256').update(configuredKey, 'utf8').digest();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', key, iv);
-  const ciphertext = Buffer.concat([cipher.update(secretValue, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-
-  return JSON.stringify({
-    version: 1,
-    algorithm: 'aes-256-gcm',
-    iv: iv.toString('base64'),
-    tag: tag.toString('base64'),
-    ciphertext: ciphertext.toString('base64'),
-  });
-}
 
 @Injectable()
 export class WorkspacesService {
