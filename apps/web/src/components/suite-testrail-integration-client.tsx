@@ -13,6 +13,17 @@ import type {
   TestRailSuiteIntegration,
 } from '@/lib/types';
 
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return 'Never';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
 function emptyFormState() {
   return {
     baseUrl: '',
@@ -453,21 +464,15 @@ export function SuiteTestRailIntegrationClient({
             </p>
             <p className="mt-2">
               Last validated:{' '}
-              {integration.lastValidatedAt
-                ? new Date(integration.lastValidatedAt).toLocaleString()
-                : 'Never'}
+              {formatDateTime(integration.lastValidatedAt)}
             </p>
             <p>
               Last synced:{' '}
-              {integration.lastSyncedAt
-                ? new Date(integration.lastSyncedAt).toLocaleString()
-                : 'Never'}
+              {formatDateTime(integration.lastSyncedAt)}
             </p>
             <p>
               Secret rotated:{' '}
-              {integration.secretRotatedAt
-                ? new Date(integration.secretRotatedAt).toLocaleString()
-                : 'Not recorded'}
+              {integration.secretRotatedAt ? formatDateTime(integration.secretRotatedAt) : 'Not recorded'}
             </p>
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
@@ -521,9 +526,7 @@ export function SuiteTestRailIntegrationClient({
                   </p>
                   <p>
                     Last synced:{' '}
-                    {link?.lastSyncedAt
-                      ? new Date(link.lastSyncedAt).toLocaleString()
-                      : 'Never'}
+                    {formatDateTime(link?.lastSyncedAt ?? null)}
                   </p>
                   {link?.lastError ? (
                     <p className="text-[var(--danger)]">{link.lastError}</p>

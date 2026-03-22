@@ -5,6 +5,13 @@ import { startTransition, useState } from 'react';
 import { buildApiUrl, parseApiResponse, suiteSchema } from '@/lib/api';
 import type { AutomationSuiteSummary } from '@/lib/types';
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date(value));
+}
+
 export function SuiteCatalogClient({
   workspaceId,
   initialSuites,
@@ -110,7 +117,7 @@ export function SuiteCatalogClient({
               </div>
               <div className="border border-[var(--line)] bg-white p-4">
                 <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-[#999999]">Latest activity</p>
-                <p className="mt-2 text-sm font-semibold">{new Date(suite.latestActivityAt).toLocaleString()}</p>
+                <p className="mt-2 text-sm font-semibold">{formatDateTime(suite.latestActivityAt)}</p>
               </div>
             </div>
           </Link>

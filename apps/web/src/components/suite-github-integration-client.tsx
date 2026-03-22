@@ -4,6 +4,17 @@ import { startTransition, useState } from 'react';
 import { buildApiUrl, githubIntegrationSchema, parseApiResponse } from '@/lib/api';
 import type { GitHubSuiteIntegration, GitHubCredentialMode, GitHubWriteScope } from '@/lib/types';
 
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return 'Never';
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
 function emptyFormState() {
   return {
     credentialMode: 'PAT' as GitHubCredentialMode,
@@ -244,9 +255,9 @@ export function SuiteGitHubIntegrationClient({
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-medium text-[var(--text)]">Validation</p>
             <p className="mt-2">{integration.validationMessage ?? 'No validation summary recorded yet.'}</p>
-            <p className="mt-2">Last validated: {integration.lastValidatedAt ? new Date(integration.lastValidatedAt).toLocaleString() : 'Never'}</p>
-            <p>Secret rotated: {integration.secretRotatedAt ? new Date(integration.secretRotatedAt).toLocaleString() : 'Not recorded'}</p>
-            <p>Webhook secret rotated: {integration.webhookSecretRotatedAt ? new Date(integration.webhookSecretRotatedAt).toLocaleString() : 'Not recorded'}</p>
+            <p className="mt-2">Last validated: {formatDateTime(integration.lastValidatedAt)}</p>
+            <p>Secret rotated: {integration.secretRotatedAt ? formatDateTime(integration.secretRotatedAt) : 'Not recorded'}</p>
+            <p>Webhook secret rotated: {integration.webhookSecretRotatedAt ? formatDateTime(integration.webhookSecretRotatedAt) : 'Not recorded'}</p>
           </div>
           <div className="border border-[var(--line)] bg-white p-4">
             <p className="font-medium text-[var(--text)]">Repository policy</p>

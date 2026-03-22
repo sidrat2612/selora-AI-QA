@@ -157,10 +157,10 @@ export async function runPlaywrightValidation(input: {
 	const dockerBaseUrl = normalizeBaseUrlForDocker(input.baseUrl);
 	const effectiveBaseUrl = validationHostRoot ? dockerBaseUrl : input.baseUrl;
 	const effectiveCode = validationHostRoot ? normalizeLoopbackUrlsForDocker(input.code) : input.code;
+	const isDockerValidation = Boolean(validationHostRoot);
 
-	// Paths as seen inside the runner container (always /test/…)
-	const containerReportPath = '/test/report.json';
-	const containerOutputDir = '/test/test-results';
+	const configReportPath = isDockerValidation ? '/test/report.json' : reportPath;
+	const configOutputDir = isDockerValidation ? '/test/test-results' : outputDir;
 
 	await writeFile(specPath, effectiveCode, 'utf8');
 	await writeFile(
@@ -171,8 +171,8 @@ export async function runPlaywrightValidation(input: {
 	retries: 0,
 	workers: 1,
 	timeout: ${timeoutMs},
-	reporter: [['json', { outputFile: ${JSON.stringify(containerReportPath)} }]],
-	outputDir: ${JSON.stringify(containerOutputDir)},
+	reporter: [['json', { outputFile: ${JSON.stringify(configReportPath)} }]],
+	outputDir: ${JSON.stringify(configOutputDir)},
 	use: {
 		baseURL: ${JSON.stringify(effectiveBaseUrl ?? '')},
 		headless: true,

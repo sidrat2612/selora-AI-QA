@@ -140,10 +140,14 @@ test.beforeEach(async () => {
 
 test('workspace operators cannot escalate a membership to tenant admin', async () => {
   const operatorCookie = await login('operator@selora.local', 'operator123');
+  const operatorMembership = await prisma.membership.findFirstOrThrow({
+    where: { user: { email: 'operator@selora.local' } },
+  });
   const adminMembership = await prisma.membership.findFirstOrThrow({
     where: {
       role: 'TENANT_ADMIN',
       user: { email: 'admin@selora.local' },
+      workspaceId: operatorMembership.workspaceId,
     },
   });
 
