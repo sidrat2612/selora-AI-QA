@@ -1,47 +1,79 @@
-function includesPackage(id: string, packageName: string): boolean {
-  return id.includes(`/node_modules/${packageName}/`);
+const CHART_PACKAGES = new Set([
+  'recharts',
+  'victory-vendor',
+  'internmap',
+]);
+
+const DND_PACKAGES = new Set([
+  'react-dnd',
+  'react-dnd-html5-backend',
+  'dnd-core',
+]);
+
+function getPackageName(id: string): string | null {
+  const marker = '/node_modules/';
+  const lastNodeModulesIndex = id.lastIndexOf(marker);
+
+  if (lastNodeModulesIndex === -1) {
+    return null;
+  }
+
+  const packagePath = id.slice(lastNodeModulesIndex + marker.length);
+  const segments = packagePath.split('/');
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const [firstSegment, secondSegment] = segments;
+  if (!firstSegment) {
+    return null;
+  }
+
+  if (firstSegment.startsWith('@') && secondSegment) {
+    return `${firstSegment}/${secondSegment}`;
+  }
+
+  return firstSegment;
+}
+
+function isD3Package(packageName: string): boolean {
+  return packageName.startsWith('d3-');
 }
 
 export function createManualChunks(id: string): string | undefined {
-  if (!id.includes('/node_modules/')) {
+  const packageName = getPackageName(id);
+
+  if (!packageName) {
     return undefined;
   }
 
   if (
-    includesPackage(id, 'react') ||
-    includesPackage(id, 'react-dom') ||
-    includesPackage(id, 'react-router') ||
-    includesPackage(id, 'scheduler')
+    packageName === 'react' ||
+    packageName === 'react-dom' ||
+    packageName === 'react-router' ||
+    packageName === 'scheduler'
   ) {
     return 'vendor-react';
   }
 
-  if (id.includes('/node_modules/@tanstack/')) {
+  if (packageName.startsWith('@tanstack/')) {
     return 'vendor-query';
   }
 
-  if (
-    includesPackage(id, 'recharts') ||
-    /\/node_modules\/d3-[^/]+\//.test(id) ||
-    includesPackage(id, 'internmap')
-  ) {
+  if (CHART_PACKAGES.has(packageName) || isD3Package(packageName)) {
     return 'vendor-charts';
   }
 
-  if (
-    includesPackage(id, 'react-dnd') ||
-    includesPackage(id, 'react-dnd-html5-backend') ||
-    includesPackage(id, 'dnd-core') ||
-    includesPackage(id, '@react-dnd')
-  ) {
+  if (DND_PACKAGES.has(packageName) || packageName.startsWith('@react-dnd/')) {
     return 'vendor-dnd';
   }
 
-  if (includesPackage(id, 'motion') || includesPackage(id, 'framer-motion')) {
+  if (packageName === 'motion' || packageName === 'framer-motion') {
     return 'vendor-motion';
   }
 
-  if (includesPackage(id, 'lucide-react')) {
+  if (packageName === 'lucide-react') {
     return 'vendor-icons';
   }
 
