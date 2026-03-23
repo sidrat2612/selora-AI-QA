@@ -41,3 +41,5 @@ Selora is organized as a monorepo with two frontend applications and a shared ba
 ## License
 
 Proprietary. All rights reserved.
+
+See the `LICENSE` file at the root of this repository for the full license terms.
