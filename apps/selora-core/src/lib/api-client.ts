@@ -1,3 +1,5 @@
+import type { LicenseStatus } from "@selora/domain";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 export class ApiError extends Error {
@@ -435,15 +437,6 @@ export const tenants = {
 
   export: (tenantId: string) =>
     `${API_BASE}/tenants/${tenantId}/export`,
-};
-
-export type LicenseStatus = {
-  enforcementEnabled: boolean;
-  tier: "evaluation" | "commercial";
-  commercialUseAllowed: boolean;
-  licensedTo: string | null;
-  alertEmailConfigured: boolean;
-  protectedFeatures: string[];
 };
 
 export const license = {

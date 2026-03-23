@@ -5,7 +5,6 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import {
   Select,
   SelectContent,
@@ -13,8 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Github, CheckCircle2, XCircle, Save, ShieldAlert } from "lucide-react";
-import type { LicenseStatus } from "../../lib/api-client";
+import { Github, CheckCircle2, XCircle, Save } from "lucide-react";
+import type { LicenseStatus } from "@selora/domain";
+import { isCommercialFeatureBlocked } from "../../../lib/license";
+import { CommercialLicenseAlert } from "./CommercialLicenseAlert";
 
 type GitHubIntegrationProps = {
   licenseStatus?: LicenseStatus | null;
@@ -28,9 +29,7 @@ export function GitHubIntegration({ licenseStatus }: GitHubIntegrationProps) {
   const [triggerOn, setTriggerOn] = useState("pull_request");
   const [reportStatus, setReportStatus] = useState(true);
 
-  const isLicenseBlocked = Boolean(
-    licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
-  );
+  const isLicenseBlocked = isCommercialFeatureBlocked(licenseStatus);
 
   const handleConnect = () => {
     if (isLicenseBlocked) return;
@@ -72,13 +71,9 @@ export function GitHubIntegration({ licenseStatus }: GitHubIntegrationProps) {
 
         <div className="space-y-4">
           {isLicenseBlocked && (
-            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-              <ShieldAlert className="h-4 w-4 text-amber-700" />
-              <AlertTitle>Commercial license required</AlertTitle>
-              <AlertDescription className="text-amber-800">
-                GitHub integration is protected by your Selora license settings. Upgrade to a commercial license to enable repository sync, validation, and publication workflows.
-              </AlertDescription>
-            </Alert>
+            <CommercialLicenseAlert>
+              GitHub integration is protected by your Selora license settings. Upgrade to a commercial license to enable repository sync, validation, and publication workflows.
+            </CommercialLicenseAlert>
           )}
 
           {/* Enable Integration */}

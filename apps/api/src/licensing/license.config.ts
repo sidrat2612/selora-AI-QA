@@ -1,11 +1,17 @@
-import { badRequest } from '../common/http-errors';
-
 export type LicenseTier = 'evaluation' | 'commercial';
 
 export type LicensedFeature =
   | 'github_integration'
   | 'testrail_integration'
   | 'artifact_publication';
+
+export const LICENSE_TIERS: readonly LicenseTier[] = ['evaluation', 'commercial'];
+
+export const PROTECTED_LICENSE_FEATURES: readonly LicensedFeature[] = [
+  'github_integration',
+  'testrail_integration',
+  'artifact_publication',
+];
 
 export type LicenseConfig = {
   enforcementEnabled: boolean;
@@ -15,10 +21,14 @@ export type LicenseConfig = {
   alertEmail: string | null;
 };
 
+function isLicenseTier(value: string): value is LicenseTier {
+  return LICENSE_TIERS.includes(value as LicenseTier);
+}
+
 export function getLicenseConfig(env: NodeJS.ProcessEnv): LicenseConfig {
   const rawTier = (env['LICENSE_TIER'] ?? 'evaluation').trim().toLowerCase();
-  if (rawTier !== 'evaluation' && rawTier !== 'commercial') {
-    throw badRequest('LICENSE_TIER_INVALID', 'LICENSE_TIER must be either evaluation or commercial.');
+  if (!isLicenseTier(rawTier)) {
+    throw new Error('LICENSE_TIER must be either evaluation or commercial.');
   }
 
   const rawEnforcement = env['LICENSE_ENFORCEMENT']?.trim().toLowerCase();

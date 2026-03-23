@@ -31,9 +31,11 @@ export function Feedback() {
   const feedbackItems = feedbackQuery.data ?? [];
 
   const filteredFeedback = feedbackItems.filter(item => {
+    const messageText = item.message ?? item.summary;
+    const typeLabel = item.type ?? item.category;
     const matchesSearch = (item.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.message.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === "all" || item.type === typeFilter;
+                         messageText.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === "all" || typeLabel === typeFilter;
     return matchesSearch && matchesType;
   });
 
@@ -117,30 +119,35 @@ export function Feedback() {
 
       {/* Feedback List */}
       <div className="space-y-3">
-        {filteredFeedback.map((item) => (
-          <Card key={item.id} className="p-6">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <MessageSquare className="h-5 w-5 text-slate-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline">{item.type}</Badge>
-                      <StatusBadge status={item.status} />
-                    </div>
-                    <p className="mt-2 font-medium text-slate-900">{item.message}</p>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                      {item.title && <span>{item.title}</span>}
-                      <span>{item.createdAt}</span>
+        {filteredFeedback.map((item) => {
+          const typeLabel = item.type ?? item.category;
+          const messageText = item.message ?? item.summary;
+
+          return (
+            <Card key={item.id} className="p-6">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <MessageSquare className="h-5 w-5 text-slate-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">{typeLabel}</Badge>
+                        <StatusBadge status={item.status} />
+                      </div>
+                      <p className="mt-2 font-medium text-slate-900">{messageText}</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                        {item.title && <span>{item.title}</span>}
+                        <span>{item.createdAt}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { createManualChunks } from '../../scripts/vite/manualChunks'
 
 export default defineConfig({
   plugins: [
@@ -24,5 +25,10 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: createManualChunks,
+      },
+    },
   },
 })

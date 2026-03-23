@@ -1,46 +1,33 @@
+import type { ComponentType } from "react";
 import { createBrowserRouter } from "react-router";
 import { AppLayout } from "./components/AppLayout";
 import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
-import { Dashboard } from "./pages/Dashboard";
-import { Suites } from "./pages/Suites";
-import { SuiteDetail } from "./pages/SuiteDetail";
-import { Tests } from "./pages/Tests";
-import { TestDetail } from "./pages/TestDetail";
-import { Runs } from "./pages/Runs";
-import { RunDetail } from "./pages/RunDetail";
-import { Feedback } from "./pages/Feedback";
-import { Audit } from "./pages/Audit";
-import { SettingsMembers } from "./pages/settings/SettingsMembers";
-import { SettingsExecution } from "./pages/settings/SettingsExecution";
-import { SettingsLifecycle } from "./pages/settings/SettingsLifecycle";
-import { SettingsQuotas } from "./pages/settings/SettingsQuotas";
-import { SettingsRetention } from "./pages/settings/SettingsRetention";
-import { SettingsEnvironments } from "./pages/settings/SettingsEnvironments";
-import { PlatformAdmin } from "./pages/PlatformAdmin";
-import { TenantDetail } from "./pages/TenantDetail";
-import { Login } from "./pages/auth/Login";
-import { ForgotPassword } from "./pages/auth/ForgotPassword";
-import { ResetPassword } from "./pages/auth/ResetPassword";
-import { VerifyEmail } from "./pages/auth/VerifyEmail";
-import { NotFound } from "./pages/NotFound";
+
+async function loadRoute<TModule extends Record<string, unknown>>(
+  loader: () => Promise<TModule>,
+  exportName: keyof TModule,
+) {
+  const module = await loader();
+  return { Component: module[exportName] as ComponentType };
+}
 
 export const router = createBrowserRouter([
   // Auth routes (no layout, no session required)
   {
     path: "/auth/login",
-    Component: Login,
+    lazy: () => loadRoute(() => import("./pages/auth/Login"), "Login"),
   },
   {
     path: "/auth/forgot-password",
-    Component: ForgotPassword,
+    lazy: () => loadRoute(() => import("./pages/auth/ForgotPassword"), "ForgotPassword"),
   },
   {
     path: "/auth/reset-password",
-    Component: ResetPassword,
+    lazy: () => loadRoute(() => import("./pages/auth/ResetPassword"), "ResetPassword"),
   },
   {
     path: "/auth/verify-email",
-    Component: VerifyEmail,
+    lazy: () => loadRoute(() => import("./pages/auth/VerifyEmail"), "VerifyEmail"),
   },
   // Authenticated routes
   {
@@ -50,24 +37,24 @@ export const router = createBrowserRouter([
         path: "/",
         Component: AppLayout,
         children: [
-          { index: true, Component: Dashboard },
-          { path: "suites", Component: Suites },
-          { path: "suites/:id", Component: SuiteDetail },
-          { path: "tests", Component: Tests },
-          { path: "tests/:id", Component: TestDetail },
-          { path: "runs", Component: Runs },
-          { path: "runs/:id", Component: RunDetail },
-          { path: "feedback", Component: Feedback },
-          { path: "audit", Component: Audit },
-          { path: "settings/members", Component: SettingsMembers },
-          { path: "settings/execution", Component: SettingsExecution },
-          { path: "settings/lifecycle", Component: SettingsLifecycle },
-          { path: "settings/quotas", Component: SettingsQuotas },
-          { path: "settings/retention", Component: SettingsRetention },
-          { path: "settings/environments", Component: SettingsEnvironments },
-          { path: "platform-admin", Component: PlatformAdmin },
-          { path: "platform-admin/tenants/:id", Component: TenantDetail },
-          { path: "*", Component: NotFound },
+          { index: true, lazy: () => loadRoute(() => import("./pages/Dashboard"), "Dashboard") },
+          { path: "suites", lazy: () => loadRoute(() => import("./pages/Suites"), "Suites") },
+          { path: "suites/:id", lazy: () => loadRoute(() => import("./pages/SuiteDetail"), "SuiteDetail") },
+          { path: "tests", lazy: () => loadRoute(() => import("./pages/Tests"), "Tests") },
+          { path: "tests/:id", lazy: () => loadRoute(() => import("./pages/TestDetail"), "TestDetail") },
+          { path: "runs", lazy: () => loadRoute(() => import("./pages/Runs"), "Runs") },
+          { path: "runs/:id", lazy: () => loadRoute(() => import("./pages/RunDetail"), "RunDetail") },
+          { path: "feedback", lazy: () => loadRoute(() => import("./pages/Feedback"), "Feedback") },
+          { path: "audit", lazy: () => loadRoute(() => import("./pages/Audit"), "Audit") },
+          { path: "settings/members", lazy: () => loadRoute(() => import("./pages/settings/SettingsMembers"), "SettingsMembers") },
+          { path: "settings/execution", lazy: () => loadRoute(() => import("./pages/settings/SettingsExecution"), "SettingsExecution") },
+          { path: "settings/lifecycle", lazy: () => loadRoute(() => import("./pages/settings/SettingsLifecycle"), "SettingsLifecycle") },
+          { path: "settings/quotas", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
+          { path: "settings/retention", lazy: () => loadRoute(() => import("./pages/settings/SettingsRetention"), "SettingsRetention") },
+          { path: "settings/environments", lazy: () => loadRoute(() => import("./pages/settings/SettingsEnvironments"), "SettingsEnvironments") },
+          { path: "platform-admin", lazy: () => loadRoute(() => import("./pages/PlatformAdmin"), "PlatformAdmin") },
+          { path: "platform-admin/tenants/:id", lazy: () => loadRoute(() => import("./pages/TenantDetail"), "TenantDetail") },
+          { path: "*", lazy: () => loadRoute(() => import("./pages/NotFound"), "NotFound") },
         ],
       },
     ],

@@ -1,37 +1,33 @@
+import type { ComponentType } from "react";
 import { createBrowserRouter } from "react-router";
 import { AppLayout } from "./components/AppLayout";
 import { AuthenticatedLayout } from "./layouts/AuthenticatedLayout";
-import { Dashboard } from "./pages/Dashboard";
-import { PlatformAdmin } from "./pages/PlatformAdmin";
-import { TenantDetail } from "./pages/TenantDetail";
-import { Audit } from "./pages/Audit";
-import { SettingsLicense } from "./pages/settings/SettingsLicense";
-import { SettingsLifecycle } from "./pages/settings/SettingsLifecycle";
-import { SettingsQuotas } from "./pages/settings/SettingsQuotas";
-import { SettingsRetention } from "./pages/settings/SettingsRetention";
-import { Login } from "./pages/auth/Login";
-import { ForgotPassword } from "./pages/auth/ForgotPassword";
-import { ResetPassword } from "./pages/auth/ResetPassword";
-import { VerifyEmail } from "./pages/auth/VerifyEmail";
-import { NotFound } from "./pages/NotFound";
+
+async function loadRoute<TModule extends Record<string, unknown>>(
+  loader: () => Promise<TModule>,
+  exportName: keyof TModule,
+) {
+  const module = await loader();
+  return { Component: module[exportName] as ComponentType };
+}
 
 export const router = createBrowserRouter([
   // Auth routes (no layout, no session required)
   {
     path: "/auth/login",
-    Component: Login,
+    lazy: () => loadRoute(() => import("./pages/auth/Login"), "Login"),
   },
   {
     path: "/auth/forgot-password",
-    Component: ForgotPassword,
+    lazy: () => loadRoute(() => import("./pages/auth/ForgotPassword"), "ForgotPassword"),
   },
   {
     path: "/auth/reset-password",
-    Component: ResetPassword,
+    lazy: () => loadRoute(() => import("./pages/auth/ResetPassword"), "ResetPassword"),
   },
   {
     path: "/auth/verify-email",
-    Component: VerifyEmail,
+    lazy: () => loadRoute(() => import("./pages/auth/VerifyEmail"), "VerifyEmail"),
   },
   // Authenticated routes
   {
@@ -41,16 +37,16 @@ export const router = createBrowserRouter([
         path: "/",
         Component: AppLayout,
         children: [
-          { index: true, Component: Dashboard },
-          { path: "tenants", Component: PlatformAdmin },
-          { path: "tenants/:id", Component: TenantDetail },
-          { path: "audit", Component: Audit },
-          { path: "usage", Component: SettingsQuotas },
-          { path: "settings/license", Component: SettingsLicense },
-          { path: "settings/lifecycle", Component: SettingsLifecycle },
-          { path: "settings/retention", Component: SettingsRetention },
-          { path: "settings/quotas", Component: SettingsQuotas },
-          { path: "*", Component: NotFound },
+          { index: true, lazy: () => loadRoute(() => import("./pages/Dashboard"), "Dashboard") },
+          { path: "tenants", lazy: () => loadRoute(() => import("./pages/PlatformAdmin"), "PlatformAdmin") },
+          { path: "tenants/:id", lazy: () => loadRoute(() => import("./pages/TenantDetail"), "TenantDetail") },
+          { path: "audit", lazy: () => loadRoute(() => import("./pages/Audit"), "Audit") },
+          { path: "usage", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
+          { path: "settings/license", lazy: () => loadRoute(() => import("./pages/settings/SettingsLicense"), "SettingsLicense") },
+          { path: "settings/lifecycle", lazy: () => loadRoute(() => import("./pages/settings/SettingsLifecycle"), "SettingsLifecycle") },
+          { path: "settings/retention", lazy: () => loadRoute(() => import("./pages/settings/SettingsRetention"), "SettingsRetention") },
+          { path: "settings/quotas", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
+          { path: "*", lazy: () => loadRoute(() => import("./pages/NotFound"), "NotFound") },
         ],
       },
     ],

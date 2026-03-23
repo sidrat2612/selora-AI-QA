@@ -3,7 +3,13 @@ import { AuditService } from '../audit/audit.service';
 import { MailerService } from '../mail/mailer.service';
 import type { AppRequest } from '../common/types';
 import { forbidden } from '../common/http-errors';
-import { getLicenseConfig, type LicensedFeature, type LicenseTier } from './license.config';
+import {
+  getLicenseConfig,
+  PROTECTED_LICENSE_FEATURES,
+  type LicensedFeature,
+  type LicenseConfig,
+  type LicenseTier,
+} from './license.config';
 
 type LicenseStatus = {
   enforcementEnabled: boolean;
@@ -23,19 +29,27 @@ export class LicenseService {
     private readonly auditService: AuditService,
   ) {}
 
-  getStatus(): LicenseStatus {
-    const config = getLicenseConfig(process.env);
-    const commercialUseAllowed =
-      !config.enforcementEnabled || (config.tier === 'commercial' && Boolean(config.key));
+  private getConfig(): LicenseConfig {
+    return getLicenseConfig(process.env);
+  }
 
+  private buildStatus(config: LicenseConfig): LicenseStatus {
     return {
       enforcementEnabled: config.enforcementEnabled,
       tier: config.tier,
-      commercialUseAllowed,
+      commercialUseAllowed: !config.enforcementEnabled || this.hasCommercialAccess(config),
       licensedTo: config.licensedTo,
       alertEmailConfigured: Boolean(config.alertEmail),
-      protectedFeatures: ['github_integration', 'testrail_integration', 'artifact_publication'],
+      protectedFeatures: [...PROTECTED_LICENSE_FEATURES],
     };
+  }
+
+  private hasCommercialAccess(config: LicenseConfig): boolean {
+    return config.tier === 'commercial' && Boolean(config.key);
+  }
+
+  getStatus(): LicenseStatus {
+    return this.buildStatus(this.getConfig());
   }
 
   assertFeatureAllowed(feature: LicensedFeature) {
@@ -60,7 +74,8 @@ export class LicenseService {
   }
 
   async notifyBlockedFeatureAttempt(feature: LicensedFeature, request: AppRequest) {
-    const status = this.getStatus();
+    const config = this.getConfig();
+    const status = this.buildStatus(config);
     const auth = request.auth;
 
     const metadata = {
@@ -89,10 +104,10 @@ export class LicenseService {
       });
     }
 
-    if (status.alertEmailConfigured) {
+    if (config.alertEmail) {
       try {
         await this.mailerService.sendLicenseComplianceAlert({
-          to: getLicenseConfig(process.env).alertEmail as string,
+          to: config.alertEmail,
           feature,
           requestPath: request.originalUrl,
           requestMethod: request.method,

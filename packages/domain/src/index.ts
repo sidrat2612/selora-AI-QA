@@ -46,6 +46,22 @@ export const RunStatus = {
 
 export type RunStatus = (typeof RunStatus)[keyof typeof RunStatus];
 
+export const LicenseTier = {
+  EVALUATION: 'evaluation',
+  COMMERCIAL: 'commercial',
+} as const;
+
+export type LicenseTier = (typeof LicenseTier)[keyof typeof LicenseTier];
+
+export type LicenseStatus = {
+  enforcementEnabled: boolean;
+  tier: LicenseTier;
+  commercialUseAllowed: boolean;
+  licensedTo: string | null;
+  alertEmailConfigured: boolean;
+  protectedFeatures: string[];
+};
+
 export function isAdminRole(role: MembershipRole): boolean {
   return role === MembershipRole.PLATFORM_ADMIN || role === MembershipRole.TENANT_ADMIN;
 }

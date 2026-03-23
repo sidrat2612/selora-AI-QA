@@ -18,7 +18,8 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@selora/domain": ["../../packages/domain/src/index.ts"]
     }
   },
   "include": ["src"],

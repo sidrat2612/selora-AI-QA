@@ -5,9 +5,10 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { CheckCircle2, XCircle, Save, ShieldAlert, TestTube2 } from "lucide-react";
-import type { LicenseStatus } from "../../lib/api-client";
+import { CheckCircle2, XCircle, Save, TestTube2 } from "lucide-react";
+import type { LicenseStatus } from "@selora/domain";
+import { isCommercialFeatureBlocked } from "../../../lib/license";
+import { CommercialLicenseAlert } from "./CommercialLicenseAlert";
 
 type TestRailIntegrationProps = {
   licenseStatus?: LicenseStatus | null;
@@ -21,9 +22,7 @@ export function TestRailIntegration({ licenseStatus }: TestRailIntegrationProps)
   const [createRuns, setCreateRuns] = useState(true);
   const [updateCases, setUpdateCases] = useState(true);
 
-  const isLicenseBlocked = Boolean(
-    licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
-  );
+  const isLicenseBlocked = isCommercialFeatureBlocked(licenseStatus);
 
   const handleConnect = () => {
     if (isLicenseBlocked) return;
@@ -65,13 +64,9 @@ export function TestRailIntegration({ licenseStatus }: TestRailIntegrationProps)
 
         <div className="space-y-4">
           {isLicenseBlocked && (
-            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-              <ShieldAlert className="h-4 w-4 text-amber-700" />
-              <AlertTitle>Commercial license required</AlertTitle>
-              <AlertDescription className="text-amber-800">
-                TestRail integration is only available with a commercial Selora license. Enable a commercial license to sync suites, validate connections, and publish run results.
-              </AlertDescription>
-            </Alert>
+            <CommercialLicenseAlert>
+              TestRail integration is only available with a commercial Selora license. Enable a commercial license to sync suites, validate connections, and publish run results.
+            </CommercialLicenseAlert>
           )}
 
           {/* Enable Integration */}
