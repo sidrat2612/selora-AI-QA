@@ -29,12 +29,6 @@ type PermissionFlags = {
   isReadOnly: boolean;
 };
 
-function normalizeRole(role: MembershipRole): MembershipRole {
-  if (role === MembershipRole.WORKSPACE_OPERATOR) return MembershipRole.TENANT_OPERATOR;
-  if (role === MembershipRole.WORKSPACE_VIEWER) return MembershipRole.TENANT_VIEWER;
-  return role;
-}
-
 function computePermissions(role: MembershipRole): PermissionFlags {
   switch (role) {
     case MembershipRole.PLATFORM_ADMIN:
@@ -501,9 +495,9 @@ export class AuthService {
     // Compute the effective role: prefer the active membership's role,
     // fall back to the highest tenant-level role the user has.
     const effectiveRole: MembershipRole | undefined = activeMembership
-      ? normalizeRole(activeMembership.role)
+      ? activeMembership.role
       : (auth.user.memberships[0]?.role
-          ? normalizeRole(auth.user.memberships[0].role)
+          ? auth.user.memberships[0].role
           : undefined);
 
     const permissions = effectiveRole ? computePermissions(effectiveRole) : null;

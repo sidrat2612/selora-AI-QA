@@ -109,8 +109,6 @@ export function SettingsMembers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="workspace_viewer">Workspace Viewer</SelectItem>
-                    <SelectItem value="workspace_operator">Workspace Operator</SelectItem>
                     <SelectItem value="tenant_viewer">Tenant Viewer</SelectItem>
                     <SelectItem value="tenant_operator">Tenant Operator</SelectItem>
                     <SelectItem value="tenant_admin">Tenant Admin</SelectItem>

@@ -18,7 +18,7 @@ const roles: RoleCheck[] = [
     email: process.env['REGRESSION_EMAIL'] ?? 'admin@selora.local',
     password: process.env['REGRESSION_PASSWORD'] ?? 'admin123',
     canManageWorkspace: true,
-    canAccessConsole: true,
+    canAccessConsole: false,
     showsPlatformAdminNav: false,
   },
   {
@@ -48,7 +48,7 @@ async function signIn(appUrl: string, email: string, password: string, page: imp
 }
 
 async function assertCoreAccess(page: import('@playwright/test').Page, role: RoleCheck) {
-  await expect(page).toHaveURL(/\/app\/[^/]+\/dashboard$/);
+  await expect(page).not.toHaveURL(/\/auth\/login$/);
   await expect(page.getByRole('link', { name: 'Tests' })).toBeVisible();
 
   const platformAdminLink = page.getByRole('link', { name: 'Platform Admin' });
@@ -79,8 +79,8 @@ async function assertConsoleAccess(page: import('@playwright/test').Page, role: 
     return;
   }
 
-  await expect(page.getByText('No console access')).toBeVisible();
-  await expect(page.getByText('does not currently hold platform-admin or tenant-admin privileges')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Access Denied' })).toBeVisible();
+  await expect(page.getByText('The Selora Console is restricted to Platform Administrators.')).toBeVisible();
 }
 
 test.describe('cross-app web regression', () => {

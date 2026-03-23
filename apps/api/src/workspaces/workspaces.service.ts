@@ -695,34 +695,6 @@ export class WorkspacesService {
   ) {
     const actorRole = this.getMembershipManagementRole(auth, tenantId, workspaceId);
 
-    if (
-      actorRole === MembershipRole.TENANT_OPERATOR ||
-      actorRole === MembershipRole.WORKSPACE_OPERATOR
-    ) {
-      const assignsWorkspaceRole =
-        nextRole === MembershipRole.TENANT_OPERATOR ||
-        nextRole === MembershipRole.TENANT_VIEWER ||
-        nextRole === MembershipRole.WORKSPACE_OPERATOR ||
-        nextRole === MembershipRole.WORKSPACE_VIEWER;
-      if (!assignsWorkspaceRole) {
-        throw forbidden(
-          'ROLE_ASSIGNMENT_FORBIDDEN',
-          'Operators can only assign non-admin workspace access roles.',
-        );
-      }
-
-      if (
-        existingMembership &&
-        (existingMembership.role === MembershipRole.PLATFORM_ADMIN ||
-          existingMembership.role === MembershipRole.TENANT_ADMIN)
-      ) {
-        throw forbidden(
-          'ROLE_ASSIGNMENT_FORBIDDEN',
-          'Workspace operators cannot modify elevated memberships.',
-        );
-      }
-    }
-
     if (actorRole === MembershipRole.TENANT_ADMIN && nextRole === MembershipRole.PLATFORM_ADMIN) {
       throw forbidden(
         'ROLE_ASSIGNMENT_FORBIDDEN',
@@ -760,15 +732,6 @@ export class WorkspacesService {
       )
     ) {
       return MembershipRole.TENANT_OPERATOR;
-    }
-
-    if (
-      activeMemberships.some(
-        (membership) =>
-          membership.workspaceId === workspaceId && membership.role === MembershipRole.WORKSPACE_OPERATOR,
-      )
-    ) {
-      return MembershipRole.WORKSPACE_OPERATOR;
     }
 
     throw forbidden('ROLE_ASSIGNMENT_FORBIDDEN', 'You do not have permission to manage memberships.');

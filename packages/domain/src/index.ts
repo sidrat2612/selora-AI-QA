@@ -9,8 +9,6 @@ export const MembershipRole = {
   TENANT_ADMIN: 'TENANT_ADMIN',
   TENANT_OPERATOR: 'TENANT_OPERATOR',
   TENANT_VIEWER: 'TENANT_VIEWER',
-  WORKSPACE_OPERATOR: 'WORKSPACE_OPERATOR',
-  WORKSPACE_VIEWER: 'WORKSPACE_VIEWER',
 } as const;
 
 export type MembershipRole = (typeof MembershipRole)[keyof typeof MembershipRole];
@@ -69,16 +67,14 @@ export function isAdminRole(role: MembershipRole): boolean {
 export function canManageWorkspace(role: MembershipRole): boolean {
   return (
     isAdminRole(role) ||
-    role === MembershipRole.TENANT_OPERATOR ||
-    role === MembershipRole.WORKSPACE_OPERATOR
+    role === MembershipRole.TENANT_OPERATOR
   );
 }
 
 export function canViewWorkspace(role: MembershipRole): boolean {
   return (
     canManageWorkspace(role) ||
-    role === MembershipRole.TENANT_VIEWER ||
-    role === MembershipRole.WORKSPACE_VIEWER
+    role === MembershipRole.TENANT_VIEWER
   );
 }
 
@@ -90,10 +86,6 @@ export function canViewWorkspace(role: MembershipRole): boolean {
  *   TENANT_ADMIN    → Company Admin   (core app, full governance)
  *   TENANT_OPERATOR → Company Operator(core app, authoring + execution)
  *   TENANT_VIEWER   → Read-only       (core app, view only)
- *
- * WORKSPACE_OPERATOR/WORKSPACE_VIEWER are treated as their tenant-wide
- * equivalents for backward-compat: WS_OPERATOR → TENANT_OPERATOR semantics,
- * WS_VIEWER → TENANT_VIEWER semantics.
  */
 
 export type PermissionFlags = {
@@ -108,14 +100,11 @@ export type PermissionFlags = {
 };
 
 export function computePermissions(role: MembershipRole): PermissionFlags {
-  // Normalize deprecated workspace-scoped roles to tenant equivalents
-  const effective = normalizeRole(role);
-
-  const isSeloraAdmin = effective === MembershipRole.PLATFORM_ADMIN;
-  const isCompanyAdmin = effective === MembershipRole.TENANT_ADMIN;
-  const isCompanyOperator = effective === MembershipRole.TENANT_OPERATOR;
+  const isSeloraAdmin = role === MembershipRole.PLATFORM_ADMIN;
+  const isCompanyAdmin = role === MembershipRole.TENANT_ADMIN;
+  const isCompanyOperator = role === MembershipRole.TENANT_OPERATOR;
   const isReadOnly =
-    effective === MembershipRole.TENANT_VIEWER && !isSeloraAdmin && !isCompanyAdmin;
+    role === MembershipRole.TENANT_VIEWER && !isSeloraAdmin && !isCompanyAdmin;
 
   return {
     isSeloraAdmin,
@@ -127,12 +116,6 @@ export function computePermissions(role: MembershipRole): PermissionFlags {
     canOperateRuns: isCompanyAdmin || isCompanyOperator,
     isReadOnly,
   };
-}
-
-export function normalizeRole(role: MembershipRole): MembershipRole {
-  if (role === MembershipRole.WORKSPACE_OPERATOR) return MembershipRole.TENANT_OPERATOR;
-  if (role === MembershipRole.WORKSPACE_VIEWER) return MembershipRole.TENANT_VIEWER;
-  return role;
 }
 
 type EncryptedSecretPayload = {

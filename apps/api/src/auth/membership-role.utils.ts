@@ -11,9 +11,7 @@ const ROLE_PRECEDENCE: MembershipRole[] = [
   MembershipRole.PLATFORM_ADMIN,
   MembershipRole.TENANT_ADMIN,
   MembershipRole.TENANT_OPERATOR,
-  MembershipRole.WORKSPACE_OPERATOR,
   MembershipRole.TENANT_VIEWER,
-  MembershipRole.WORKSPACE_VIEWER,
 ];
 
 const TENANT_WIDE_ROLES = new Set<MembershipRole>([
@@ -30,16 +28,14 @@ export function canManageWorkspaceRole(role: MembershipRole) {
   return (
     role === MembershipRole.PLATFORM_ADMIN ||
     role === MembershipRole.TENANT_ADMIN ||
-    role === MembershipRole.TENANT_OPERATOR ||
-    role === MembershipRole.WORKSPACE_OPERATOR
+    role === MembershipRole.TENANT_OPERATOR
   );
 }
 
 export function canViewWorkspaceRole(role: MembershipRole) {
   return (
     canManageWorkspaceRole(role) ||
-    role === MembershipRole.TENANT_VIEWER ||
-    role === MembershipRole.WORKSPACE_VIEWER
+    role === MembershipRole.TENANT_VIEWER
   );
 }
 
@@ -81,11 +77,7 @@ export function roleSatisfiesRequirement(actualRole: MembershipRole, requiredRol
       return actualRole === MembershipRole.PLATFORM_ADMIN || actualRole === MembershipRole.TENANT_ADMIN;
     case MembershipRole.TENANT_OPERATOR:
       return canManageWorkspaceRole(actualRole);
-    case MembershipRole.WORKSPACE_OPERATOR:
-      return canManageWorkspaceRole(actualRole);
     case MembershipRole.TENANT_VIEWER:
-      return canViewWorkspaceRole(actualRole);
-    case MembershipRole.WORKSPACE_VIEWER:
       return canViewWorkspaceRole(actualRole);
     default:
       return false;

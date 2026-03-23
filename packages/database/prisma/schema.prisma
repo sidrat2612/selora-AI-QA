@@ -123,8 +123,6 @@ enum MembershipRole {
   TENANT_ADMIN
   TENANT_OPERATOR
   TENANT_VIEWER
-  WORKSPACE_OPERATOR
-  WORKSPACE_VIEWER
 }
 
 enum MembershipStatus {
