@@ -4,7 +4,7 @@ const coreAppUrl = process.env['CORE_APP_URL'] ?? 'http://localhost:3001';
 const consoleAppUrl = process.env['CONSOLE_APP_URL'] ?? 'http://localhost:3002';
 
 type RoleCheck = {
-  name: 'admin' | 'operator' | 'viewer';
+  name: 'admin' | 'operator' | 'viewer' | 'platform-admin';
   email: string;
   password: string;
   canManageWorkspace: boolean;
@@ -36,6 +36,14 @@ const roles: RoleCheck[] = [
     canManageWorkspace: false,
     canAccessConsole: false,
     showsPlatformAdminNav: false,
+  },
+  {
+    name: 'platform-admin',
+    email: process.env['REGRESSION_PLATFORM_EMAIL'] ?? 'platform@selora.local',
+    password: process.env['REGRESSION_PLATFORM_PASSWORD'] ?? 'platform123',
+    canManageWorkspace: true,
+    canAccessConsole: true,
+    showsPlatformAdminNav: true,
   },
 ];
 
@@ -73,9 +81,9 @@ async function assertConsoleAccess(page: import('@playwright/test').Page, role: 
   await page.goto(`${consoleAppUrl}/`, { waitUntil: 'networkidle' });
 
   if (role.canAccessConsole) {
-    await expect(page.getByRole('heading', { name: 'Central Console' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Companies', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Browse companies' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Platform Overview' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Tenants', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Usage & Quotas', exact: true })).toBeVisible();
     return;
   }
 
