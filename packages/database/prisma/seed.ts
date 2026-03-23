@@ -126,6 +126,51 @@ async function main() {
   });
   console.log(`  Operator User: ${operatorUser.email} (${operatorUser.id})`);
 
+  const viewerPasswordHash = await bcrypt.hash('viewer123', 12);
+  const viewerUser = await prisma.user.upsert({
+    where: { email: 'viewer@selora.local' },
+    update: {
+      name: 'Dev Viewer',
+      passwordHash: viewerPasswordHash,
+      passwordVersion: 1,
+      emailVerifiedAt: new Date(),
+      status: 'ACTIVE',
+    },
+    create: {
+      id: randomUUID(),
+      email: 'viewer@selora.local',
+      name: 'Dev Viewer',
+      passwordHash: viewerPasswordHash,
+      passwordVersion: 1,
+      emailVerifiedAt: new Date(),
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`  Viewer User: ${viewerUser.email} (${viewerUser.id})`);
+
+  // ─── Platform Admin User ───
+  const platformPasswordHash = await bcrypt.hash('platform123', 12);
+  const platformUser = await prisma.user.upsert({
+    where: { email: 'platform@selora.local' },
+    update: {
+      name: 'Dev Platform Admin',
+      passwordHash: platformPasswordHash,
+      passwordVersion: 1,
+      emailVerifiedAt: new Date(),
+      status: 'ACTIVE',
+    },
+    create: {
+      id: randomUUID(),
+      email: 'platform@selora.local',
+      name: 'Dev Platform Admin',
+      passwordHash: platformPasswordHash,
+      passwordVersion: 1,
+      emailVerifiedAt: new Date(),
+      status: 'ACTIVE',
+    },
+  });
+  console.log(`  Platform Admin User: ${platformUser.email} (${platformUser.id})`);
+
   // ─── Memberships ───
   // Admin gets TENANT_ADMIN role (tenant-scoped)
   await prisma.membership.upsert({
@@ -151,14 +196,14 @@ async function main() {
   });
   console.log('  Membership: admin -> TENANT_ADMIN');
 
-  // Operator gets WORKSPACE_OPERATOR role
+  // Operator gets TENANT_OPERATOR role
   await prisma.membership.upsert({
     where: {
       tenantId_userId_workspaceId_role: {
         tenantId: tenant.id,
         userId: operatorUser.id,
         workspaceId: workspace.id,
-        role: 'WORKSPACE_OPERATOR',
+        role: 'TENANT_OPERATOR',
       },
     },
     update: {
@@ -169,11 +214,59 @@ async function main() {
       tenantId: tenant.id,
       workspaceId: workspace.id,
       userId: operatorUser.id,
-      role: 'WORKSPACE_OPERATOR',
+      role: 'TENANT_OPERATOR',
       status: 'ACTIVE',
     },
   });
-  console.log('  Membership: operator -> WORKSPACE_OPERATOR');
+  console.log('  Membership: operator -> TENANT_OPERATOR');
+
+  // Viewer gets TENANT_VIEWER role
+  await prisma.membership.upsert({
+    where: {
+      tenantId_userId_workspaceId_role: {
+        tenantId: tenant.id,
+        userId: viewerUser.id,
+        workspaceId: workspace.id,
+        role: 'TENANT_VIEWER',
+      },
+    },
+    update: {
+      status: 'ACTIVE',
+    },
+    create: {
+      id: randomUUID(),
+      tenantId: tenant.id,
+      workspaceId: workspace.id,
+      userId: viewerUser.id,
+      role: 'TENANT_VIEWER',
+      status: 'ACTIVE',
+    },
+  });
+  console.log('  Membership: viewer -> TENANT_VIEWER');
+
+  // Platform Admin gets PLATFORM_ADMIN role
+  await prisma.membership.upsert({
+    where: {
+      tenantId_userId_workspaceId_role: {
+        tenantId: tenant.id,
+        userId: platformUser.id,
+        workspaceId: workspace.id,
+        role: 'PLATFORM_ADMIN',
+      },
+    },
+    update: {
+      status: 'ACTIVE',
+    },
+    create: {
+      id: randomUUID(),
+      tenantId: tenant.id,
+      workspaceId: workspace.id,
+      userId: platformUser.id,
+      role: 'PLATFORM_ADMIN',
+      status: 'ACTIVE',
+    },
+  });
+  console.log('  Membership: platform -> PLATFORM_ADMIN');
 
   // ─── Default Environment ───
   const env = await prisma.environment.upsert({

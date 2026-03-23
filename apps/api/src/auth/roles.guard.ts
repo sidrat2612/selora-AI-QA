@@ -4,6 +4,7 @@ import type { MembershipRole } from '@prisma/client';
 import { forbidden } from '../common/http-errors';
 import type { AppRequest } from '../common/types';
 import { REQUIRED_ROLES_KEY } from './roles.decorator';
+import { roleSatisfiesRequirement } from './membership-role.utils';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -20,7 +21,10 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AppRequest>();
-    if (!request.resourceRole || !requiredRoles.includes(request.resourceRole)) {
+    if (
+      !request.resourceRole ||
+      !requiredRoles.some((requiredRole) => roleSatisfiesRequirement(request.resourceRole as MembershipRole, requiredRole))
+    ) {
       throw forbidden('ROLE_REQUIRED', 'You do not have the required role for this action.');
     }
 

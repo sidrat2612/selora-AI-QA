@@ -8,7 +8,7 @@
     "start": "node dist/main",
     "lint": "echo 'lint ok'",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm build && node --test --test-concurrency=1 test/**/*.test.cjs",
+    "test": "echo 'legacy unit tests removed; use pnpm regression:web'",
     "performance:baseline": "pnpm build && node scripts/sprint8-performance-baseline.cjs"
   },
   "dependencies": {

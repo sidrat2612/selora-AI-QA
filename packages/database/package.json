@@ -26,7 +26,7 @@
     "db:studio": "prisma studio",
     "db:clean:dev": "tsx prisma/cleanup-dev-data.ts",
     "db:backfill:suites": "tsx prisma/backfill-automation-suites.ts",
-    "regression:smoke": "tsx prisma/regression-smoke.ts",
+    "regression:smoke": "echo 'legacy smoke removed; use pnpm regression:web'",
     "db:seed": "prisma db seed"
   },
   "prisma": {

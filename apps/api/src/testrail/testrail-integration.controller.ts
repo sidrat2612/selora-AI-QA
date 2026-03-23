@@ -18,7 +18,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async upsertIntegration(
     @Param('workspaceId') workspaceId: string,
@@ -45,7 +44,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async validateIntegration(
     @Param('workspaceId') workspaceId: string,
@@ -70,7 +68,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async deleteIntegration(
     @Param('workspaceId') workspaceId: string,
@@ -95,7 +92,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async syncIntegration(
     @Param('workspaceId') workspaceId: string,
@@ -120,7 +116,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async upsertCaseLink(
     @Param('workspaceId') workspaceId: string,
@@ -149,7 +144,6 @@ export class TestRailIntegrationController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
   )
   async retryCaseLink(
     @Param('workspaceId') workspaceId: string,

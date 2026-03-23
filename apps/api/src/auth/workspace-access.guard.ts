@@ -1,8 +1,9 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { MembershipRole, MembershipStatus, TenantStatus, WorkspaceStatus } from '@prisma/client';
+import { TenantStatus, WorkspaceStatus } from '@prisma/client';
 import { forbidden, notFound } from '../common/http-errors';
 import type { AppRequest } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
+import { resolveWorkspaceRole } from './membership-role.utils';
 
 @Injectable()
 export class WorkspaceAccessGuard implements CanActivate {
@@ -33,25 +34,8 @@ export class WorkspaceAccessGuard implements CanActivate {
       throw notFound('WORKSPACE_NOT_FOUND', 'Workspace was not found.');
     }
 
-    const platformMembership = auth.user.memberships.find(
-      (membership) =>
-        membership.status === MembershipStatus.ACTIVE && membership.role === MembershipRole.PLATFORM_ADMIN,
-    );
-
-    const tenantAdminMembership = auth.user.memberships.find(
-      (membership) =>
-        membership.status === MembershipStatus.ACTIVE &&
-        membership.tenantId === workspace.tenantId &&
-        membership.role === MembershipRole.TENANT_ADMIN,
-    );
-
-    const workspaceMembership = auth.user.memberships.find(
-      (membership) =>
-        membership.status === MembershipStatus.ACTIVE && membership.workspaceId === workspaceId,
-    );
-
-    const effectiveMembership = platformMembership ?? tenantAdminMembership ?? workspaceMembership;
-    if (!effectiveMembership) {
+    const effectiveRole = resolveWorkspaceRole(auth.user.memberships, workspace.tenantId, workspaceId);
+    if (!effectiveRole) {
       throw forbidden('WORKSPACE_ACCESS_DENIED', 'You do not have access to this workspace.');
     }
 
@@ -79,7 +63,7 @@ export class WorkspaceAccessGuard implements CanActivate {
 
     request.resourceWorkspaceId = workspaceId;
     request.resourceTenantId = workspace.tenantId;
-    request.resourceRole = effectiveMembership.role;
+    request.resourceRole = effectiveRole;
     return true;
   }
 

@@ -1,3 +1,4 @@
+// force-rebuild
 import {
   MembershipRole,
   MembershipStatus,
@@ -14,6 +15,42 @@ import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailerService } from '../mail/mailer.service';
+
+// ─── Permission helpers (inlined from @selora/domain) ────────────────────────
+
+type PermissionFlags = {
+  isSeloraAdmin: boolean;
+  canManageCompany: boolean;
+  canManageMembers: boolean;
+  canManageIntegrations: boolean;
+  canManageEnvironments: boolean;
+  canAuthorAutomation: boolean;
+  canOperateRuns: boolean;
+  isReadOnly: boolean;
+};
+
+function normalizeRole(role: MembershipRole): MembershipRole {
+  if (role === MembershipRole.WORKSPACE_OPERATOR) return MembershipRole.TENANT_OPERATOR;
+  if (role === MembershipRole.WORKSPACE_VIEWER) return MembershipRole.TENANT_VIEWER;
+  return role;
+}
+
+function computePermissions(role: MembershipRole): PermissionFlags {
+  switch (role) {
+    case MembershipRole.PLATFORM_ADMIN:
+      return { isSeloraAdmin: true, canManageCompany: true, canManageMembers: true, canManageIntegrations: true, canManageEnvironments: true, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
+    case MembershipRole.TENANT_ADMIN:
+      return { isSeloraAdmin: false, canManageCompany: true, canManageMembers: true, canManageIntegrations: true, canManageEnvironments: true, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
+    case MembershipRole.TENANT_OPERATOR:
+      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
+    case MembershipRole.TENANT_VIEWER:
+      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: false, canOperateRuns: false, isReadOnly: true };
+    default:
+      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: false, canOperateRuns: false, isReadOnly: true };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24;
 const SESSION_IDLE_TTL_SECONDS = 60 * 60 * 8;
@@ -461,6 +498,16 @@ export class AuthService {
       auth.user.memberships.find((membership) => membership.workspaceId !== null) ??
       null;
 
+    // Compute the effective role: prefer the active membership's role,
+    // fall back to the highest tenant-level role the user has.
+    const effectiveRole: MembershipRole | undefined = activeMembership
+      ? normalizeRole(activeMembership.role)
+      : (auth.user.memberships[0]?.role
+          ? normalizeRole(auth.user.memberships[0].role)
+          : undefined);
+
+    const permissions = effectiveRole ? computePermissions(effectiveRole) : null;
+
     return {
       user: {
         id: auth.user.id,
@@ -468,8 +515,9 @@ export class AuthService {
         name: auth.user.name,
         status: auth.user.status,
         emailVerifiedAt: auth.user.emailVerifiedAt,
+        memberships: auth.user.memberships,
       },
-      memberships: auth.user.memberships,
+      permissions,
       activeWorkspace: activeMembership
         ? {
             id: activeMembership.workspaceId,

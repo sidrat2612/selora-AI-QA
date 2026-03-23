@@ -69,11 +69,7 @@ export class WorkspacesController {
 
   @Post('workspaces/:workspaceId/memberships')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async createMembership(
     @Param('workspaceId') workspaceId: string,
     @Body() body: Record<string, unknown>,
@@ -94,11 +90,7 @@ export class WorkspacesController {
 
   @Patch('workspaces/:workspaceId/memberships/:membershipId')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async updateMembership(
     @Param('workspaceId') workspaceId: string,
     @Param('membershipId') membershipId: string,
@@ -121,11 +113,7 @@ export class WorkspacesController {
 
   @Delete('workspaces/:workspaceId/memberships/:membershipId')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async deleteMembership(
     @Param('workspaceId') workspaceId: string,
     @Param('membershipId') membershipId: string,
@@ -154,11 +142,7 @@ export class WorkspacesController {
 
   @Post('workspaces/:workspaceId/environments')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async createEnvironment(
     @Param('workspaceId') workspaceId: string,
     @Body() body: Record<string, unknown>,
@@ -179,11 +163,7 @@ export class WorkspacesController {
 
   @Patch('workspaces/:workspaceId/environments/:environmentId')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async updateEnvironment(
     @Param('workspaceId') workspaceId: string,
     @Param('environmentId') environmentId: string,
@@ -214,11 +194,7 @@ export class WorkspacesController {
 
   @Patch('workspaces/:workspaceId/settings/retention')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async updateRetention(
     @Param('workspaceId') workspaceId: string,
     @Body() body: Record<string, unknown>,
@@ -239,11 +215,7 @@ export class WorkspacesController {
 
   @Post('workspaces/:workspaceId/environments/:environmentId/clone')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async cloneEnvironment(
     @Param('workspaceId') workspaceId: string,
     @Param('environmentId') environmentId: string,
@@ -266,11 +238,7 @@ export class WorkspacesController {
 
   @Patch('workspaces/:workspaceId/settings')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(
-    MembershipRole.PLATFORM_ADMIN,
-    MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
-  )
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async updateWorkspaceSettings(
     @Param('workspaceId') workspaceId: string,
     @Body() body: Record<string, unknown>,

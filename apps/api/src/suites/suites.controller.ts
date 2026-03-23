@@ -35,7 +35,7 @@ export class SuitesController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async createSuite(
     @Param('workspaceId') workspaceId: string,
@@ -72,7 +72,7 @@ export class SuitesController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async updateSuite(
     @Param('workspaceId') workspaceId: string,

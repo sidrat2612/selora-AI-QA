@@ -15,7 +15,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint ok'",
-    "test": "pnpm build && node --test test/**/*.test.cjs"
+    "test": "echo 'legacy unit tests removed; use pnpm regression:web'"
   },
   "dependencies": {
     "@selora/canonical-tests": "workspace:*"

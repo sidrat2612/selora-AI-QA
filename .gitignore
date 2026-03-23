@@ -44,8 +44,8 @@ npm-debug.log*
 pnpm-debug.log*
 
 
-
+archive/
 .github/
 docs/
 infrastructure/certs
-scripts/
+scripts/.playwright-mcp/

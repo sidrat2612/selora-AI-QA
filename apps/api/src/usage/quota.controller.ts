@@ -14,7 +14,7 @@ export class QuotaController {
 
   @Get('tenants/:tenantId/quotas')
   @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
-  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN, MembershipRole.TENANT_VIEWER)
   async getTenantQuotas(
     @Param('tenantId') tenantId: string,
     @Req() request: AppRequest,

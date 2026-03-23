@@ -23,8 +23,9 @@
     "docker:logs": "docker compose logs -f",
     "docker:clean": "docker compose down -v",
     "ollama:check": "node scripts/ollama-e2e.cjs",
-    "regression:smoke": "pnpm --filter @selora/database regression:smoke",
-    "regression": "node scripts/regression.cjs",
+    "regression:web": "pnpm --filter @selora/test-validator regression:web",
+    "regression:smoke": "pnpm regression:web",
+    "regression": "pnpm regression:web",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },

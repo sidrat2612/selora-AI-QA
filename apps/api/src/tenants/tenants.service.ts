@@ -58,6 +58,7 @@ export class TenantsService {
       slug: tenant.slug,
       name: tenant.name,
       status: tenant.status,
+      createdAt: tenant.createdAt,
       suspendedAt: tenant.suspendedAt,
       archivedAt: tenant.archivedAt,
       softDeleteRequestedAt: tenant.softDeleteRequestedAt,

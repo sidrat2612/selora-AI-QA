@@ -17,6 +17,7 @@ import type { RequestAuthContext } from '../common/types';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { isTenantWideRole } from '../auth/membership-role.utils';
 import { QuotaService } from '../usage/quota.service';
 import { encryptSecretValue } from '../common/secret-crypto';
 import { ensureDefaultSuite } from '../suites/suite-defaults';
@@ -46,16 +47,20 @@ export class WorkspacesService {
   ) {}
 
   async listTenantWorkspaces(tenantId: string, auth: RequestAuthContext) {
-    const adminAccess = auth.user.memberships.some(
+    const tenantWideAccess = auth.user.memberships.some(
       (membership) =>
         membership.tenantId === tenantId &&
         membership.status === MembershipStatus.ACTIVE &&
-        (membership.role === MembershipRole.PLATFORM_ADMIN ||
-          membership.role === MembershipRole.TENANT_ADMIN),
+        isTenantWideRole(membership.role),
+    );
+
+    const platformAccess = auth.user.memberships.some(
+      (membership) =>
+        membership.status === MembershipStatus.ACTIVE && membership.role === MembershipRole.PLATFORM_ADMIN,
     );
 
     const workspaces = await this.prisma.workspace.findMany({
-      where: adminAccess
+      where: platformAccess || tenantWideAccess
         ? { tenantId }
         : {
             tenantId,
@@ -153,8 +158,24 @@ export class WorkspacesService {
   }
 
   async listMemberships(workspaceId: string) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { tenantId: true },
+    });
+
+    if (!workspace) {
+      throw notFound('WORKSPACE_NOT_FOUND', 'Workspace was not found.');
+    }
+
     return this.prisma.membership.findMany({
-      where: { workspaceId, status: { not: MembershipStatus.REVOKED } },
+      where: {
+        tenantId: workspace.tenantId,
+        status: { not: MembershipStatus.REVOKED },
+        OR: [
+          { workspaceId },
+          { role: { in: [MembershipRole.TENANT_ADMIN, MembershipRole.TENANT_OPERATOR, MembershipRole.TENANT_VIEWER] } },
+        ],
+      },
       include: { user: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -199,14 +220,20 @@ export class WorkspacesService {
     const duplicate = await this.prisma.membership.findFirst({
       where: {
         tenantId,
-        workspaceId,
         userId: user.id,
         status: { not: MembershipStatus.REVOKED },
+        ...(isTenantWideRole(role)
+          ? {
+              role: {
+                in: [MembershipRole.TENANT_ADMIN, MembershipRole.TENANT_OPERATOR, MembershipRole.TENANT_VIEWER],
+              },
+            }
+          : { workspaceId }),
       },
     });
 
     if (duplicate) {
-      throw conflict('MEMBERSHIP_EXISTS', 'A membership already exists for this user in the workspace.');
+      throw conflict('MEMBERSHIP_EXISTS', 'A membership already exists for this user in the target access scope.');
     }
 
     await this.quotaService.assertSeatAvailable(tenantId, user.id);
@@ -245,7 +272,7 @@ export class WorkspacesService {
     requestId: string,
   ) {
     const membership = await this.prisma.membership.findFirst({
-      where: { id: membershipId, workspaceId },
+      where: { id: membershipId, tenantId },
       include: { user: true },
     });
 
@@ -254,6 +281,26 @@ export class WorkspacesService {
     }
 
     const role = this.readRole(body['role']);
+    const duplicate = await this.prisma.membership.findFirst({
+      where: {
+        tenantId,
+        userId: membership.userId,
+        status: { not: MembershipStatus.REVOKED },
+        NOT: { id: membershipId },
+        ...(isTenantWideRole(role)
+          ? {
+              role: {
+                in: [MembershipRole.TENANT_ADMIN, MembershipRole.TENANT_OPERATOR, MembershipRole.TENANT_VIEWER],
+              },
+            }
+          : { workspaceId: membership.workspaceId }),
+      },
+    });
+
+    if (duplicate) {
+      throw conflict('MEMBERSHIP_EXISTS', 'A membership already exists for this user in the target access scope.');
+    }
+
     this.assertMembershipRoleAssignable(auth, tenantId, workspaceId, role, membership);
     await this.ensureNotRemovingLastAdmin(auth, tenantId, membership, role);
 
@@ -285,7 +332,7 @@ export class WorkspacesService {
     requestId: string,
   ) {
     const membership = await this.prisma.membership.findFirst({
-      where: { id: membershipId, workspaceId },
+      where: { id: membershipId, tenantId },
     });
 
     if (!membership) {
@@ -648,13 +695,19 @@ export class WorkspacesService {
   ) {
     const actorRole = this.getMembershipManagementRole(auth, tenantId, workspaceId);
 
-    if (actorRole === MembershipRole.WORKSPACE_OPERATOR) {
+    if (
+      actorRole === MembershipRole.TENANT_OPERATOR ||
+      actorRole === MembershipRole.WORKSPACE_OPERATOR
+    ) {
       const assignsWorkspaceRole =
-        nextRole === MembershipRole.WORKSPACE_OPERATOR || nextRole === MembershipRole.WORKSPACE_VIEWER;
+        nextRole === MembershipRole.TENANT_OPERATOR ||
+        nextRole === MembershipRole.TENANT_VIEWER ||
+        nextRole === MembershipRole.WORKSPACE_OPERATOR ||
+        nextRole === MembershipRole.WORKSPACE_VIEWER;
       if (!assignsWorkspaceRole) {
         throw forbidden(
           'ROLE_ASSIGNMENT_FORBIDDEN',
-          'Workspace operators can only assign workspace-scoped roles.',
+          'Operators can only assign non-admin workspace access roles.',
         );
       }
 
@@ -698,6 +751,15 @@ export class WorkspacesService {
       )
     ) {
       return MembershipRole.TENANT_ADMIN;
+    }
+
+    if (
+      activeMemberships.some(
+        (membership) =>
+          membership.tenantId === tenantId && membership.role === MembershipRole.TENANT_OPERATOR,
+      )
+    ) {
+      return MembershipRole.TENANT_OPERATOR;
     }
 
     if (

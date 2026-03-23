@@ -68,7 +68,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   @UseInterceptors(
     FileInterceptor('file', {
@@ -146,7 +146,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async generateTest(
     @Param('workspaceId') workspaceId: string,
@@ -220,7 +220,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async createRun(
     @Param('workspaceId') workspaceId: string,
@@ -245,7 +245,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async cancelRun(
     @Param('workspaceId') workspaceId: string,
@@ -284,7 +284,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async publishGeneratedArtifact(
     @Param('workspaceId') workspaceId: string,
@@ -311,7 +311,7 @@ export class RecordingsController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
   )
   async replayGeneratedArtifactPublication(
     @Param('workspaceId') workspaceId: string,

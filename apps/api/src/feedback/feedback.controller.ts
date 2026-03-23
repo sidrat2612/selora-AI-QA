@@ -47,7 +47,7 @@ export class FeedbackController {
 
   @Patch('workspaces/:workspaceId/feedback/:feedbackId')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
-  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN, MembershipRole.WORKSPACE_OPERATOR)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN, MembershipRole.TENANT_OPERATOR)
   async updateFeedback(
     @Param('workspaceId') workspaceId: string,
     @Param('feedbackId') feedbackId: string,

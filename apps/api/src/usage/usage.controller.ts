@@ -18,7 +18,8 @@ export class UsageController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
+    MembershipRole.TENANT_VIEWER,
   )
   async getWorkspaceUsage(
     @Param('workspaceId') workspaceId: string,

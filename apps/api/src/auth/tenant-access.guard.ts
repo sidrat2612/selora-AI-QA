@@ -3,6 +3,7 @@ import { MembershipRole, MembershipStatus, TenantStatus } from '@prisma/client';
 import { forbidden, notFound } from '../common/http-errors';
 import type { AppRequest } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
+import { resolveTenantRole } from './membership-role.utils';
 
 @Injectable()
 export class TenantAccessGuard implements CanActivate {
@@ -22,15 +23,9 @@ export class TenantAccessGuard implements CanActivate {
       throw notFound('TENANT_NOT_FOUND', 'Tenant was not found.');
     }
 
-    const platformMembership = auth.user.memberships.find(
-      (membership) =>
-        membership.status === MembershipStatus.ACTIVE && membership.role === MembershipRole.PLATFORM_ADMIN,
-    );
-    const tenantMembership = auth.user.memberships.find(
-      (membership) => membership.status === MembershipStatus.ACTIVE && membership.tenantId === tenantId,
-    );
+    const effectiveRole = resolveTenantRole(auth.user.memberships, tenantId);
 
-    if (!platformMembership && !tenantMembership) {
+    if (!effectiveRole) {
       throw forbidden('TENANT_ACCESS_DENIED', 'You do not have access to this tenant.');
     }
 
@@ -53,7 +48,7 @@ export class TenantAccessGuard implements CanActivate {
     }
 
     request.resourceTenantId = tenantId;
-    request.resourceRole = platformMembership?.role ?? tenantMembership?.role;
+    request.resourceRole = effectiveRole;
     return true;
   }
 

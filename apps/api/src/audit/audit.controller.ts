@@ -19,7 +19,8 @@ export class AuditController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
+    MembershipRole.TENANT_VIEWER,
   )
   async listEvents(
     @Param('workspaceId') workspaceId: string,
@@ -36,7 +37,8 @@ export class AuditController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
+    MembershipRole.TENANT_VIEWER,
   )
   async getEventTypes(
     @Param('workspaceId') workspaceId: string,
@@ -52,7 +54,8 @@ export class AuditController {
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
-    MembershipRole.WORKSPACE_OPERATOR,
+    MembershipRole.TENANT_OPERATOR,
+    MembershipRole.TENANT_VIEWER,
   )
   async exportEvents(
     @Param('workspaceId') workspaceId: string,
