@@ -437,6 +437,19 @@ export const tenants = {
     `${API_BASE}/tenants/${tenantId}/export`,
 };
 
+export type LicenseStatus = {
+  enforcementEnabled: boolean;
+  tier: "evaluation" | "commercial";
+  commercialUseAllowed: boolean;
+  licensedTo: string | null;
+  alertEmailConfigured: boolean;
+  protectedFeatures: string[];
+};
+
+export const license = {
+  getStatus: () => request<LicenseStatus>("/license/status"),
+};
+
 // ─── Usage & Quotas ──────────────────────────────────────────────────────────
 
 export type UsageData = {

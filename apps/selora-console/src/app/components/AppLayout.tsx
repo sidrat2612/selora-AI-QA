@@ -20,10 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useState } from "react";
 import { cn } from "./ui/utils";
 import { CommandPalette } from "./CommandPalette";
 import { useAuth } from "../../lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
+import { license as licenseApi } from "../../lib/api-client";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -33,6 +36,7 @@ const navigation = [
 ];
 
 const settingsNav = [
+  { name: "License", href: "/settings/license" },
   { name: "Lifecycle", href: "/settings/lifecycle" },
   { name: "Retention", href: "/settings/retention" },
   { name: "Quotas", href: "/settings/quotas" },
@@ -43,6 +47,16 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const licenseQuery = useQuery({
+    queryKey: ["license-status"],
+    queryFn: () => licenseApi.getStatus(),
+  });
+
+  const licenseStatus = licenseQuery.data;
+  const showLicenseBanner = Boolean(
+    licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
+  );
 
   const userInitials = user ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
   
@@ -183,6 +197,15 @@ export function AppLayout() {
 
         {/* Page Content */}
         <main className="p-6">
+          {showLicenseBanner && (
+            <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
+              <Shield className="h-4 w-4 text-amber-700" />
+              <AlertTitle>Evaluation license active</AlertTitle>
+              <AlertDescription className="text-amber-800">
+                This Selora instance is running in evaluation mode{licenseStatus?.licensedTo ? ` for ${licenseStatus.licensedTo}` : ""}. Premium capabilities including GitHub integration, TestRail integration, and artifact publication are blocked until a commercial license is configured.
+              </AlertDescription>
+            </Alert>
+          )}
           <Outlet />
         </main>
       </div>

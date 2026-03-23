@@ -40,6 +40,9 @@ import { TenantsController } from './tenants/tenants.controller';
 import { TenantsService } from './tenants/tenants.service';
 import { QuotaController } from './usage/quota.controller';
 import { QuotaService } from './usage/quota.service';
+import { LicenseController } from './licensing/license.controller';
+import { LicenseGuard } from './licensing/license.guard';
+import { LicenseService } from './licensing/license.service';
 import { TestRailIntegrationController } from './testrail/testrail-integration.controller';
 import { TestRailIntegrationService } from './testrail/testrail-integration.service';
 import { UsageController } from './usage/usage.controller';
@@ -73,6 +76,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     UsageController,
     QuotaController,
     RetentionCleanupController,
+    LicenseController,
   ],
   providers: [
     PrismaService,
@@ -99,6 +103,8 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     TenantsService,
     UsageMeterService,
     QuotaService,
+    LicenseService,
+    LicenseGuard,
     RequestRateLimitService,
     SessionAuthGuard,
     RolesGuard,

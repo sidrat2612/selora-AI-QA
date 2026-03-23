@@ -5,9 +5,15 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
-import { CheckCircle2, XCircle, Save, TestTube2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { CheckCircle2, XCircle, Save, ShieldAlert, TestTube2 } from "lucide-react";
+import type { LicenseStatus } from "../../lib/api-client";
 
-export function TestRailIntegration() {
+type TestRailIntegrationProps = {
+  licenseStatus?: LicenseStatus | null;
+};
+
+export function TestRailIntegration({ licenseStatus }: TestRailIntegrationProps) {
   const [enabled, setEnabled] = useState(false);
   const [connected, setConnected] = useState(false);
   const [projectId, setProjectId] = useState("");
@@ -15,11 +21,17 @@ export function TestRailIntegration() {
   const [createRuns, setCreateRuns] = useState(true);
   const [updateCases, setUpdateCases] = useState(true);
 
+  const isLicenseBlocked = Boolean(
+    licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
+  );
+
   const handleConnect = () => {
+    if (isLicenseBlocked) return;
     console.log("Connecting to TestRail...");
   };
 
   const handleSave = () => {
+    if (isLicenseBlocked) return;
     console.log("Saving TestRail integration settings...");
   };
 
@@ -52,6 +64,16 @@ export function TestRailIntegration() {
         </div>
 
         <div className="space-y-4">
+          {isLicenseBlocked && (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+              <ShieldAlert className="h-4 w-4 text-amber-700" />
+              <AlertTitle>Commercial license required</AlertTitle>
+              <AlertDescription className="text-amber-800">
+                TestRail integration is only available with a commercial Selora license. Enable a commercial license to sync suites, validate connections, and publish run results.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Enable Integration */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -60,7 +82,7 @@ export function TestRailIntegration() {
                 Sync test execution results to TestRail
               </p>
             </div>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <Switch checked={enabled} onCheckedChange={setEnabled} disabled={isLicenseBlocked} />
           </div>
 
           {enabled && (
@@ -85,6 +107,7 @@ export function TestRailIntegration() {
                       placeholder="e.g., P123"
                       value={projectId}
                       onChange={(e) => setProjectId(e.target.value)}
+                      disabled={isLicenseBlocked}
                     />
                   </div>
 
@@ -96,6 +119,7 @@ export function TestRailIntegration() {
                       placeholder="e.g., S456"
                       value={suiteId}
                       onChange={(e) => setSuiteId(e.target.value)}
+                      disabled={isLicenseBlocked}
                     />
                   </div>
 
@@ -107,7 +131,7 @@ export function TestRailIntegration() {
                         Create a new TestRail run for each execution
                       </p>
                     </div>
-                    <Switch checked={createRuns} onCheckedChange={setCreateRuns} />
+                    <Switch checked={createRuns} onCheckedChange={setCreateRuns} disabled={isLicenseBlocked} />
                   </div>
 
                   {/* Update Test Cases */}
@@ -118,7 +142,7 @@ export function TestRailIntegration() {
                         Update individual test case results in TestRail
                       </p>
                     </div>
-                    <Switch checked={updateCases} onCheckedChange={setUpdateCases} />
+                    <Switch checked={updateCases} onCheckedChange={setUpdateCases} disabled={isLicenseBlocked} />
                   </div>
                 </>
               )}
@@ -128,7 +152,7 @@ export function TestRailIntegration() {
 
         {enabled && connected && (
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={isLicenseBlocked}>
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>

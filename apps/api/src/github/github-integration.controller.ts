@@ -7,6 +7,8 @@ import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
 import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
+import { LicenseGuard } from '../licensing/license.guard';
+import { RequireLicense } from '../licensing/require-license.decorator';
 import { GitHubIntegrationService } from './github-integration.service';
 
 @Controller()
@@ -14,11 +16,12 @@ export class GitHubIntegrationController {
   constructor(private readonly githubIntegrationService: GitHubIntegrationService) {}
 
   @Patch('workspaces/:workspaceId/suites/:suiteId/github-integration')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('github_integration')
   async upsertIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -40,11 +43,12 @@ export class GitHubIntegrationController {
   }
 
   @Post('workspaces/:workspaceId/suites/:suiteId/github-integration/validate')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('github_integration')
   async validateIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -64,11 +68,12 @@ export class GitHubIntegrationController {
   }
 
   @Delete('workspaces/:workspaceId/suites/:suiteId/github-integration')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('github_integration')
   async deleteIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,

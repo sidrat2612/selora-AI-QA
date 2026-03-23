@@ -5,6 +5,7 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import {
   Select,
   SelectContent,
@@ -12,9 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Github, CheckCircle2, XCircle, Save } from "lucide-react";
+import { Github, CheckCircle2, XCircle, Save, ShieldAlert } from "lucide-react";
+import type { LicenseStatus } from "../../lib/api-client";
 
-export function GitHubIntegration() {
+type GitHubIntegrationProps = {
+  licenseStatus?: LicenseStatus | null;
+};
+
+export function GitHubIntegration({ licenseStatus }: GitHubIntegrationProps) {
   const [enabled, setEnabled] = useState(true);
   const [connected, setConnected] = useState(true);
   const [repository, setRepository] = useState("acme-corp/web-app");
@@ -22,11 +28,17 @@ export function GitHubIntegration() {
   const [triggerOn, setTriggerOn] = useState("pull_request");
   const [reportStatus, setReportStatus] = useState(true);
 
+  const isLicenseBlocked = Boolean(
+    licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
+  );
+
   const handleConnect = () => {
+    if (isLicenseBlocked) return;
     console.log("Connecting to GitHub...");
   };
 
   const handleSave = () => {
+    if (isLicenseBlocked) return;
     console.log("Saving GitHub integration settings...");
   };
 
@@ -59,6 +71,16 @@ export function GitHubIntegration() {
         </div>
 
         <div className="space-y-4">
+          {isLicenseBlocked && (
+            <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+              <ShieldAlert className="h-4 w-4 text-amber-700" />
+              <AlertTitle>Commercial license required</AlertTitle>
+              <AlertDescription className="text-amber-800">
+                GitHub integration is protected by your Selora license settings. Upgrade to a commercial license to enable repository sync, validation, and publication workflows.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Enable Integration */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
@@ -67,7 +89,7 @@ export function GitHubIntegration() {
                 Trigger test runs based on GitHub events
               </p>
             </div>
-            <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <Switch checked={enabled} onCheckedChange={setEnabled} disabled={isLicenseBlocked} />
           </div>
 
           {enabled && (
@@ -92,6 +114,7 @@ export function GitHubIntegration() {
                       placeholder="owner/repository"
                       value={repository}
                       onChange={(e) => setRepository(e.target.value)}
+                      disabled={isLicenseBlocked}
                     />
                   </div>
 
@@ -103,13 +126,14 @@ export function GitHubIntegration() {
                       placeholder="main"
                       value={branch}
                       onChange={(e) => setBranch(e.target.value)}
+                      disabled={isLicenseBlocked}
                     />
                   </div>
 
                   {/* Trigger Events */}
                   <div className="space-y-2">
                     <Label htmlFor="trigger">Trigger on</Label>
-                    <Select value={triggerOn} onValueChange={setTriggerOn}>
+                    <Select value={triggerOn} onValueChange={setTriggerOn} disabled={isLicenseBlocked}>
                       <SelectTrigger id="trigger">
                         <SelectValue />
                       </SelectTrigger>
@@ -130,7 +154,7 @@ export function GitHubIntegration() {
                         Post test results as GitHub status checks
                       </p>
                     </div>
-                    <Switch checked={reportStatus} onCheckedChange={setReportStatus} />
+                    <Switch checked={reportStatus} onCheckedChange={setReportStatus} disabled={isLicenseBlocked} />
                   </div>
                 </>
               )}
@@ -140,7 +164,7 @@ export function GitHubIntegration() {
 
         {enabled && connected && (
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={isLicenseBlocked}>
               <Save className="mr-2 h-4 w-4" />
               Save Changes
             </Button>

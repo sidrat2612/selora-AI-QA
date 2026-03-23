@@ -20,7 +20,7 @@ import { RolloutControls } from "../components/suite-settings/RolloutControls";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
-import { suites as suitesApi, tests as testsApi, runs as runsApi } from "../../lib/api-client";
+import { license as licenseApi, suites as suitesApi, tests as testsApi, runs as runsApi } from "../../lib/api-client";
 
 export function SuiteDetail() {
   const { id } = useParams();
@@ -43,6 +43,11 @@ export function SuiteDetail() {
     queryKey: ["runs", activeWorkspaceId, { suiteId: id }],
     queryFn: () => runsApi.list(activeWorkspaceId!, { suiteId: id }),
     enabled: !!activeWorkspaceId && !!id,
+  });
+
+  const licenseQuery = useQuery({
+    queryKey: ["license-status"],
+    queryFn: () => licenseApi.getStatus(),
   });
 
   const suite = suiteQuery.data;
@@ -213,8 +218,8 @@ export function SuiteDetail() {
             <p className="mt-1 text-sm text-slate-600">Configure execution policy and integrations</p>
             <div className="mt-6 space-y-4">
               <ExecutionPolicy />
-              <GitHubIntegration />
-              <TestRailIntegration />
+              <GitHubIntegration licenseStatus={licenseQuery.data} />
+              <TestRailIntegration licenseStatus={licenseQuery.data} />
               <RolloutControls />
             </div>
           </Card>

@@ -7,6 +7,8 @@ import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
 import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
+import { LicenseGuard } from '../licensing/license.guard';
+import { RequireLicense } from '../licensing/require-license.decorator';
 import { TestRailIntegrationService } from './testrail-integration.service';
 
 @Controller('workspaces/:workspaceId/suites/:suiteId')
@@ -14,11 +16,12 @@ export class TestRailIntegrationController {
   constructor(private readonly testRailIntegrationService: TestRailIntegrationService) {}
 
   @Patch('testrail-integration')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async upsertIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -40,11 +43,12 @@ export class TestRailIntegrationController {
   }
 
   @Post('testrail-integration/validate')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async validateIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -64,11 +68,12 @@ export class TestRailIntegrationController {
   }
 
   @Delete('testrail-integration')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async deleteIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -88,11 +93,12 @@ export class TestRailIntegrationController {
   }
 
   @Post('testrail-integration/sync')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async syncIntegration(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -112,11 +118,12 @@ export class TestRailIntegrationController {
   }
 
   @Patch('testrail-links/:testId')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async upsertCaseLink(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,
@@ -140,11 +147,12 @@ export class TestRailIntegrationController {
   }
 
   @Post('testrail-links/:testId/retry')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
   )
+  @RequireLicense('testrail_integration')
   async retryCaseLink(
     @Param('workspaceId') workspaceId: string,
     @Param('suiteId') suiteId: string,

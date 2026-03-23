@@ -23,6 +23,8 @@ import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
 import { GitHubPublicationService } from '../github/github-publication.service';
 import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
+import { LicenseGuard } from '../licensing/license.guard';
+import { RequireLicense } from '../licensing/require-license.decorator';
 import { RecordingsService } from './recordings.service';
 
 type UploadedSourceFile = {
@@ -280,12 +282,13 @@ export class RecordingsController {
   }
 
   @Post('tests/:testId/generated-artifacts/:artifactId/publish')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
     MembershipRole.TENANT_OPERATOR,
   )
+  @RequireLicense('artifact_publication')
   async publishGeneratedArtifact(
     @Param('workspaceId') workspaceId: string,
     @Param('testId') testId: string,
@@ -307,12 +310,13 @@ export class RecordingsController {
   }
 
   @Post('tests/:testId/generated-artifacts/:artifactId/publication/replay')
-  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
   @RequireRoles(
     MembershipRole.PLATFORM_ADMIN,
     MembershipRole.TENANT_ADMIN,
     MembershipRole.TENANT_OPERATOR,
   )
+  @RequireLicense('artifact_publication')
   async replayGeneratedArtifactPublication(
     @Param('workspaceId') workspaceId: string,
     @Param('testId') testId: string,

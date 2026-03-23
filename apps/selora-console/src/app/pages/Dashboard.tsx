@@ -14,7 +14,7 @@ import { Link } from "react-router";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../lib/auth-context";
-import { tenants as tenantsApi, workspaces as workspacesApi, audit as auditApi, type Tenant, type Workspace } from "../../lib/api-client";
+import { license as licenseApi, tenants as tenantsApi, workspaces as workspacesApi, audit as auditApi, type Tenant, type Workspace } from "../../lib/api-client";
 import { ErrorState } from "../components/ErrorState";
 import { useMemo } from "react";
 
@@ -47,6 +47,11 @@ export function Dashboard() {
       return Object.fromEntries(entries) as Record<string, Workspace[]>;
     },
     enabled: tenantIds.length > 0,
+  });
+
+  const { data: licenseStatus } = useQuery({
+    queryKey: ["license-status"],
+    queryFn: () => licenseApi.getStatus(),
   });
 
   const totalWorkspaces = Object.values(workspacesByTenant).reduce((sum, ws) => sum + ws.length, 0);
@@ -163,6 +168,45 @@ export function Dashboard() {
           </div>
         </Card>
       </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">License Status</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Current enforcement mode for premium platform capabilities
+            </p>
+          </div>
+          <StatusBadge status={licenseStatus?.commercialUseAllowed ? "ACTIVE" : "PENDING"} />
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-sm text-slate-600">Tier</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900 capitalize">
+              {licenseStatus?.tier ?? "evaluation"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-sm text-slate-600">Licensed To</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">
+              {licenseStatus?.licensedTo ?? "Not configured"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="text-sm text-slate-600">Premium Features</p>
+            <p className="mt-1 text-lg font-semibold text-slate-900">
+              {licenseStatus?.commercialUseAllowed ? "Unlocked" : "Blocked"}
+            </p>
+          </div>
+        </div>
+        {!licenseStatus?.commercialUseAllowed && (
+          <Alert className="mt-4 border-amber-200 bg-amber-50 text-amber-900">
+            <AlertDescription className="text-amber-800">
+              Premium features are protected while this instance remains on an evaluation license. Configure a commercial license key to unlock GitHub integration, TestRail integration, and artifact publication.
+            </AlertDescription>
+          </Alert>
+        )}
+      </Card>
     </div>
   );
 }

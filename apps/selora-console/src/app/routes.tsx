@@ -5,6 +5,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { PlatformAdmin } from "./pages/PlatformAdmin";
 import { TenantDetail } from "./pages/TenantDetail";
 import { Audit } from "./pages/Audit";
+import { SettingsLicense } from "./pages/settings/SettingsLicense";
 import { SettingsLifecycle } from "./pages/settings/SettingsLifecycle";
 import { SettingsQuotas } from "./pages/settings/SettingsQuotas";
 import { SettingsRetention } from "./pages/settings/SettingsRetention";
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
           { path: "tenants/:id", Component: TenantDetail },
           { path: "audit", Component: Audit },
           { path: "usage", Component: SettingsQuotas },
+          { path: "settings/license", Component: SettingsLicense },
           { path: "settings/lifecycle", Component: SettingsLifecycle },
           { path: "settings/retention", Component: SettingsRetention },
           { path: "settings/quotas", Component: SettingsQuotas },
