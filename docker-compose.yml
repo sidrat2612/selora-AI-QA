@@ -127,12 +127,35 @@ services:
       - "${WEB_PORT:-3000}:3000"
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api/v1}
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
-      - ./apps/web/src:/app/apps/web/src
-      - ./apps/web/public:/app/apps/web/public
+      - ./apps/selora-core:/app/apps/selora-core
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  console:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/console.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${CONSOLE_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000/api/v1}
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./apps/selora-console:/app/apps/selora-console
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -10,12 +10,13 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
-COPY apps/web/package.json ./apps/web/
+COPY apps/selora-core/package.json ./apps/selora-core/
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
 # Copy source
-COPY apps/web ./apps/web
+COPY apps/selora-core ./apps/selora-core
+COPY scripts ./scripts
 COPY tsconfig.base.json ./
 
 EXPOSE 3000
-CMD ["pnpm", "--filter", "@selora/web", "dev"]
+CMD ["pnpm", "--dir", "apps/selora-core", "exec", "vite", "--host", "0.0.0.0", "--port", "3000"]

@@ -10,13 +10,13 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
-COPY apps/api ./apps/api
-COPY packages ./packages
-COPY tsconfig.base.json ./
+COPY apps/selora-console/package.json ./apps/selora-console/
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
-# Generate Prisma client
-RUN pnpm --filter @selora/database db:generate
+# Copy source
+COPY apps/selora-console ./apps/selora-console
+COPY scripts ./scripts
+COPY tsconfig.base.json ./
 
-EXPOSE 4000
-CMD ["pnpm", "--filter", "@selora/api", "dev"]
+EXPOSE 3001
+CMD ["pnpm", "--dir", "apps/selora-console", "exec", "vite", "--host", "0.0.0.0", "--port", "3001"]
