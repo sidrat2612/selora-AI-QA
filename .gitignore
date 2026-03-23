@@ -48,4 +48,5 @@ archive/
 .github/
 docs/
 infrastructure/certs
-scripts/.playwright-mcp/
+scripts/
+.playwright-mcp/
