@@ -1,7 +1,7 @@
 import { createDecipheriv, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Prisma } from '@prisma/client';
-import type { PrismaClient, RunStatus } from '@selora/database';
+import type { PrismaClient, RunStatus, ScreenshotPolicy } from '@selora/database';
 import type { TestExecutionJobData } from '@selora/queue';
 import { buildArtifactKey, getStorageConfig, putStoredObject, readStoredText } from '@selora/storage';
 import {
@@ -105,6 +105,17 @@ export async function processExecutionJob(input: {
 
 	if (!runItem) {
 		return null;
+	}
+
+	let screenshotPolicy: ScreenshotPolicy = 'ALWAYS';
+	if (input.job.suiteId) {
+		const suite = await input.prisma.automationSuite.findUnique({
+			where: { id: input.job.suiteId },
+			select: { screenshotPolicy: true },
+		});
+		if (suite?.screenshotPolicy) {
+			screenshotPolicy = suite.screenshotPolicy;
+		}
 	}
 
 	const environment = await input.prisma.environment.findFirst({
@@ -226,6 +237,7 @@ export async function processExecutionJob(input: {
 					generatedTestArtifactId: runItem.generatedTestArtifact.id,
 					execution,
 					attemptNumber: attempt + 1,
+					screenshotPolicy,
 				})),
 			);
 
@@ -363,6 +375,7 @@ async function persistExecutionArtifacts(input: {
 	generatedTestArtifactId: string;
 	execution: ValidationResult;
 	attemptNumber: number;
+	screenshotPolicy: ScreenshotPolicy;
 }) {
 	const persistedArtifacts: PersistedArtifactSummary[] = [];
 	const storageConfig = getStorageConfig();
@@ -382,6 +395,11 @@ async function persistExecutionArtifacts(input: {
 	);
 
 	for (const artifact of input.execution.artifacts ?? []) {
+		if (artifact.artifactType === 'SCREENSHOT') {
+			if (input.screenshotPolicy === 'NEVER') continue;
+			if (input.screenshotPolicy === 'ON_FAIL_ONLY' && input.execution.ok) continue;
+		}
+
 		persistedArtifacts.push(
 			await persistArtifact({
 				prisma: input.prisma,
@@ -517,6 +535,8 @@ async function finalizeRunState(input: {
 		});
 
 		if (isTerminalRunStatus(runStatus)) {
+			await rollUpTestCaseVerdicts(transaction, input.job.testRunId);
+
 			await transaction.auditEvent.create({
 				data: {
 					tenantId: input.job.tenantId,
@@ -805,6 +825,38 @@ async function readGitHubExecutionCode(input: {
 	}
 
 	return Buffer.from(encodedContent.replace(/\n/g, ''), 'base64').toString('utf8');
+}
+
+async function rollUpTestCaseVerdicts(prisma: Prisma.TransactionClient, testRunId: string) {
+	const results = await prisma.testCaseResult.findMany({
+		where: { testRunId },
+		select: {
+			id: true,
+			runItems: {
+				select: { status: true },
+			},
+		},
+	});
+
+	for (const result of results) {
+		const statuses = result.runItems.map((item) => item.status);
+
+		let verdict: 'PASSED' | 'FAILED' | 'NOT_COVERED';
+		if (statuses.length === 0) {
+			verdict = 'NOT_COVERED';
+		} else if (statuses.some((s) => s === 'FAILED' || s === 'TIMED_OUT')) {
+			verdict = 'FAILED';
+		} else if (statuses.every((s) => s === 'PASSED')) {
+			verdict = 'PASSED';
+		} else {
+			verdict = 'FAILED';
+		}
+
+		await prisma.testCaseResult.update({
+			where: { id: result.id },
+			data: { verdict },
+		});
+	}
 }
 
 async function countRunItems(prisma: Prisma.TransactionClient, testRunId: string) {

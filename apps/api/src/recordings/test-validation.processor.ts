@@ -4,7 +4,9 @@ import type { TestValidationJobData } from '@selora/queue';
 import { getStorageConfig, readStoredText } from '@selora/storage';
 import { validateGeneratedPlaywrightTest } from '@selora/test-validator';
 import { AuditService } from '../audit/audit.service';
+import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
+import { GitHubPublicationService } from '../github/github-publication.service';
 import { AIRepairQueueService } from './ai-repair.queue';
 
 @Injectable()
@@ -13,6 +15,7 @@ export class TestValidationProcessor {
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly aiRepairQueue: AIRepairQueueService,
+    private readonly githubPublicationService: GitHubPublicationService,
   ) {}
 
   async process(job: TestValidationJobData) {
@@ -81,7 +84,10 @@ export class TestValidationProcessor {
         },
       });
 
-      if (!validation.ok) {
+      if (validation.ok) {
+        // Auto-publish suite to GitHub when artifact passes validation
+        await this.tryPublishSuite(generatedArtifact.canonicalTestId, job);
+      } else {
         await this.aiRepairQueue.enqueue({
           generatedTestArtifactId: generatedArtifact.id,
           canonicalTestId: generatedArtifact.canonicalTestId,
@@ -185,5 +191,27 @@ export class TestValidationProcessor {
     }
 
     return { message: 'Unknown validation error.' };
+  }
+
+  private async tryPublishSuite(
+    canonicalTestId: string,
+    job: TestValidationJobData,
+  ) {
+    try {
+      const canonicalTest = await this.prisma.canonicalTest.findUnique({
+        where: { id: canonicalTestId },
+        select: { suiteId: true },
+      });
+      if (!canonicalTest?.suiteId) return;
+
+      await this.githubPublicationService.publishSuite(
+        canonicalTest.suiteId,
+        { user: { id: job.actorUserId } } as RequestAuthContext,
+        job.tenantId,
+        job.requestId,
+      );
+    } catch {
+      // Suite publish is best-effort — do not fail validation
+    }
   }
 }

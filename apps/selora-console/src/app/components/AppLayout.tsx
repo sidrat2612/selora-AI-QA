@@ -36,9 +36,7 @@ const navigation = [
 ];
 
 const settingsNav = [
-  { name: "License", href: "/settings/license" },
   { name: "Lifecycle", href: "/settings/lifecycle" },
-  { name: "Retention", href: "/settings/retention" },
   { name: "Quotas", href: "/settings/quotas" },
 ];
 

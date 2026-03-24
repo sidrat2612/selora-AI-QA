@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import {
   GitHubWebhookDeliveryStatus,
@@ -309,6 +309,294 @@ export class GitHubPublicationService {
     });
 
     return this.toPublicationSummary(publication);
+  }
+
+  /**
+   * Publish all READY artifacts for a suite to a single branch as a runnable
+   * Playwright project. Creates/updates `selora/{suiteSlug}/latest` with a
+   * playwright.config.ts and all spec files under `tests/`.
+   */
+  async publishSuite(
+    suiteId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Acquire a PostgreSQL session-level advisory lock keyed on the suiteId to
+      // serialise concurrent publish calls for the same suite.
+      const lockKey = this.advisoryLockKey(suiteId);
+      await this.prisma.$executeRawUnsafe('SELECT pg_advisory_lock($1)', lockKey);
+
+      try {
+        return await this.publishSuiteInner(suiteId, auth, tenantId, requestId);
+      } catch (err) {
+        if (attempt >= maxAttempts) throw err;
+        const delay = 1000 * 2 ** (attempt - 1); // 1s, 2s
+        console.warn(
+          `[github-publication] publishSuite attempt ${attempt} failed, retrying in ${delay}ms:`,
+          (err as Error).message ?? err,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      } finally {
+        await this.prisma.$executeRawUnsafe('SELECT pg_advisory_unlock($1)', lockKey).catch(() => {});
+      }
+    }
+
+    return null;
+  }
+
+  private async publishSuiteInner(
+    suiteId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const suite = await this.prisma.automationSuite.findFirst({
+      where: { id: suiteId, tenantId },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        workspaceId: true,
+        rolloutStage: true,
+        githubPublishingEnabled: true,
+      },
+    });
+
+    if (!suite) {
+      return null;
+    }
+
+    if (!suite.githubPublishingEnabled) {
+      return null;
+    }
+
+    let integration: Awaited<ReturnType<GitHubIntegrationService['getOperationalIntegrationBySuiteId']>>;
+    try {
+      integration = await this.githubIntegrationService.getOperationalIntegrationBySuiteId(suiteId);
+    } catch {
+      return null;
+    }
+
+    const { record: config, token, webhookSecret } = integration;
+    if (config.status !== 'CONNECTED' || !token || config.allowedWriteScope === 'READ_ONLY') {
+      return null;
+    }
+
+    const artifacts = await this.prisma.generatedTestArtifact.findMany({
+      where: {
+        workspaceId: suite.workspaceId,
+        canonicalTest: { suiteId, status: { not: 'ARCHIVED' } },
+        status: 'READY',
+      },
+      orderBy: { version: 'desc' },
+      distinct: ['canonicalTestId'],
+      select: {
+        id: true,
+        fileName: true,
+        storageKey: true,
+        version: true,
+        canonicalTestId: true,
+        canonicalTest: { select: { id: true, name: true } },
+      },
+    });
+
+    if (artifacts.length === 0) {
+      return null;
+    }
+
+    const suiteSlug = this.toSlug(suite.slug);
+    const branchName = `selora/${suiteSlug}/latest`;
+    const basePath = `selora/generated/${suiteSlug}`;
+
+    const baseBranchSha = await this.getBranchSha(
+      config.repoOwner,
+      config.repoName,
+      config.defaultBranch,
+      token,
+    );
+    await this.ensureBranch(config.repoOwner, config.repoName, branchName, baseBranchSha, token);
+
+    // Commit playwright.config.ts
+    const playwrightConfig = this.buildPlaywrightConfig(suiteSlug);
+    await this.upsertArtifactFile({
+      owner: config.repoOwner,
+      repo: config.repoName,
+      branchName,
+      targetPath: `${basePath}/playwright.config.ts`,
+      content: playwrightConfig,
+      commitMessage: `chore: update playwright config for ${suite.name}`,
+      token,
+    });
+
+    // Commit each artifact
+    let lastCommitSha: string | null = null;
+    for (const artifact of artifacts) {
+      const content = await this.readArtifactSource(artifact.storageKey);
+      lastCommitSha = await this.upsertArtifactFile({
+        owner: config.repoOwner,
+        repo: config.repoName,
+        branchName,
+        targetPath: `${basePath}/tests/${artifact.fileName}`,
+        content,
+        commitMessage: `publish: ${artifact.canonicalTest.name} v${artifact.version}`,
+        token,
+      });
+
+      // Upsert publication record per artifact
+      const now = new Date();
+      await this.prisma.generatedArtifactPublication.upsert({
+        where: { generatedTestArtifactId: artifact.id },
+        create: {
+          tenantId,
+          workspaceId: suite.workspaceId,
+          suiteId,
+          githubIntegrationId: config.id,
+          canonicalTestId: artifact.canonicalTestId,
+          generatedTestArtifactId: artifact.id,
+          createdByUserId: auth.user.id,
+          idempotencyKey: `suite-publish:${artifact.id}`,
+          status: PublicationStatus.PUBLISHED,
+          targetPath: `${basePath}/tests/${artifact.fileName}`,
+          branchName,
+          defaultBranch: config.defaultBranch,
+          headCommitSha: lastCommitSha,
+          lastAttemptedAt: now,
+          publishedAt: now,
+        },
+        update: {
+          suiteId,
+          githubIntegrationId: config.id,
+          canonicalTestId: artifact.canonicalTestId,
+          status: PublicationStatus.PUBLISHED,
+          targetPath: `${basePath}/tests/${artifact.fileName}`,
+          branchName,
+          defaultBranch: config.defaultBranch,
+          headCommitSha: lastCommitSha,
+          lastError: null,
+          lastAttemptedAt: now,
+        },
+      });
+    }
+
+    // Create / update a single long-lived PR for the suite
+    const shouldUsePullRequest =
+      config.pullRequestRequired || config.allowedWriteScope === 'PULL_REQUESTS';
+    const pullRequest = shouldUsePullRequest
+      ? await this.ensurePullRequest({
+          owner: config.repoOwner,
+          repo: config.repoName,
+          branchName,
+          defaultBranch: config.defaultBranch,
+          title: `Selora suite: ${suite.name}`,
+          body: [
+            `Automated suite publication for **${suite.name}**.`,
+            '',
+            `Contains ${artifacts.length} test artifact(s).`,
+            '',
+            `Branch: \`${branchName}\``,
+          ].join('\n'),
+          token,
+        })
+      : null;
+
+    // Update PR info on all publications if a PR was created
+    if (pullRequest) {
+      await this.prisma.generatedArtifactPublication.updateMany({
+        where: { branchName, suiteId },
+        data: {
+          pullRequestNumber: pullRequest.number,
+          pullRequestUrl: pullRequest.url,
+          pullRequestState: pullRequest.state,
+          mergeCommitSha: pullRequest.mergeCommitSha,
+        },
+      });
+    }
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: suite.workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'github_publication.suite_published',
+      entityType: 'automation_suite',
+      entityId: suiteId,
+      requestId,
+      metadataJson: {
+        branchName,
+        artifactCount: artifacts.length,
+        pullRequestNumber: pullRequest?.number ?? null,
+      },
+    });
+
+    return {
+      suiteId,
+      branchName,
+      artifactCount: artifacts.length,
+      pullRequestNumber: pullRequest?.number ?? null,
+      pullRequestUrl: pullRequest?.url ?? null,
+      headCommitSha: lastCommitSha,
+    };
+  }
+
+  /**
+   * Best-effort cleanup of the suite's auto-publish branch and any open PR
+   * when the GitHub integration is disconnected or the suite is archived.
+   */
+  async cleanupSuiteBranch(input: {
+    suiteSlug: string;
+    repoOwner: string;
+    repoName: string;
+    defaultBranch: string;
+    token: string;
+  }) {
+    const branchName = `selora/${this.toSlug(input.suiteSlug)}/latest`;
+
+    // Close the open PR, if any
+    try {
+      const openPull = await this.findPullRequest(
+        {
+          owner: input.repoOwner,
+          repo: input.repoName,
+          branchName,
+          defaultBranch: input.defaultBranch,
+          title: '',
+          body: '',
+          token: input.token,
+        },
+        'open',
+      );
+      if (openPull) {
+        await this.githubFetch(
+          input.repoOwner,
+          input.repoName,
+          `/pulls/${openPull.number}`,
+          input.token,
+          {
+            method: 'PATCH',
+            body: JSON.stringify({ state: 'closed' }),
+          },
+        );
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Delete the branch
+    try {
+      await this.githubFetch(
+        input.repoOwner,
+        input.repoName,
+        `/git/refs/heads/${branchName}`,
+        input.token,
+        { method: 'DELETE' },
+        true,
+      );
+    } catch {
+      // best-effort
+    }
   }
 
   async replayPublication(
@@ -1037,6 +1325,29 @@ export class GitHubPublicationService {
     return response;
   }
 
+  private buildPlaywrightConfig(suiteSlug: string) {
+    return [
+      `import { defineConfig } from '@playwright/test';`,
+      ``,
+      `export default defineConfig({`,
+      `  testDir: './tests',`,
+      `  timeout: 60_000,`,
+      `  retries: 1,`,
+      `  use: {`,
+      `    baseURL: process.env.BASE_URL ?? 'http://localhost:3000',`,
+      `    trace: 'on-first-retry',`,
+      `    screenshot: 'only-on-failure',`,
+      `  },`,
+      `  reporter: [['json', { outputFile: 'report.json' }], ['html', { open: 'never' }]],`,
+      `});`,
+      ``,
+    ].join('\n');
+  }
+
+  private buildSuiteBranchName(suiteSlug: string) {
+    return `selora/${this.toSlug(suiteSlug)}/latest`;
+  }
+
   private buildBranchName(suiteSlug: string, testName: string, version: number) {
     return `selora/${this.toSlug(suiteSlug)}/${this.toSlug(testName).slice(0, 48)}/v${version}`;
   }
@@ -1051,6 +1362,12 @@ export class GitHubPublicationService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 64);
+  }
+
+  /** Derive a stable 32-bit integer from a CUID for pg_advisory_xact_lock. */
+  private advisoryLockKey(id: string): number {
+    const hash = createHash('md5').update(`publish-suite:${id}`).digest();
+    return hash.readInt32BE(0);
   }
 
   private decodeGitHubContent(content: string) {

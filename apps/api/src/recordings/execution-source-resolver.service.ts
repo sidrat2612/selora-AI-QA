@@ -187,8 +187,10 @@ export class ExecutionSourceResolverService {
         };
       }
 
+      // For BRANCH_HEAD: prefer the suite-level publication branch (e.g. selora/{slug}/latest),
+      // then any user-requested ref, then the repo default branch.
       const branchRef =
-        input.requestedGitRef?.trim() || publication.defaultBranch || integration.defaultBranch;
+        input.requestedGitRef?.trim() || publication.branchName || publication.defaultBranch || integration.defaultBranch;
       const resolvedCommitSha = await this.resolveGitRefToCommitSha(integration, branchRef);
 
       return {

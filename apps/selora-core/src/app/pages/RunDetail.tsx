@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card } from "../components/ui/card";
@@ -14,13 +15,17 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { Progress } from "../components/ui/progress";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
+import { usePermissions } from "../../lib/auth-context";
 import { runs as runsApi } from "../../lib/api-client";
+import { toast } from "sonner";
 
 export function RunDetail() {
   const { id } = useParams();
   const { activeWorkspaceId } = useWorkspace();
+  const permissions = usePermissions();
+  const queryClient = useQueryClient();
 
   const runQuery = useQuery({
     queryKey: ["run", activeWorkspaceId, id],
@@ -37,6 +42,22 @@ export function RunDetail() {
   const runData = runQuery.data;
   const runItems = itemsQuery.data ?? [];
 
+  const cancelRunMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId || !id) throw new Error("No run selected.");
+      return runsApi.cancel(activeWorkspaceId, id);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["run", activeWorkspaceId, id] });
+      await queryClient.invalidateQueries({ queryKey: ["runs", activeWorkspaceId] });
+      toast.success("Run cancelled.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to cancel run.";
+      toast.error(message);
+    },
+  });
+
   if (!runData && runQuery.isLoading) {
     return <div className="p-8 text-center text-slate-500">Loading...</div>;
   }
@@ -47,6 +68,26 @@ export function RunDetail() {
 
   const passRate = runData.totalTests ? ((runData.passedTests ?? 0) / runData.totalTests) * 100 : 0;
   const durationStr = runData.duration != null ? `${Math.round(runData.duration / 1000)}s` : "—";
+  const canCancelRun = useMemo(
+    () => permissions.canOperateRuns && ["running", "queued", "RUNNING", "QUEUED"].includes(runData.status),
+    [permissions.canOperateRuns, runData.status],
+  );
+
+  const handleExportReport = () => {
+    const report = {
+      run: runData,
+      items: runItems,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `selora-run-${runData.id}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    toast.success("Run report exported.");
+  };
 
   return (
     <div className="space-y-6">
@@ -84,7 +125,13 @@ export function RunDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          {canCancelRun && (
+            <Button variant="outline" onClick={() => cancelRunMutation.mutate()} disabled={cancelRunMutation.isPending}>
+              <Square className="mr-2 h-4 w-4" />
+              {cancelRunMutation.isPending ? "Cancelling..." : "Cancel Run"}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExportReport}>
             <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
@@ -171,7 +218,9 @@ export function RunDetail() {
                     </TableCell>
                     <TableCell className="text-slate-600">{item.duration != null ? `${Math.round(item.duration / 1000)}s` : "—"}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">View Details</Button>
+                      <Link to={`/tests/${item.testId}`}>
+                        <Button variant="ghost" size="sm">View Details</Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

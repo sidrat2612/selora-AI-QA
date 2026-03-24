@@ -188,6 +188,7 @@ export class SuitesService {
         generatedArtifacts: generatedArtifactCount,
       },
       latestActivityAt,
+      screenshotPolicy: suite.screenshotPolicy,
       executionPolicy: {
         defaultMode: suite.executionSourcePolicy,
         allowBranchHeadExecution: suite.allowBranchHeadExecution,
@@ -379,6 +380,23 @@ export class SuitesService {
     });
 
     return this.getSuiteDetails(workspaceId, updated.id);
+  }
+
+  async deleteSuite(
+    workspaceId: string,
+    suiteId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    return this.updateSuite(
+      workspaceId,
+      suiteId,
+      { status: 'ARCHIVED' },
+      auth,
+      tenantId,
+      requestId,
+    );
   }
 
   async ensureWorkspaceDefaultSuite(workspaceId: string, tenantId: string, workspaceName?: string | null) {

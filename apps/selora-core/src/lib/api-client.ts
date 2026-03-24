@@ -155,6 +155,19 @@ export type Workspace = {
   slug: string;
   status: string;
   createdAt: string;
+  concurrentExecutionLimit?: number;
+  maxTestsPerRun?: number;
+  runCooldownSeconds?: number;
+  [key: string]: unknown;
+};
+
+export type RetentionSettings = {
+  workspaceId: string;
+  logsDays: number;
+  screenshotsDays: number;
+  videosDays: number;
+  tracesDays: number;
+  auditDays: number;
   [key: string]: unknown;
 };
 
@@ -169,9 +182,17 @@ export type Membership = {
 
 export type Environment = {
   id: string;
+  workspaceId?: string;
   name: string;
   baseUrl: string;
+  secretRef?: string;
   isDefault: boolean;
+  status?: string;
+  testTimeoutMs?: number;
+  runTimeoutMs?: number;
+  maxRetries?: number;
+  createdAt?: string;
+  updatedAt?: string;
   [key: string]: unknown;
 };
 
@@ -185,10 +206,27 @@ export const workspaces = {
   getDetails: (workspaceId: string) =>
     request<Workspace>(`/workspaces/${workspaceId}`),
 
+  updateSettings: (
+    workspaceId: string,
+    body: {
+      concurrentExecutionLimit?: number;
+      maxTestsPerRun?: number;
+      runCooldownSeconds?: number;
+    },
+  ) => request<Workspace>(`/workspaces/${workspaceId}/settings`, { method: "PATCH", body }),
+
+  getRetention: (workspaceId: string) =>
+    request<RetentionSettings>(`/workspaces/${workspaceId}/settings/retention`),
+
+  updateRetention: (
+    workspaceId: string,
+    body: Partial<Pick<RetentionSettings, "logsDays" | "screenshotsDays" | "videosDays" | "tracesDays" | "auditDays">>,
+  ) => request<RetentionSettings>(`/workspaces/${workspaceId}/settings/retention`, { method: "PATCH", body }),
+
   listMemberships: (workspaceId: string) =>
     requestList<Membership>(`/workspaces/${workspaceId}/memberships`),
 
-  createMembership: (workspaceId: string, body: { email: string; role: string }) =>
+  createMembership: (workspaceId: string, body: { name: string; email: string; role: string }) =>
     request<Membership>(`/workspaces/${workspaceId}/memberships`, { method: "POST", body }),
 
   updateMembership: (workspaceId: string, membershipId: string, body: { role: string }) =>
@@ -197,14 +235,35 @@ export const workspaces = {
   deleteMembership: (workspaceId: string, membershipId: string) =>
     request<void>(`/workspaces/${workspaceId}/memberships/${membershipId}`, { method: "DELETE" }),
 
+  resendMembershipInvite: (workspaceId: string, membershipId: string) =>
+    request<{ resent: true }>(`/workspaces/${workspaceId}/memberships/${membershipId}/resend-invite`, { method: "POST" }),
+
   listEnvironments: (workspaceId: string) =>
     requestList<Environment>(`/workspaces/${workspaceId}/environments`),
 
-  createEnvironment: (workspaceId: string, body: { name: string; baseUrl: string }) =>
+  createEnvironment: (
+    workspaceId: string,
+    body: {
+      name: string;
+      baseUrl: string;
+      secretRef: string;
+      secretValue?: string;
+      isDefault?: boolean;
+      testTimeoutMs?: number;
+      runTimeoutMs?: number;
+      maxRetries?: number;
+    },
+  ) =>
     request<Environment>(`/workspaces/${workspaceId}/environments`, { method: "POST", body }),
 
   updateEnvironment: (workspaceId: string, environmentId: string, body: Record<string, unknown>) =>
     request<Environment>(`/workspaces/${workspaceId}/environments/${environmentId}`, { method: "PATCH", body }),
+
+  updateLifecycle: (workspaceId: string, body: { status: string }) =>
+    request<Workspace>(`/workspaces/${workspaceId}/lifecycle`, { method: "PATCH", body }),
+
+  delete: (workspaceId: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}`, { method: "DELETE" }),
 };
 
 // ─── Suites ──────────────────────────────────────────────────────────────────
@@ -233,6 +292,9 @@ export const suites = {
 
   update: (workspaceId: string, suiteId: string, body: Record<string, unknown>) =>
     request<Suite>(`/workspaces/${workspaceId}/suites/${suiteId}`, { method: "PATCH", body }),
+
+  delete: (workspaceId: string, suiteId: string) =>
+    request<Suite>(`/workspaces/${workspaceId}/suites/${suiteId}`, { method: "DELETE" }),
 };
 
 // ─── Tests / Recordings ─────────────────────────────────────────────────────
@@ -241,11 +303,16 @@ export type Test = {
   id: string;
   title: string;
   status: string;
+  description?: string | null;
+  tags?: string[];
   suiteId?: string;
   suiteName?: string;
   lastRunStatus?: string;
   lastRunAt?: string;
   generatedAt?: string;
+  publicationStatus?: string | null;
+  publicationBranch?: string | null;
+  publicationPrUrl?: string | null;
   [key: string]: unknown;
 };
 
@@ -283,11 +350,130 @@ export const tests = {
   generate: (workspaceId: string, testId: string) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/tests/${testId}/generate`, { method: "POST" }),
 
+  update: (workspaceId: string, testId: string, body: Record<string, unknown>) =>
+    request<Test>(`/workspaces/${workspaceId}/tests/${testId}`, { method: "PATCH", body }),
+
   getArtifact: (workspaceId: string, testId: string, artifactId: string) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/tests/${testId}/generated-artifacts/${artifactId}`),
 
   publishArtifact: (workspaceId: string, testId: string, artifactId: string) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/tests/${testId}/generated-artifacts/${artifactId}/publish`, { method: "POST" }),
+};
+
+// ─── Business Test Cases ────────────────────────────────────────────────────
+
+export type BusinessTestCase = {
+  id: string;
+  workspaceId: string;
+  suiteId: string;
+  title: string;
+  description?: string | null;
+  format: "SIMPLE" | "STRUCTURED";
+  source: "MANUAL" | "TESTRAIL_IMPORT";
+  status: "ACTIVE" | "ARCHIVED";
+  priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  preconditions?: string | null;
+  steps?: unknown[] | null;
+  expectedResult?: string | null;
+  tags?: string[];
+  mappedScriptCount?: number;
+  mappedScripts?: {
+    mappingId: string;
+    canonicalTestId: string;
+    name: string;
+    status: string;
+  }[];
+  externalLinks?: {
+    id: string;
+    externalCaseId: string;
+    status: string;
+    title?: string | null;
+    lastSyncedAt?: string | null;
+  }[];
+  createdAt: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+};
+
+export type ScriptMapping = {
+  id: string;
+  businessTestCaseId: string;
+  canonicalTestId: string;
+  scriptName: string;
+  scriptStatus?: string;
+  createdAt: string;
+  [key: string]: unknown;
+};
+
+export const testCases = {
+  list: (workspaceId: string, suiteId: string) =>
+    request<BusinessTestCase[]>(`/workspaces/${workspaceId}/suites/${suiteId}/test-cases`),
+
+  get: (workspaceId: string, suiteId: string, testCaseId: string) =>
+    request<BusinessTestCase>(`/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}`),
+
+  create: (
+    workspaceId: string,
+    suiteId: string,
+    body: {
+      title: string;
+      description?: string;
+      format?: "SIMPLE" | "STRUCTURED";
+      priority?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+      preconditions?: string;
+      steps?: unknown[];
+      expectedResult?: string;
+      tags?: string[];
+    },
+  ) =>
+    request<BusinessTestCase>(`/workspaces/${workspaceId}/suites/${suiteId}/test-cases`, {
+      method: "POST",
+      body,
+    }),
+
+  update: (
+    workspaceId: string,
+    suiteId: string,
+    testCaseId: string,
+    body: Record<string, unknown>,
+  ) =>
+    request<BusinessTestCase>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}`,
+      { method: "PATCH", body },
+    ),
+
+  delete: (workspaceId: string, suiteId: string, testCaseId: string) =>
+    request<BusinessTestCase>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}`,
+      { method: "DELETE" },
+    ),
+
+  listMappings: (workspaceId: string, suiteId: string, testCaseId: string) =>
+    request<ScriptMapping[]>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}/mappings`,
+    ),
+
+  addMapping: (
+    workspaceId: string,
+    suiteId: string,
+    testCaseId: string,
+    body: { canonicalTestId: string },
+  ) =>
+    request<ScriptMapping>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}/mappings`,
+      { method: "POST", body },
+    ),
+
+  removeMapping: (
+    workspaceId: string,
+    suiteId: string,
+    testCaseId: string,
+    mappingId: string,
+  ) =>
+    request<{ deleted: true }>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/test-cases/${testCaseId}/mappings/${mappingId}`,
+      { method: "DELETE" },
+    ),
 };
 
 export const recordings = {
@@ -297,10 +483,11 @@ export const recordings = {
   get: (workspaceId: string, recordingId: string) =>
     request<Recording>(`/workspaces/${workspaceId}/recordings/${recordingId}`),
 
-  upload: (workspaceId: string, file: File, suiteId?: string) => {
+  upload: (workspaceId: string, file: File, suiteId?: string, canonicalTestId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
     if (suiteId) formData.append("suiteId", suiteId);
+    if (canonicalTestId) formData.append("canonicalTestId", canonicalTestId);
     return fetch(`${API_BASE}/workspaces/${workspaceId}/recordings`, {
       method: "POST",
       credentials: "include",
@@ -360,7 +547,7 @@ export const runs = {
       params: { runIdA, runIdB },
     }),
 
-  create: (workspaceId: string, body: { suiteId: string; environmentId: string }) =>
+  create: (workspaceId: string, body: { suiteId?: string; environmentId: string; testIds?: string[]; testCaseIds?: string[] }) =>
     request<Run>(`/workspaces/${workspaceId}/runs`, { method: "POST", body }),
 
   cancel: (workspaceId: string, runId: string) =>
@@ -430,6 +617,9 @@ export type Tenant = {
 };
 
 export const tenants = {
+  create: (body: { name: string; slug?: string; workspaceName?: string; workspaceSlug?: string }) =>
+    request<Tenant>(`/tenants`, { method: "POST", body }),
+
   get: (tenantId: string) => request<Tenant>(`/tenants/${tenantId}`),
 
   update: (tenantId: string, body: Record<string, unknown>) =>
@@ -507,4 +697,34 @@ export const testRailIntegration = {
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/suites/${suiteId}/testrail-integration/sync`, {
       method: "POST",
     }),
+
+  importTestCases: (workspaceId: string, suiteId: string) =>
+    request<{ importedCount: number; skippedCount: number; totalFromTestRail: number }>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/testrail-integration/import-test-cases`,
+      { method: "POST" },
+    ),
+};
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export const notifications = {
+  list: () =>
+    request<{ items: AppNotification[]; unreadCount: number }>("/notifications"),
+
+  markRead: (notificationId: string) =>
+    request<void>(`/notifications/${notificationId}/read`, { method: "PATCH" }),
+
+  markAllRead: () =>
+    request<void>("/notifications/read-all", { method: "PATCH" }),
 };

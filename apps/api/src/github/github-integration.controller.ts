@@ -1,5 +1,6 @@
-import { Controller, Delete, Param, Patch, Post, Req, Body, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, Body, UseGuards } from '@nestjs/common';
 import { MembershipRole } from '@prisma/client';
+import type { Response } from 'express';
 import { CurrentAuth } from '../auth/current-auth.decorator';
 import { RequireRoles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -10,10 +11,14 @@ import type { AppRequest } from '../common/types';
 import { LicenseGuard } from '../licensing/license.guard';
 import { RequireLicense } from '../licensing/require-license.decorator';
 import { GitHubIntegrationService } from './github-integration.service';
+import { GitHubPublicationService } from './github-publication.service';
 
 @Controller()
 export class GitHubIntegrationController {
-  constructor(private readonly githubIntegrationService: GitHubIntegrationService) {}
+  constructor(
+    private readonly githubIntegrationService: GitHubIntegrationService,
+    private readonly githubPublicationService: GitHubPublicationService,
+  ) {}
 
   @Patch('workspaces/:workspaceId/suites/:suiteId/github-integration')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
@@ -80,15 +85,51 @@ export class GitHubIntegrationController {
     @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
     @Req() request: AppRequest,
   ) {
+    const result = await this.githubIntegrationService.deleteIntegration(
+      workspaceId,
+      suiteId,
+      auth,
+      request.resourceTenantId as string,
+      request.requestId,
+    );
+
+    // Best-effort cleanup of the suite branch and PR on GitHub
+    if (result.cleanupContext) {
+      this.githubPublicationService
+        .cleanupSuiteBranch(result.cleanupContext)
+        .catch(() => {});
+    }
+
+    return success({ removed: result.removed }, { requestId: request.requestId });
+  }
+
+  @Get('workspaces/:workspaceId/suites/:suiteId/github-integration/install-url')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  @RequireLicense('github_integration')
+  async getInstallUrl(
+    @Param('workspaceId') workspaceId: string,
+    @Param('suiteId') suiteId: string,
+    @Req() request: AppRequest,
+  ) {
     return success(
-      await this.githubIntegrationService.deleteIntegration(
-        workspaceId,
-        suiteId,
-        auth,
-        request.resourceTenantId as string,
-        request.requestId,
-      ),
+      this.githubIntegrationService.buildInstallUrl(workspaceId, suiteId),
       { requestId: request.requestId },
     );
+  }
+
+  @Get('github/app/callback')
+  async handleAppCallback(
+    @Query('installation_id') installationId: string | undefined,
+    @Query('setup_action') setupAction: string | undefined,
+    @Query('state') state: string | undefined,
+    @Res() res: Response,
+  ) {
+    const redirectUrl = this.githubIntegrationService.resolveAppCallback(
+      installationId,
+      setupAction,
+      state,
+    );
+    res.redirect(redirectUrl);
   }
 }

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ArtifactType } from '@selora/database';
 import { PrismaService } from '../database/prisma.service';
 import { deleteStoredObject, getStorageConfig } from '@selora/storage';
@@ -6,10 +7,21 @@ import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class RetentionCleanupService {
+  private readonly logger = new Logger(RetentionCleanupService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
   ) {}
+
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async scheduledCleanup() {
+    this.logger.log('Scheduled retention cleanup started');
+    const summary = await this.runCleanup();
+    const totalArtifacts = summary.reduce((acc, s) => acc + s.deletedArtifacts, 0);
+    const totalAudit = summary.reduce((acc, s) => acc + s.deletedAuditEvents, 0);
+    this.logger.log(`Retention cleanup finished: ${totalArtifacts} artifacts, ${totalAudit} audit events removed across ${summary.length} workspace(s)`);
+  }
 
   async runCleanup() {
     const workspaces = await this.prisma.retentionSetting.findMany({

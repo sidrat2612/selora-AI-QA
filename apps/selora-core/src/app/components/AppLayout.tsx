@@ -23,11 +23,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "./ui/utils";
 import { CommandPalette } from "./CommandPalette";
 import { useAuth, usePermissions } from "../../lib/auth-context";
 import { useWorkspace } from "../../lib/workspace-context";
+import { notifications as notificationsApi, type AppNotification as NotifType } from "../../lib/api-client";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -55,6 +56,25 @@ export function AppLayout() {
   const { workspaceMemberships, activeWorkspaceId, setActiveWorkspaceId } = useWorkspace();
   const [commandOpen, setCommandOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState<NotifType[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await notificationsApi.list();
+      setNotifItems(data.items);
+      setUnreadCount(data.unreadCount);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const activeWs = workspaceMemberships.find(m => m.workspaceId === activeWorkspaceId);
   const userInitials = user ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
@@ -84,8 +104,6 @@ export function AppLayout() {
   };
 
   const isSettingsActive = location.pathname.startsWith("/settings");
-  const isPlatformAdminActive = location.pathname.startsWith("/platform-admin");
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
@@ -183,22 +201,6 @@ export function AppLayout() {
                 </DropdownMenu>
               )}
             </div>
-
-            {/* Platform Admin Link (role-based) */}
-            {permissions.isSeloraAdmin && (
-              <Link
-                to="/platform-admin"
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isPlatformAdminActive
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "text-slate-700 hover:bg-slate-100"
-                )}
-              >
-                <Shield className="h-5 w-5" />
-                Platform Admin
-              </Link>
-            )}
           </nav>
 
           {/* User Menu */}
@@ -254,10 +256,54 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
-            </Button>
+            <DropdownMenu open={notifOpen} onOpenChange={(open) => { setNotifOpen(open); if (open) fetchNotifications(); }}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  Notifications
+                  {unreadCount > 0 && (
+                    <button
+                      className="text-xs text-blue-600 hover:underline"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await notificationsApi.markAllRead();
+                        fetchNotifications();
+                      }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifItems.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-slate-500 text-center">No notifications</div>
+                ) : (
+                  notifItems.map((n) => (
+                    <DropdownMenuItem
+                      key={n.id}
+                      className={cn("flex flex-col items-start gap-0.5 cursor-pointer", !n.read && "bg-blue-50")}
+                      onClick={async () => {
+                        if (!n.read) {
+                          await notificationsApi.markRead(n.id);
+                          fetchNotifications();
+                        }
+                      }}
+                    >
+                      <span className="text-sm font-medium">{n.title}</span>
+                      {n.message && <span className="text-xs text-slate-500 line-clamp-2">{n.message}</span>}
+                      <span className="text-[10px] text-slate-400">{new Date(n.createdAt).toLocaleString()}</span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

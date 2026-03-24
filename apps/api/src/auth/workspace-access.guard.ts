@@ -56,7 +56,7 @@ export class WorkspaceAccessGuard implements CanActivate {
         );
       }
 
-      if (workspace.status !== WorkspaceStatus.ACTIVE) {
+      if (workspace.status !== WorkspaceStatus.ACTIVE && !this.isWorkspaceLifecycleRoute(request)) {
         throw forbidden('WORKSPACE_INACTIVE', 'Workspace changes are blocked while the workspace is not active.');
       }
     }
@@ -69,6 +69,13 @@ export class WorkspaceAccessGuard implements CanActivate {
 
   private isMutatingRequest(method: string | undefined) {
     return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+  }
+
+  private isWorkspaceLifecycleRoute(request: AppRequest) {
+    return (
+      /^\/api\/v1\/workspaces\/[^/]+\/lifecycle\/?$/.test(request.path) ||
+      (request.method === 'DELETE' && /^\/api\/v1\/workspaces\/[^/]+\/?$/.test(request.path))
+    );
   }
 
   private readRouteParam(value: string | string[] | undefined, fieldName: string) {

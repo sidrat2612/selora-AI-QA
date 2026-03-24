@@ -171,6 +171,18 @@ export class GitHubIntegrationService {
       },
     });
 
+    // Auto-configure suite for Git-based execution when integration is connected
+    if (record.status === 'CONNECTED') {
+      await this.prisma.automationSuite.update({
+        where: { id: suiteId },
+        data: {
+          executionSourcePolicy: 'BRANCH_HEAD',
+          allowBranchHeadExecution: true,
+          gitExecutionEnabled: true,
+        },
+      });
+    }
+
     return this.toIntegrationSummary(record);
   }
 
@@ -238,12 +250,31 @@ export class GitHubIntegrationService {
   ) {
     const existing = await this.prisma.gitHubSuiteIntegration.findFirst({
       where: { suiteId, workspaceId },
-      select: { id: true, repoOwner: true, repoName: true },
+      select: {
+        id: true,
+        repoOwner: true,
+        repoName: true,
+        defaultBranch: true,
+        encryptedSecretJson: true,
+        suite: { select: { slug: true } },
+      },
     });
 
     if (!existing) {
       throw notFound('GITHUB_INTEGRATION_NOT_FOUND', 'GitHub integration was not found for this suite.');
     }
+
+    // Capture cleanup context before deleting the record
+    const token = existing.encryptedSecretJson ? this.tryDecryptToken(existing.encryptedSecretJson) : null;
+    const cleanupContext = token && existing.suite
+      ? {
+          suiteSlug: existing.suite.slug,
+          repoOwner: existing.repoOwner,
+          repoName: existing.repoName,
+          defaultBranch: existing.defaultBranch,
+          token,
+        }
+      : null;
 
     await this.prisma.gitHubSuiteIntegration.delete({ where: { suiteId } });
 
@@ -262,7 +293,7 @@ export class GitHubIntegrationService {
       },
     });
 
-    return { removed: true };
+    return { removed: true, cleanupContext };
   }
 
   toIntegrationSummary(record: Prisma.GitHubSuiteIntegrationGetPayload<{ select: typeof githubIntegrationSelect }>) {
@@ -564,5 +595,52 @@ export class GitHubIntegrationService {
 
   private asRecord(value: unknown) {
     return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+  }
+
+  /* ---------- GitHub App installation flow ---------- */
+
+  buildInstallUrl(workspaceId: string, suiteId: string) {
+    const appSlug = process.env['GITHUB_APP_SLUG'];
+    if (!appSlug) {
+      throw badRequest('GITHUB_APP_NOT_CONFIGURED', 'GITHUB_APP_SLUG is not configured on this instance.');
+    }
+
+    const state = Buffer.from(JSON.stringify({ workspaceId, suiteId })).toString('base64url');
+    const installUrl = `https://github.com/apps/${encodeURIComponent(appSlug)}/installations/new?state=${state}`;
+    return { installUrl };
+  }
+
+  resolveAppCallback(
+    installationId: string | undefined,
+    setupAction: string | undefined,
+    state: string | undefined,
+  ): string {
+    const frontendOrigin = (
+      process.env['FRONTEND_PUBLIC_ORIGIN'] ??
+      process.env['NEXT_PUBLIC_APP_URL'] ??
+      'http://localhost:3000'
+    ).replace(/\/$/, '');
+
+    if (!state) {
+      return `${frontendOrigin}/settings?github_error=missing_state`;
+    }
+
+    let decoded: { workspaceId?: string; suiteId?: string };
+    try {
+      decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+    } catch {
+      return `${frontendOrigin}/settings?github_error=invalid_state`;
+    }
+
+    const { workspaceId, suiteId } = decoded;
+    if (!workspaceId || !suiteId) {
+      return `${frontendOrigin}/settings?github_error=invalid_state`;
+    }
+
+    const params = new URLSearchParams();
+    if (installationId) params.set('installation_id', installationId);
+    if (setupAction) params.set('setup_action', setupAction);
+
+    return `${frontendOrigin}/workspaces/${workspaceId}/suites/${suiteId}/settings/github?${params.toString()}`;
   }
 }

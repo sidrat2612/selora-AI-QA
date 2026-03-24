@@ -172,4 +172,30 @@ export class TestRailIntegrationController {
       { requestId: request.requestId },
     );
   }
+
+  @Post('testrail-integration/import-test-cases')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard, LicenseGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  @RequireLicense('testrail_integration')
+  async importTestCases(
+    @Param('workspaceId') workspaceId: string,
+    @Param('suiteId') suiteId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.testRailIntegrationService.importTestCases(
+        workspaceId,
+        suiteId,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
 }

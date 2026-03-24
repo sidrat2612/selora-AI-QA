@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -80,6 +81,7 @@ export class RecordingsController {
   async uploadRecording(
     @Param('workspaceId') workspaceId: string,
     @UploadedFile() file: UploadedSourceFile | undefined,
+    @Body('canonicalTestId') canonicalTestId: string | undefined,
     @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
     @Req() request: AppRequest,
   ) {
@@ -90,6 +92,7 @@ export class RecordingsController {
         auth,
         request.resourceTenantId as string,
         request.requestId,
+        canonicalTestId,
       ),
       { requestId: request.requestId },
     );
@@ -117,6 +120,33 @@ export class RecordingsController {
     return success(await this.recordingsService.getTest(workspaceId, testId), {
       requestId: request.requestId,
     });
+  }
+
+  @Patch('tests/:testId')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async updateTest(
+    @Param('workspaceId') workspaceId: string,
+    @Param('testId') testId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.recordingsService.updateTest(
+        workspaceId,
+        testId,
+        body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
   }
 
   @Get('tests/:testId/repair-attempts')

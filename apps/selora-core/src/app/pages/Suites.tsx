@@ -3,7 +3,6 @@ import { Plus, Search, MoreHorizontal, FolderKanban, FileCheck2, PlayCircle } fr
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,20 +11,98 @@ import {
 } from "../components/ui/dropdown-menu";
 import { useState } from "react";
 import { StatusBadge } from "../components/StatusBadge";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
 import { suites as suitesApi } from "../../lib/api-client";
+import { CreateRunDialog } from "../components/CreateRunDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Label } from "../components/ui/label";
+import { toast } from "sonner";
 
 export function Suites() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
+  const [selectedSuiteId, setSelectedSuiteId] = useState<string | undefined>();
+  const [suiteName, setSuiteName] = useState("");
+  const [suiteDescription, setSuiteDescription] = useState("");
   const { activeWorkspaceId } = useWorkspace();
   const permissions = usePermissions();
+  const queryClient = useQueryClient();
 
   const suitesQuery = useQuery({
     queryKey: ["suites", activeWorkspaceId],
     queryFn: () => suitesApi.list(activeWorkspaceId!),
     enabled: !!activeWorkspaceId,
+  });
+
+  const createSuiteMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return suitesApi.create(activeWorkspaceId, {
+        name: suiteName.trim(),
+        description: suiteDescription.trim() || undefined,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["suites", activeWorkspaceId] });
+      toast.success("Suite created.");
+      setCreateOpen(false);
+      setSuiteName("");
+      setSuiteDescription("");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to create suite.";
+      toast.error(message);
+    },
+  });
+
+  const updateSuiteMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId || !selectedSuiteId) throw new Error("No suite selected.");
+      return suitesApi.update(activeWorkspaceId, selectedSuiteId, {
+        name: suiteName.trim(),
+        description: suiteDescription.trim() || undefined,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["suites", activeWorkspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ["suite", activeWorkspaceId, selectedSuiteId] });
+      toast.success("Suite updated.");
+      setEditOpen(false);
+      setSelectedSuiteId(undefined);
+      setSuiteName("");
+      setSuiteDescription("");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to update suite.";
+      toast.error(message);
+    },
+  });
+
+  const deleteSuiteMutation = useMutation({
+    mutationFn: async (suiteId: string) => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return suitesApi.delete(activeWorkspaceId, suiteId);
+    },
+    onSuccess: async (_, suiteId) => {
+      await queryClient.invalidateQueries({ queryKey: ["suites", activeWorkspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ["suite", activeWorkspaceId, suiteId] });
+      toast.success("Suite archived.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to archive suite.";
+      toast.error(message);
+    },
   });
 
   const suites = suitesQuery.data ?? [];
@@ -34,6 +111,48 @@ export function Suites() {
     suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (suite.description ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCreateSuite = () => {
+    if (!suiteName.trim()) {
+      toast.error("Suite name is required.");
+      return;
+    }
+    createSuiteMutation.mutate();
+  };
+
+  const openEditSuite = (suite: { id: string; name: string; description?: string }) => {
+    setSelectedSuiteId(suite.id);
+    setSuiteName(suite.name);
+    setSuiteDescription(suite.description ?? "");
+    setEditOpen(true);
+  };
+
+  const openRunSuite = (suiteId: string) => {
+    setSelectedSuiteId(suiteId);
+    setRunDialogOpen(true);
+  };
+
+  const handleSaveSuite = () => {
+    if (!suiteName.trim()) {
+      toast.error("Suite name is required.");
+      return;
+    }
+
+    if (editOpen) {
+      updateSuiteMutation.mutate();
+      return;
+    }
+
+    createSuiteMutation.mutate();
+  };
+
+  const handleDeleteSuite = (suite: { id: string; name: string }) => {
+    if (!window.confirm(`Archive suite ${suite.name}?`)) {
+      return;
+    }
+
+    deleteSuiteMutation.mutate(suite.id);
+  };
 
   return (
     <div className="space-y-6">
@@ -46,12 +165,92 @@ export function Suites() {
           </p>
         </div>
         {permissions.canAuthorAutomation && (
-          <Button>
+          <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Create Suite
           </Button>
         )}
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Suite</DialogTitle>
+            <DialogDescription>
+              Create a new automation suite in the active workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="suite-name">Suite Name</Label>
+              <Input
+                id="suite-name"
+                placeholder="Release Readiness"
+                value={suiteName}
+                onChange={(event) => setSuiteName(event.target.value)}
+                disabled={createSuiteMutation.isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="suite-description">Description</Label>
+              <Input
+                id="suite-description"
+                placeholder="Smoke and regression coverage for release-critical flows"
+                value={suiteDescription}
+                onChange={(event) => setSuiteDescription(event.target.value)}
+                disabled={createSuiteMutation.isPending}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={createSuiteMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSuite} disabled={createSuiteMutation.isPending}>
+              {createSuiteMutation.isPending ? "Creating..." : "Create Suite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) {
+            setSelectedSuiteId(undefined);
+            setSuiteName("");
+            setSuiteDescription("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Suite</DialogTitle>
+            <DialogDescription>
+              Update the suite name and description.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-suite-name">Suite Name</Label>
+              <Input id="edit-suite-name" value={suiteName} onChange={(event) => setSuiteName(event.target.value)} disabled={updateSuiteMutation.isPending} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-suite-description">Description</Label>
+              <Input id="edit-suite-description" value={suiteDescription} onChange={(event) => setSuiteDescription(event.target.value)} disabled={updateSuiteMutation.isPending} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={updateSuiteMutation.isPending}>Cancel</Button>
+            <Button onClick={handleSaveSuite} disabled={updateSuiteMutation.isPending}>
+              {updateSuiteMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <CreateRunDialog open={runDialogOpen} onOpenChange={setRunDialogOpen} defaultSuiteId={selectedSuiteId} />
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -125,10 +324,12 @@ export function Suites() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                  {permissions.canOperateRuns && <DropdownMenuItem>Run Suite</DropdownMenuItem>}
-                  {permissions.canAuthorAutomation && <DropdownMenuItem>Edit Suite</DropdownMenuItem>}
-                  {permissions.canAuthorAutomation && <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>}
+                  <DropdownMenuItem asChild>
+                    <Link to={`/suites/${suite.id}`}>View Details</Link>
+                  </DropdownMenuItem>
+                  {permissions.canOperateRuns && <DropdownMenuItem onClick={() => openRunSuite(suite.id)}>Run Suite</DropdownMenuItem>}
+                  {permissions.canAuthorAutomation && <DropdownMenuItem onClick={() => openEditSuite(suite)}>Edit Suite</DropdownMenuItem>}
+                  {permissions.canAuthorAutomation && <DropdownMenuItem onClick={() => handleDeleteSuite(suite)} className="text-red-600">Delete</DropdownMenuItem>}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

@@ -15,34 +15,7 @@ import type { RequestAuthContext } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { MailerService } from '../mail/mailer.service';
-
-// ─── Permission helpers (inlined from @selora/domain) ────────────────────────
-
-type PermissionFlags = {
-  isSeloraAdmin: boolean;
-  canManageCompany: boolean;
-  canManageMembers: boolean;
-  canManageIntegrations: boolean;
-  canManageEnvironments: boolean;
-  canAuthorAutomation: boolean;
-  canOperateRuns: boolean;
-  isReadOnly: boolean;
-};
-
-function computePermissions(role: MembershipRole): PermissionFlags {
-  switch (role) {
-    case MembershipRole.PLATFORM_ADMIN:
-      return { isSeloraAdmin: true, canManageCompany: true, canManageMembers: true, canManageIntegrations: true, canManageEnvironments: true, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
-    case MembershipRole.TENANT_ADMIN:
-      return { isSeloraAdmin: false, canManageCompany: true, canManageMembers: true, canManageIntegrations: true, canManageEnvironments: true, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
-    case MembershipRole.TENANT_OPERATOR:
-      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: true, canOperateRuns: true, isReadOnly: false };
-    case MembershipRole.TENANT_VIEWER:
-      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: false, canOperateRuns: false, isReadOnly: true };
-    default:
-      return { isSeloraAdmin: false, canManageCompany: false, canManageMembers: false, canManageIntegrations: false, canManageEnvironments: false, canAuthorAutomation: false, canOperateRuns: false, isReadOnly: true };
-  }
-}
+import { computePermissions, type PermissionFlags } from '@selora/domain';
 
 // ─────────────────────────────────────────────────────────────────────────────
 

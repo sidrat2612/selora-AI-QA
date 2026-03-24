@@ -1,21 +1,65 @@
 import { Save } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
-import { Switch } from "../../components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
 import { usePermissions } from "../../../lib/auth-context";
+import { useWorkspace } from "../../../lib/workspace-context";
+import { workspaces as workspacesApi } from "../../../lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function SettingsExecution() {
   const permissions = usePermissions();
   const canEdit = permissions.canManageCompany || permissions.canAuthorAutomation;
+  const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    concurrentExecutionLimit: "",
+    maxTestsPerRun: "",
+    runCooldownSeconds: "",
+  });
+
+  const workspaceQuery = useQuery({
+    queryKey: ["workspace-details", activeWorkspaceId],
+    queryFn: () => workspacesApi.getDetails(activeWorkspaceId!),
+    enabled: !!activeWorkspaceId,
+  });
+
+  useEffect(() => {
+    const workspace = workspaceQuery.data;
+    if (!workspace) return;
+    setForm({
+      concurrentExecutionLimit: String(workspace.concurrentExecutionLimit ?? ""),
+      maxTestsPerRun: String(workspace.maxTestsPerRun ?? ""),
+      runCooldownSeconds: String(workspace.runCooldownSeconds ?? ""),
+    });
+  }, [workspaceQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return workspacesApi.updateSettings(activeWorkspaceId, {
+        concurrentExecutionLimit: Number(form.concurrentExecutionLimit),
+        maxTestsPerRun: Number(form.maxTestsPerRun),
+        runCooldownSeconds: Number(form.runCooldownSeconds),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-details", activeWorkspaceId] });
+      toast.success("Execution settings saved.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to save execution settings.";
+      toast.error(message);
+    },
+  });
+
+  const updateField = (field: keyof typeof form, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -27,119 +71,75 @@ export function SettingsExecution() {
           </p>
         </div>
         {canEdit && (
-          <Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !activeWorkspaceId}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         )}
       </div>
 
-      {/* Retry Policy */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Retry Policy</h3>
+        <h3 className="text-base font-semibold text-slate-900">Execution Capacity</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Configure automatic retry behavior for failed tests
-        </p>
-        <div className="mt-6 space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="max-retries">Maximum Retries</Label>
-              <Input id="max-retries" type="number" defaultValue="3" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="retry-delay">Retry Delay (seconds)</Label>
-              <Input id="retry-delay" type="number" defaultValue="2" />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Automatic Retries</Label>
-              <p className="text-xs text-slate-500">Retry failed tests automatically</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-        </div>
-      </Card>
-
-      {/* Timeout Settings */}
-      <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Timeout Settings</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Set default timeout values for test execution
+          Configure the execution limits enforced for the active workspace
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="test-timeout">Test Timeout (seconds)</Label>
-            <Input id="test-timeout" type="number" defaultValue="30" />
+            <Label htmlFor="concurrent-execution-limit">Concurrent Execution Limit</Label>
+            <Input
+              id="concurrent-execution-limit"
+              type="number"
+              value={form.concurrentExecutionLimit}
+              onChange={(event) => updateField("concurrentExecutionLimit", event.target.value)}
+              disabled={!canEdit || saveMutation.isPending}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="action-timeout">Action Timeout (seconds)</Label>
-            <Input id="action-timeout" type="number" defaultValue="10" />
+            <Label htmlFor="max-tests-per-run">Maximum Tests Per Run</Label>
+            <Input
+              id="max-tests-per-run"
+              type="number"
+              value={form.maxTestsPerRun}
+              onChange={(event) => updateField("maxTestsPerRun", event.target.value)}
+              disabled={!canEdit || saveMutation.isPending}
+            />
           </div>
         </div>
       </Card>
 
-      {/* AI Validation & Repair */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">AI Validation & Repair</h3>
+        <h3 className="text-base font-semibold text-slate-900">Run Creation Cooldown</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Configure bounded AI assistance for test validation and repair
+          Control how quickly users can start another run after the previous one is created
         </p>
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable Auto-Repair</Label>
-              <p className="text-xs text-slate-500">Allow AI to automatically fix detected issues</p>
-            </div>
-            <Switch defaultChecked />
-          </div>
+        <div className="mt-6 max-w-md space-y-2">
           <div className="space-y-2">
-            <Label htmlFor="max-repair-attempts">Maximum Repair Attempts</Label>
-            <Input id="max-repair-attempts" type="number" defaultValue="3" />
-            <p className="text-xs text-slate-500">
-              Bounded limit prevents infinite repair loops
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confidence-threshold">Confidence Threshold (%)</Label>
-            <Input id="confidence-threshold" type="number" defaultValue="80" />
-            <p className="text-xs text-slate-500">
-              Minimum confidence required for automatic repairs
-            </p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Require Human Review for Low Confidence</Label>
-              <p className="text-xs text-slate-500">Flag repairs below threshold for manual review</p>
-            </div>
-            <Switch defaultChecked />
+            <Label htmlFor="run-cooldown-seconds">Run Cooldown (seconds)</Label>
+            <Input
+              id="run-cooldown-seconds"
+              type="number"
+              value={form.runCooldownSeconds}
+              onChange={(event) => updateField("runCooldownSeconds", event.target.value)}
+              disabled={!canEdit || saveMutation.isPending}
+            />
           </div>
         </div>
       </Card>
 
-      {/* Parallel Execution */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Parallel Execution</h3>
+        <h3 className="text-base font-semibold text-slate-900">Applied Backend Settings</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Control concurrent test execution
+          These values are enforced by the backend when creating and operating runs
         </p>
-        <div className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="workers">Number of Workers</Label>
-            <Select defaultValue="5">
-              <SelectTrigger id="workers">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 (Sequential)</SelectItem>
-                <SelectItem value="3">3</SelectItem>
-                <SelectItem value="5">5 (Default)</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <ul className="mt-6 space-y-2 text-sm text-slate-600">
+          <li>Concurrent execution limit caps active runs across the workspace.</li>
+          <li>Maximum tests per run prevents oversized run requests.</li>
+          <li>Run cooldown delays consecutive run creation to protect infrastructure.</li>
+        </ul>
+        {workspaceQuery.isLoading && <p className="mt-4 text-sm text-slate-500">Loading workspace settings...</p>}
+        {workspaceQuery.error instanceof Error && (
+          <p className="mt-4 text-sm text-red-600">{workspaceQuery.error.message}</p>
+        )}
       </Card>
     </div>
   );

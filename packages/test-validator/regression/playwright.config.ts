@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './',
-  testMatch: ['web-regression.spec.ts'],
+  testMatch: ['web-regression.spec.ts', 'test-cases-api.spec.ts', 'role-authorization.spec.ts'],
   timeout: 45_000,
   expect: {
     timeout: 10_000,

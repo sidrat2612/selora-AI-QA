@@ -6,8 +6,7 @@ import {
   PlayCircle,
   Settings,
   Users,
-  Database,
-  Shield
+  Database
 } from "lucide-react";
 import {
   CommandDialog,
@@ -66,12 +65,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem onSelect={() => handleSelect("/settings/quotas")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Quotas</span>
-          </CommandItem>
-        </CommandGroup>
-        <CommandGroup heading="Admin">
-          <CommandItem onSelect={() => handleSelect("/platform-admin")}>
-            <Shield className="mr-2 h-4 w-4" />
-            <span>Platform Admin</span>
           </CommandItem>
         </CommandGroup>
       </CommandList>

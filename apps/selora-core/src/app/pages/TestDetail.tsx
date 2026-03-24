@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router";
 import { ArrowLeft, PlayCircle, Archive, RefreshCw, Code, History, Info } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -14,15 +15,19 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { RepairAttemptsHistory } from "../components/RepairAttemptsHistory";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
 import { tests as testsApi } from "../../lib/api-client";
+import { CreateRunDialog } from "../components/CreateRunDialog";
+import { toast } from "sonner";
 
 export function TestDetail() {
   const { id } = useParams();
   const { activeWorkspaceId } = useWorkspace();
   const permissions = usePermissions();
+  const queryClient = useQueryClient();
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
 
   const testQuery = useQuery({
     queryKey: ["test", activeWorkspaceId, id],
@@ -39,6 +44,22 @@ export function TestDetail() {
   const testData = testQuery.data;
   const repairAttempts = repairsQuery.data ?? [];
 
+  const archiveTestMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId || !id) throw new Error("No test selected.");
+      return testsApi.update(activeWorkspaceId, id, { status: "ARCHIVED" });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tests", activeWorkspaceId] });
+      toast.success("Test archived.");
+      window.location.assign("/tests");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to archive test.";
+      toast.error(message);
+    },
+  });
+
   if (!testData && testQuery.isLoading) {
     return <div className="p-8 text-center text-slate-500">Loading...</div>;
   }
@@ -46,6 +67,23 @@ export function TestDetail() {
   if (!testData) {
     return <div className="p-8 text-center text-slate-500">Test not found</div>;
   }
+
+  const handleRunTest = () => {
+    if (!testData.suiteId) {
+      toast.error("This test is not assigned to a suite yet.");
+      return;
+    }
+
+    setRunDialogOpen(true);
+  };
+
+  const handleArchiveTest = () => {
+    if (!window.confirm(`Archive test ${testData.title}?`)) {
+      return;
+    }
+
+    archiveTestMutation.mutate();
+  };
 
   return (
     <div className="space-y-6">
@@ -72,19 +110,21 @@ export function TestDetail() {
         </div>
         <div className="flex gap-2">
           {permissions.canAuthorAutomation && (
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleArchiveTest} disabled={archiveTestMutation.isPending}>
               <Archive className="mr-2 h-4 w-4" />
-              Archive
+              {archiveTestMutation.isPending ? "Archiving..." : "Archive"}
             </Button>
           )}
           {permissions.canOperateRuns && (
-            <Button>
+            <Button onClick={handleRunTest}>
               <PlayCircle className="mr-2 h-4 w-4" />
               Run Test
             </Button>
           )}
         </div>
       </div>
+
+      <CreateRunDialog open={runDialogOpen} onOpenChange={setRunDialogOpen} defaultSuiteId={testData.suiteId} />
 
       {/* Metadata Cards */}
       <div className="grid gap-4 md:grid-cols-2">

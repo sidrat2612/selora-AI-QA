@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -86,6 +87,31 @@ export class SuitesController {
         workspaceId,
         suiteId,
         body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Delete('workspaces/:workspaceId/suites/:suiteId')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async deleteSuite(
+    @Param('workspaceId') workspaceId: string,
+    @Param('suiteId') suiteId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.suitesService.deleteSuite(
+        workspaceId,
+        suiteId,
         auth,
         request.resourceTenantId as string,
         request.requestId,

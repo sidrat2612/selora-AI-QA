@@ -17,6 +17,8 @@ export type RecordingIngestionJobData = {
   tenantId: string;
   actorUserId: string;
   requestId: string;
+  /** When set, the ingestion updates this existing test instead of creating a new one. */
+  canonicalTestId?: string;
 };
 
 export type TestValidationJobData = {

@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { MembershipRole, TenantStatus, type Prisma } from '@prisma/client';
-import { badRequest, conflict, notFound } from '../common/http-errors';
+import { MembershipRole, MembershipStatus, MetricType, TenantStatus, type Prisma } from '@prisma/client';
+import { badRequest, conflict, forbidden, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../database/prisma.service';
+import { ensureDefaultSuite } from '../suites/suite-defaults';
 
 type TenantLifecycleUpdateInput = {
   status?: unknown;
@@ -11,12 +12,112 @@ type TenantLifecycleUpdateInput = {
   softDeleteGraceDays?: unknown;
 };
 
+const DEFAULT_TENANT_QUOTAS: Array<{ metricType: MetricType; limitValue: number }> = [
+  { metricType: MetricType.RUN_COUNT, limitValue: 500 },
+  { metricType: MetricType.EXECUTION_MINUTES, limitValue: 5000 },
+  { metricType: MetricType.WORKSPACE_COUNT, limitValue: 10 },
+  { metricType: MetricType.USER_SEATS, limitValue: 100 },
+];
+
 @Injectable()
 export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
   ) {}
+
+  async createTenant(
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    requestId: string,
+  ) {
+    const hasPlatformAdmin = auth.user.memberships.some(
+      (membership) =>
+        membership.status === MembershipStatus.ACTIVE && membership.role === MembershipRole.PLATFORM_ADMIN,
+    );
+
+    if (!hasPlatformAdmin) {
+      throw forbidden('ROLE_REQUIRED', 'Platform admin access is required to create tenants.');
+    }
+
+    const name = this.readNonEmptyString(body['name'], 'name');
+    const slug = this.readSlug(body['slug'], name, 'slug');
+    const workspaceName = this.readOptionalString(body['workspaceName']) ?? 'Default Workspace';
+    const workspaceSlug = this.readSlug(body['workspaceSlug'], workspaceName, 'workspaceSlug');
+
+    const existing = await this.prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (existing) {
+      throw conflict('TENANT_SLUG_EXISTS', 'Tenant slug already exists.');
+    }
+
+    const tenant = await this.prisma.$transaction(async (transaction) => {
+      const createdTenant = await transaction.tenant.create({
+        data: {
+          name,
+          slug,
+          status: TenantStatus.ACTIVE,
+        },
+      });
+
+      await transaction.tenantQuota.createMany({
+        data: DEFAULT_TENANT_QUOTAS.map((quota) => ({
+          tenantId: createdTenant.id,
+          metricType: quota.metricType,
+          limitValue: quota.limitValue,
+        })),
+      });
+
+      const workspace = await transaction.workspace.create({
+        data: {
+          tenantId: createdTenant.id,
+          name: workspaceName,
+          slug: workspaceSlug,
+        },
+      });
+
+      await transaction.retentionSetting.create({
+        data: { workspaceId: workspace.id },
+      });
+
+      await transaction.membership.create({
+        data: {
+          tenantId: createdTenant.id,
+          workspaceId: null,
+          userId: auth.user.id,
+          role: MembershipRole.TENANT_ADMIN,
+          status: MembershipStatus.ACTIVE,
+        },
+      });
+
+      await ensureDefaultSuite(transaction, {
+        tenantId: createdTenant.id,
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+      });
+
+      return createdTenant;
+    });
+
+    await this.auditService.record({
+      tenantId: tenant.id,
+      workspaceId: null,
+      actorUserId: auth.user.id,
+      eventType: 'tenant.created',
+      entityType: 'tenant',
+      entityId: tenant.id,
+      requestId,
+      metadataJson: {
+        slug: tenant.slug,
+        workspaceName,
+        workspaceSlug,
+      },
+    });
+
+    return this.getTenantLifecycle(tenant.id);
+  }
 
   async getTenantLifecycle(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
@@ -418,5 +519,37 @@ export class TenantsService {
     }
 
     return value.trim();
+  }
+
+  private readNonEmptyString(value: unknown, fieldName: string) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw badRequest('VALIDATION_ERROR', `${fieldName} is required.`);
+    }
+
+    return value.trim();
+  }
+
+  private readOptionalString(value: unknown) {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  private readSlug(value: unknown, fallback: string, fieldName: string) {
+    const source = typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+    const slug = source
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (!slug) {
+      throw badRequest('VALIDATION_ERROR', `${fieldName} is required.`);
+    }
+
+    return slug;
   }
 }

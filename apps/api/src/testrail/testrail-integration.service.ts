@@ -389,7 +389,7 @@ export class TestRailIntegrationService {
           where: { id: link.id },
           data: {
             status: TestRailCaseLinkStatus.SYNCED,
-            titleSnapshot: typeof caseData['title'] === 'string' ? caseData['title'] : link.canonicalTest.name,
+            titleSnapshot: typeof caseData['title'] === 'string' ? caseData['title'] : link.canonicalTest?.name ?? link.titleSnapshot,
             sectionNameSnapshot: this.readOptionalString(caseData['section_id']) ?? link.sectionNameSnapshot,
             syncSnapshotJson: caseData as Prisma.InputJsonValue,
             lastSyncedAt: new Date(),
@@ -484,6 +484,140 @@ export class TestRailIntegrationService {
     };
   }
 
+  async importTestCases(
+    workspaceId: string,
+    suiteId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const integration = await this.requireIntegration(workspaceId, suiteId, tenantId);
+    this.assertSyncEnabled(integration);
+    const apiKey = integration.encryptedApiKeyJson
+      ? this.tryDecryptApiKey(integration.encryptedApiKeyJson)
+      : null;
+
+    if (!apiKey) {
+      throw badRequest(
+        'TESTRAIL_CREDENTIAL_UNRESOLVED',
+        'The stored TestRail credential cannot be resolved in this environment.',
+      );
+    }
+
+    // Fetch cases from TestRail
+    let casesUrl = `/index.php?/api/v2/get_cases/${encodeURIComponent(integration.projectId)}`;
+    if (integration.suiteIdExternal) {
+      casesUrl += `&suite_id=${encodeURIComponent(integration.suiteIdExternal)}`;
+    }
+    if (integration.sectionId) {
+      casesUrl += `&section_id=${encodeURIComponent(integration.sectionId)}`;
+    }
+
+    const response = await this.fetchTestRail(
+      integration.baseUrl,
+      casesUrl,
+      integration.username,
+      apiKey,
+    );
+
+    if (!response.ok) {
+      throw badRequest(
+        'TESTRAIL_IMPORT_FAILED',
+        `Failed to fetch test cases from TestRail (status ${response.status}).`,
+      );
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+    const cases = Array.isArray(payload['cases']) ? payload['cases'] : Array.isArray(payload) ? payload : [];
+
+    // Find already-imported case IDs
+    const existingLinks = await this.prisma.externalTestCaseLink.findMany({
+      where: { suiteId, integrationId: integration.id },
+      select: { externalCaseId: true, businessTestCaseId: true },
+    });
+    const importedCaseIds = new Set(existingLinks.map((l) => l.externalCaseId));
+
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    for (const raw of cases) {
+      const caseData = raw as Record<string, unknown>;
+      const externalCaseId = String(caseData['id'] ?? '');
+      if (!externalCaseId || importedCaseIds.has(externalCaseId)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      const title = typeof caseData['title'] === 'string' ? caseData['title'] : `TestRail Case #${externalCaseId}`;
+      const sectionName = typeof caseData['section_id'] === 'number' ? `Section ${caseData['section_id']}` : null;
+
+      // Create business test case
+      const testCase = await this.prisma.businessTestCase.create({
+        data: {
+          workspaceId,
+          suiteId,
+          title,
+          description: typeof caseData['custom_preconds'] === 'string' ? caseData['custom_preconds'] : null,
+          format: 'SIMPLE',
+          source: 'TESTRAIL_IMPORT',
+          status: 'ACTIVE',
+          priority: this.mapTestRailPriority(caseData['priority_id']),
+          preconditions: typeof caseData['custom_preconds'] === 'string' ? caseData['custom_preconds'] : null,
+          expectedResult: typeof caseData['custom_expected'] === 'string' ? caseData['custom_expected'] : null,
+          tagsJson: [],
+        },
+      });
+
+      // Create external link
+      await this.prisma.externalTestCaseLink.create({
+        data: {
+          workspaceId,
+          suiteId,
+          businessTestCaseId: testCase.id,
+          integrationId: integration.id,
+          externalCaseId,
+          status: 'SYNCED',
+          titleSnapshot: title,
+          sectionNameSnapshot: sectionName,
+          syncSnapshotJson: caseData as Prisma.InputJsonValue,
+          lastSyncedAt: new Date(),
+        },
+      });
+
+      importedCount += 1;
+    }
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'testrail_import.completed',
+      entityType: 'automation_suite',
+      entityId: suiteId,
+      requestId,
+      metadataJson: {
+        suiteId,
+        importedCount,
+        skippedCount,
+        totalFromTestRail: cases.length,
+      },
+    });
+
+    return {
+      importedCount,
+      skippedCount,
+      totalFromTestRail: cases.length,
+    };
+  }
+
+  private mapTestRailPriority(priorityId: unknown): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+    // TestRail default priority IDs: 1=Low, 2=Medium, 3=High, 4=Critical
+    if (priorityId === 4) return 'CRITICAL';
+    if (priorityId === 3) return 'HIGH';
+    if (priorityId === 2) return 'MEDIUM';
+    return 'LOW';
+  }
+
   async retryCaseLink(
     workspaceId: string,
     suiteId: string,
@@ -526,7 +660,7 @@ export class TestRailIntegrationService {
         where: { id: link.id },
         data: {
           status: TestRailCaseLinkStatus.SYNCED,
-          titleSnapshot: typeof caseData['title'] === 'string' ? caseData['title'] : link.canonicalTest.name,
+          titleSnapshot: typeof caseData['title'] === 'string' ? caseData['title'] : link.canonicalTest?.name ?? link.titleSnapshot,
           syncSnapshotJson: caseData as Prisma.InputJsonValue,
           lastSyncedAt: new Date(),
           lastError: null,

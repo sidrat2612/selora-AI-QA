@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Query, Req, Res, StreamableFile, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, StreamableFile, UseGuards } from '@nestjs/common';
 import { MembershipRole } from '@prisma/client';
 import type { Response } from 'express';
 import { CurrentAuth } from '../auth/current-auth.decorator';
@@ -10,11 +10,24 @@ import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
 import { TenantsService } from './tenants.service';
 
-@Controller('tenants/:tenantId')
+@Controller()
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
-  @Get()
+  @Post('tenants')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN)
+  async createTenant(
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(await this.tenantsService.createTenant(body, auth, request.requestId), {
+      requestId: request.requestId,
+    });
+  }
+
+  @Get('tenants/:tenantId')
   @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
   @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async getTenantLifecycle(@Param('tenantId') tenantId: string, @Req() request: AppRequest) {
@@ -23,7 +36,7 @@ export class TenantsController {
     });
   }
 
-  @Patch()
+  @Patch('tenants/:tenantId')
   @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
   @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async updateTenantLifecycle(
@@ -38,7 +51,7 @@ export class TenantsController {
     );
   }
 
-  @Get('export')
+  @Get('tenants/:tenantId/export')
   @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
   @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
   async exportTenantData(

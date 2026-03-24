@@ -32,14 +32,14 @@ export function NotFound() {
           <div className="mt-12 pt-8 border-t">
             <p className="text-sm text-muted-foreground mb-4">Need help? Try one of these:</p>
             <div className="grid sm:grid-cols-3 gap-3 text-sm">
-              <Link to="/tests" className="text-primary hover:underline">
-                Browse Tests
+              <Link to="/tenants" className="text-primary hover:underline">
+                Browse Tenants
               </Link>
-              <Link to="/suites" className="text-primary hover:underline">
-                View Suites
+              <Link to="/audit" className="text-primary hover:underline">
+                Review Audit
               </Link>
-              <Link to="/runs" className="text-primary hover:underline">
-                Check Runs
+              <Link to="/usage" className="text-primary hover:underline">
+                View Usage
               </Link>
             </div>
           </div>

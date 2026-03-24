@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuditController } from './audit/audit.controller';
 import { AuthController } from './auth/auth.controller';
@@ -45,14 +46,19 @@ import { LicenseGuard } from './licensing/license.guard';
 import { LicenseService } from './licensing/license.service';
 import { TestRailIntegrationController } from './testrail/testrail-integration.controller';
 import { TestRailIntegrationService } from './testrail/testrail-integration.service';
+import { TestCasesController } from './test-cases/test-cases.controller';
+import { TestCasesService } from './test-cases/test-cases.service';
 import { UsageController } from './usage/usage.controller';
 import { UsageMeterService } from './usage/usage-meter.service';
 import { WorkspacesController } from './workspaces/workspaces.controller';
 import { WorkspacesService } from './workspaces/workspaces.service';
+import { NotificationController } from './notifications/notification.controller';
+import { NotificationService } from './notifications/notification.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         name: 'auth',
@@ -69,6 +75,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     GitHubIntegrationController,
     GitHubWebhookController,
     TestRailIntegrationController,
+    TestCasesController,
     RecordingsController,
     FeedbackController,
     AuditController,
@@ -77,6 +84,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     QuotaController,
     RetentionCleanupController,
     LicenseController,
+    NotificationController,
   ],
   providers: [
     PrismaService,
@@ -89,6 +97,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     GitHubIntegrationService,
     GitHubPublicationService,
     TestRailIntegrationService,
+    TestCasesService,
     ExecutionSourceResolverService,
     AIRepairProcessor,
     AIRepairQueueService,
@@ -100,6 +109,7 @@ import { WorkspacesService } from './workspaces/workspaces.service';
     TestValidationQueueService,
     RecordingsService,
     RetentionCleanupService,
+    NotificationService,
     TenantsService,
     UsageMeterService,
     QuotaService,

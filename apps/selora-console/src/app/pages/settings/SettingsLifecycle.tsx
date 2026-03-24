@@ -3,18 +3,64 @@ import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { StatusBadge } from "../../components/StatusBadge";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workspaces as workspacesApi } from "../../../lib/api-client";
 import { useWorkspace } from "../../../lib/workspace-context";
+import { toast } from "sonner";
 
 export function SettingsLifecycle() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
 
   const { data: workspace } = useQuery({
     queryKey: ["workspace-details", activeWorkspaceId],
     queryFn: () => workspacesApi.getDetails(activeWorkspaceId!),
     enabled: !!activeWorkspaceId,
   });
+
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return workspacesApi.updateLifecycle(activeWorkspaceId, { status: "ARCHIVED" });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspace-details", activeWorkspaceId] });
+      await queryClient.invalidateQueries({ queryKey: ["tenant-workspaces"] });
+      toast.success("Workspace archived.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to archive workspace.";
+      toast.error(message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return workspacesApi.delete(activeWorkspaceId);
+    },
+    onSuccess: () => {
+      toast.success("Workspace deleted.");
+      window.location.assign("/tenants");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to delete workspace.";
+      toast.error(message);
+    },
+  });
+
+  const handleArchive = () => {
+    if (!workspace || archiveMutation.isPending) return;
+    if (!window.confirm(`Archive workspace ${workspace.name}?`)) return;
+    archiveMutation.mutate();
+  };
+
+  const handleDelete = () => {
+    if (!workspace || deleteMutation.isPending) return;
+    if (!window.confirm(`Delete workspace ${workspace.name}? This cannot be undone.`)) return;
+    deleteMutation.mutate();
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -65,7 +111,9 @@ export function SettingsLifecycle() {
                 Preserve data but suspend all test execution and AI operations
               </p>
             </div>
-            <Button variant="outline">Archive</Button>
+            <Button variant="outline" onClick={handleArchive} disabled={archiveMutation.isPending || workspace?.status === "ARCHIVED"}>
+              {archiveMutation.isPending ? "Archiving..." : "Archive"}
+            </Button>
           </div>
 
           <div className="flex items-start justify-between rounded-lg border border-red-200 bg-red-50 p-4">
@@ -78,8 +126,8 @@ export function SettingsLifecycle() {
                 Permanently delete all tests, runs, artifacts, and configuration
               </p>
             </div>
-            <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
-              Delete
+            <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100" onClick={handleDelete} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </div>
         </div>

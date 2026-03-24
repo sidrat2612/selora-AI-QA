@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint ok'",
     "test": "echo 'no tests yet'",
+    "capture:training-screenshots": "node scripts/capture-training-screenshots.mjs",
     "regression:web": "playwright test -c regression/playwright.config.ts",
     "regression:web:install": "playwright install chromium"
   }

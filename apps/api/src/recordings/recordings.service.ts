@@ -154,6 +154,7 @@ export class RecordingsService {
     auth: RequestAuthContext,
     tenantId: string,
     requestId: string,
+    canonicalTestId?: string,
   ) {
     if (!file) {
       throw badRequest('RECORDING_FILE_REQUIRED', 'Provide a recording file in the file field.');
@@ -166,6 +167,16 @@ export class RecordingsService {
 
     if (!workspace) {
       throw notFound('WORKSPACE_NOT_FOUND', 'Workspace was not found.');
+    }
+
+    if (canonicalTestId) {
+      const existingTest = await this.prisma.canonicalTest.findFirst({
+        where: { id: canonicalTestId, workspaceId, status: { not: 'ARCHIVED' } },
+        select: { id: true },
+      });
+      if (!existingTest) {
+        throw notFound('CANONICAL_TEST_NOT_FOUND', 'Canonical test to re-record was not found.');
+      }
     }
 
     try {
@@ -238,6 +249,7 @@ export class RecordingsService {
         tenantId,
         actorUserId: auth.user.id,
         requestId,
+        canonicalTestId,
       });
 
       return {
@@ -263,7 +275,7 @@ export class RecordingsService {
 
     const where: Prisma.CanonicalTestWhereInput = {
       workspaceId,
-      ...(status ? { status } : {}),
+      ...(status ? { status } : { status: { not: 'ARCHIVED' } }),
       ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
       ...(tag ? { tagsJson: { array_contains: [tag] } } : {}),
     };
@@ -279,7 +291,20 @@ export class RecordingsService {
             select: { id: true, filename: true, version: true, status: true, createdAt: true },
           },
           generatedArtifacts: {
-            select: { id: true, version: true, status: true, createdAt: true },
+            select: {
+              id: true,
+              version: true,
+              status: true,
+              createdAt: true,
+              publication: {
+                select: {
+                  status: true,
+                  branchName: true,
+                  publishedAt: true,
+                  pullRequestUrl: true,
+                },
+              },
+            },
             orderBy: { version: 'desc' },
           },
         },
@@ -297,6 +322,70 @@ export class RecordingsService {
       totalCount,
       hasMore: page * pageSize < totalCount,
     };
+  }
+
+  async updateTest(
+    workspaceId: string,
+    testId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const existing = await this.prisma.canonicalTest.findFirst({
+      where: { id: testId, workspaceId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        status: true,
+        tagsJson: true,
+      },
+    });
+
+    if (!existing) {
+      throw notFound('TEST_NOT_FOUND', 'Canonical test was not found.');
+    }
+
+    const name = body['name'] === undefined ? undefined : this.readRequiredBodyString(body['name'], 'name');
+    const description = body['description'] === undefined
+      ? undefined
+      : body['description'] === null
+        ? null
+        : this.readOptionalBodyString(body['description'], 'description');
+    const status = body['status'] === undefined ? undefined : this.readTestStatusValue(body['status']);
+    const tags = body['tags'] === undefined ? undefined : this.readTags(body['tags']);
+
+    if (name === undefined && description === undefined && status === undefined && tags === undefined) {
+      throw badRequest('TEST_UPDATE_INVALID', 'Provide at least one test field to update.');
+    }
+
+    await this.prisma.canonicalTest.update({
+      where: { id: testId },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(body['description'] !== undefined ? { description } : {}),
+        ...(status !== undefined ? { status } : {}),
+        ...(tags !== undefined ? { tagsJson: tags } : {}),
+      },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: status === 'ARCHIVED' ? 'test.archived' : 'test.updated',
+      entityType: 'canonical_test',
+      entityId: testId,
+      requestId,
+      metadataJson: {
+        previousStatus: existing.status,
+        nextStatus: status ?? existing.status,
+        tags,
+      },
+    });
+
+    return this.getTest(workspaceId, testId);
   }
 
   async getTest(workspaceId: string, testId: string) {
@@ -806,8 +895,74 @@ export class RecordingsService {
     tenantId: string,
     requestId: string,
   ) {
-    const { environmentId, testIds, requestedSourceMode, requestedGitRef } =
+    const { environmentId, suiteId, testIds: directTestIds, testCaseIds, requestedSourceMode, requestedGitRef } =
       this.readRunCreationBody(body);
+
+    // ── Resolve test IDs from suite or test case mappings ───────────────────
+    let resolvedSuiteId = suiteId || null;
+    let testIds = directTestIds;
+
+    // Business test cases that are part of this run (for result rollup)
+    let businessTestCaseIds: string[] = [];
+
+    if (suiteId && testIds.length === 0) {
+      // Suite-based run: resolve all mapped scripts from business test cases
+      const testCaseMappings = await this.prisma.testCaseScriptMapping.findMany({
+        where: {
+          businessTestCase: {
+            suiteId,
+            workspaceId,
+            status: 'ACTIVE',
+          },
+        },
+        select: {
+          canonicalTestId: true,
+          businessTestCaseId: true,
+        },
+      });
+
+      if (testCaseMappings.length === 0) {
+        // Fallback: use all canonical tests in the suite directly
+        const suiteTests = await this.prisma.canonicalTest.findMany({
+          where: { suiteId, workspaceId },
+          select: { id: true },
+        });
+        testIds = suiteTests.map((t) => t.id);
+      } else {
+        testIds = [...new Set(testCaseMappings.map((m) => m.canonicalTestId))];
+        businessTestCaseIds = [...new Set(testCaseMappings.map((m) => m.businessTestCaseId))];
+      }
+    } else if (testCaseIds.length > 0) {
+      // Test-case-based run: resolve mapped scripts from specified test cases
+      const testCaseMappings = await this.prisma.testCaseScriptMapping.findMany({
+        where: {
+          businessTestCaseId: { in: testCaseIds },
+          businessTestCase: {
+            workspaceId,
+            status: 'ACTIVE',
+          },
+        },
+        select: {
+          canonicalTestId: true,
+          businessTestCaseId: true,
+        },
+      });
+
+      testIds = [...new Set(testCaseMappings.map((m) => m.canonicalTestId))];
+      businessTestCaseIds = [...new Set(testCaseMappings.map((m) => m.businessTestCaseId))];
+
+      // Find test cases with no mapped scripts → these get NOT_COVERED verdict
+      const coveredTestCaseIds = new Set(testCaseMappings.map((m) => m.businessTestCaseId));
+      const uncovered = testCaseIds.filter((id) => !coveredTestCaseIds.has(id));
+      businessTestCaseIds = [...businessTestCaseIds, ...uncovered];
+    }
+
+    if (testIds.length === 0) {
+      throw badRequest(
+        'RUN_TEST_SELECTION_INVALID',
+        'No executable automation scripts found for the selected suite or test cases.',
+      );
+    }
 
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -956,6 +1111,7 @@ export class RecordingsService {
         data: {
           tenantId,
           workspaceId,
+          suiteId: resolvedSuiteId,
           environmentId: environment.id,
           triggeredByUserId: auth.user.id,
           runType: 'MANUAL',
@@ -972,15 +1128,58 @@ export class RecordingsService {
         },
       });
 
+      // Create TestCaseResult records for business test cases in this run
+      const testCaseResultMap = new Map<string, string>(); // businessTestCaseId → testCaseResultId
+      const scriptToTestCases = new Map<string, string[]>(); // canonicalTestId → businessTestCaseId[]
+      if (businessTestCaseIds.length > 0) {
+        const mappings = await transaction.testCaseScriptMapping.findMany({
+          where: {
+            businessTestCaseId: { in: businessTestCaseIds },
+            canonicalTestId: { in: testIds },
+          },
+          select: { businessTestCaseId: true, canonicalTestId: true },
+        });
+        for (const m of mappings) {
+          const arr = scriptToTestCases.get(m.canonicalTestId) ?? [];
+          arr.push(m.businessTestCaseId);
+          scriptToTestCases.set(m.canonicalTestId, arr);
+        }
+
+        // Create a TestCaseResult for each business test case
+        for (const tcId of businessTestCaseIds) {
+          const hasMappedScript = mappings.some((m) => m.businessTestCaseId === tcId);
+          const result = await transaction.testCaseResult.create({
+            data: {
+              testRunId: run.id,
+              businessTestCaseId: tcId,
+              verdict: hasMappedScript ? 'PASSED' : 'NOT_COVERED', // Default: will be updated after execution
+            },
+          });
+          testCaseResultMap.set(tcId, result.id);
+        }
+
+        // Store for linking run items below
+      }
+
       await transaction.testRunItem.createMany({
         data: orderedTests.map((test, index) => {
           const resolvedSource = resolvedSourcesByTestId.get(test.id);
+
+          // Link run item to a test case result if mapped
+          let testCaseResultId: string | null = null;
+          if (businessTestCaseIds.length > 0) {
+            const tcIds = scriptToTestCases.get(test.id);
+            if (tcIds?.[0]) {
+              testCaseResultId = testCaseResultMap.get(tcIds[0]) ?? null;
+            }
+          }
 
           return {
             testRunId: run.id,
             canonicalTestId: test.id,
             generatedTestArtifactId: test.generatedArtifacts[0]!.id,
             publicationId: resolvedSource?.publicationId ?? null,
+            testCaseResultId,
             sequence: index + 1,
             requestedSourceMode: resolvedSource?.requestedSourceMode ?? requestedSourceMode,
             requestedGitRef: resolvedSource?.requestedGitRef ?? requestedGitRef,
@@ -1003,12 +1202,14 @@ export class RecordingsService {
           entityId: run.id,
           requestId,
           metadataJson: {
+            suiteId: resolvedSuiteId,
             environmentId: environment.id,
             environmentName: environment.name,
             baseUrl: environment.baseUrl,
             requestedSourceMode,
             requestedGitRef,
             testIds,
+            businessTestCaseIds,
             totalCount: orderedTests.length,
             storageFallbacks: resolvedSources.filter((source) => source.sourceFallbackReason).map((source) => ({
               canonicalTestId: source.canonicalTestId,
@@ -1692,6 +1893,22 @@ export class RecordingsService {
     return normalized ? normalized : undefined;
   }
 
+  private readRequiredBodyString(value: unknown, fieldName: string) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw badRequest('VALIDATION_ERROR', `${fieldName} is required.`);
+    }
+
+    return value.trim();
+  }
+
+  private readOptionalBodyString(value: unknown, fieldName: string) {
+    if (typeof value !== 'string') {
+      throw badRequest('VALIDATION_ERROR', `${fieldName} must be a string.`);
+    }
+
+    return value.trim();
+  }
+
   private readRecordingStatus(value: string | undefined) {
     if (!value) {
       return undefined;
@@ -1726,21 +1943,61 @@ export class RecordingsService {
     return value as TestStatus;
   }
 
+  private readTestStatusValue(value: unknown) {
+    if (
+      value === 'INGESTED' ||
+      value === 'GENERATED' ||
+      value === 'VALIDATING' ||
+      value === 'VALIDATED' ||
+      value === 'AUTO_REPAIRED' ||
+      value === 'NEEDS_HUMAN_REVIEW' ||
+      value === 'ARCHIVED'
+    ) {
+      return value as TestStatus;
+    }
+
+    throw badRequest('TEST_STATUS_INVALID', 'Canonical test status is invalid.');
+  }
+
+  private readTags(value: unknown) {
+    if (!Array.isArray(value)) {
+      throw badRequest('VALIDATION_ERROR', 'tags must be an array of strings.');
+    }
+
+    const tags = [...new Set(value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean))];
+    if (tags.length !== value.length) {
+      throw badRequest('VALIDATION_ERROR', 'tags must be an array of non-empty strings.');
+    }
+
+    return tags;
+  }
+
   private readRunCreationBody(body: Record<string, unknown>) {
     const environmentId = typeof body['environmentId'] === 'string' ? body['environmentId'].trim() : '';
+    const suiteId = typeof body['suiteId'] === 'string' ? body['suiteId'].trim() : '';
     const rawTestIds = Array.isArray(body['testIds']) ? body['testIds'] : [];
     const testIds = [...new Set(rawTestIds.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))];
+    const rawTestCaseIds = Array.isArray(body['testCaseIds']) ? body['testCaseIds'] : [];
+    const testCaseIds = [...new Set(rawTestCaseIds.filter((value): value is string => typeof value === 'string').map((value) => value.trim()).filter(Boolean))];
     const requestedSourceMode = this.readExecutionSourceRequestMode(body['sourceMode']);
     const requestedGitRef = typeof body['gitRef'] === 'string' ? this.readOptionalString(body['gitRef']) ?? null : null;
 
-    if (!environmentId || testIds.length === 0) {
+    if (!environmentId) {
       throw badRequest(
         'RUN_REQUEST_INVALID',
-        'environmentId and at least one canonical test id are required to create a run.',
+        'environmentId is required to create a run.',
       );
     }
 
-    return { environmentId, testIds, requestedSourceMode, requestedGitRef };
+    // Must supply either suiteId, testIds, or testCaseIds
+    if (!suiteId && testIds.length === 0 && testCaseIds.length === 0) {
+      throw badRequest(
+        'RUN_REQUEST_INVALID',
+        'suiteId, testIds, or testCaseIds are required to create a run.',
+      );
+    }
+
+    return { environmentId, suiteId, testIds, testCaseIds, requestedSourceMode, requestedGitRef };
   }
 
   private readExecutionSourceRequestMode(value: unknown): ExecutionSourceRequestMode {

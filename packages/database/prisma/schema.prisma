@@ -99,6 +99,42 @@ enum ExecutionSourceRequestMode {
   BRANCH_HEAD
 }
 
+enum BusinessTestCaseFormat {
+  SIMPLE
+  STRUCTURED
+}
+
+enum BusinessTestCaseSource {
+  MANUAL
+  TESTRAIL_IMPORT
+  CSV_IMPORT
+}
+
+enum BusinessTestCaseStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum BusinessTestCasePriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TestCaseVerdict {
+  PASSED
+  FAILED
+  NOT_COVERED
+  SKIPPED
+}
+
+enum ScreenshotPolicy {
+  ALWAYS
+  ON_FAIL_ONLY
+  NEVER
+}
+
 enum ExecutionSourceMode {
   STORAGE_ARTIFACT
   PINNED_COMMIT
@@ -313,6 +349,7 @@ model Workspace {
   recordingAssets        RecordingAsset[]
   canonicalTests         CanonicalTest[]
   generatedTestArtifacts GeneratedTestArtifact[]
+  businessTestCases      BusinessTestCase[]
   testRuns               TestRun[]
   artifacts              Artifact[]
   auditEvents            AuditEvent[]
@@ -341,6 +378,7 @@ model AutomationSuite {
   githubPublishingEnabled      Boolean             @default(true)
   gitExecutionEnabled          Boolean             @default(true)
   testRailSyncEnabled          Boolean             @default(true)
+  screenshotPolicy             ScreenshotPolicy    @default(ALWAYS)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -348,12 +386,14 @@ model AutomationSuite {
   tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   canonicalTests CanonicalTest[]
+  businessTestCases BusinessTestCase[]
   githubIntegration GitHubSuiteIntegration?
   testRailIntegration TestRailSuiteIntegration?
   externalTestCaseLinks ExternalTestCaseLink[]
   testRailSyncRuns TestRailSyncRun[]
   generatedArtifactPublications GeneratedArtifactPublication[]
   gitHubWebhookDeliveries GitHubWebhookDelivery[]
+  testRuns TestRun[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status])
@@ -431,6 +471,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   submittedFeedback BetaFeedback[]      @relation("SubmittedByUser")
   rotatedGitHubIntegrationSecrets GitHubSuiteIntegration[] @relation("GitHubIntegrationSecretRotatedBy")
+  notifications AppNotification[]
 
   @@map("users")
 }
@@ -580,6 +621,7 @@ model CanonicalTest {
   aiRepairAttempts AIRepairAttempt[]
   publications GeneratedArtifactPublication[]
   externalCaseLink ExternalTestCaseLink?
+  scriptMappings TestCaseScriptMapping[]
 
   @@index([suiteId, updatedAt])
   @@index([workspaceId, status, updatedAt])
@@ -728,7 +770,8 @@ model ExternalTestCaseLink {
   id                  String                 @id @default(uuid())
   workspaceId         String
   suiteId             String
-  canonicalTestId     String                 @unique
+  businessTestCaseId  String?
+  canonicalTestId     String?                @unique
   integrationId       String
   externalCaseId      String
   status              TestRailCaseLinkStatus @default(MAPPED)
@@ -745,7 +788,8 @@ model ExternalTestCaseLink {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   suite AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
-  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
+  businessTestCase BusinessTestCase? @relation(fields: [businessTestCaseId], references: [id], onDelete: SetNull)
+  canonicalTest CanonicalTest? @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
   integration TestRailSuiteIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
 
   @@unique([integrationId, externalCaseId])
@@ -786,6 +830,7 @@ model TestRun {
   id                 String    @id @default(uuid())
   tenantId           String
   workspaceId        String
+  suiteId            String?
   environmentId      String
   triggeredByUserId  String
   runType            RunType   @default(MANUAL)
@@ -806,13 +851,16 @@ model TestRun {
 
   tenant      Tenant      @relation(fields: [tenantId], references: [id])
   workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite       AutomationSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
   environment Environment @relation(fields: [environmentId], references: [id])
   triggeredBy User        @relation("TriggeredByUser", fields: [triggeredByUserId], references: [id])
   items       TestRunItem[]
+  testCaseResults TestCaseResult[]
   artifacts   Artifact[]
   aiRepairAttempts AIRepairAttempt[]
 
   @@index([workspaceId, createdAt, status])
+  @@index([suiteId, createdAt])
   @@map("test_runs")
 }
 
@@ -822,6 +870,7 @@ model TestRunItem {
   canonicalTestId          String
   generatedTestArtifactId  String
   publicationId            String?
+  testCaseResultId         String?
   sequence                 Int
   requestedSourceMode      ExecutionSourceRequestMode @default(SUITE_DEFAULT)
   requestedGitRef          String?
@@ -840,6 +889,7 @@ model TestRunItem {
   canonicalTest          CanonicalTest         @relation(fields: [canonicalTestId], references: [id])
   generatedTestArtifact  GeneratedTestArtifact @relation(fields: [generatedTestArtifactId], references: [id])
   publication            GeneratedArtifactPublication? @relation(fields: [publicationId], references: [id], onDelete: SetNull)
+  testCaseResult         TestCaseResult?       @relation(fields: [testCaseResultId], references: [id], onDelete: SetNull)
   artifacts              Artifact[]
   aiRepairAttempts       AIRepairAttempt[]
 
@@ -973,6 +1023,71 @@ model BetaFeedback {
   @@map("beta_feedback")
 }
 
+// ──────────────── Business Test Cases ────────────────
+
+model BusinessTestCase {
+  id               String                    @id @default(uuid())
+  workspaceId      String
+  suiteId          String
+  title            String
+  description      String?
+  format           BusinessTestCaseFormat     @default(SIMPLE)
+  source           BusinessTestCaseSource    @default(MANUAL)
+  status           BusinessTestCaseStatus    @default(ACTIVE)
+  priority         BusinessTestCasePriority  @default(MEDIUM)
+  preconditions    String?
+  stepsJson        Json?
+  expectedResult   String?
+  tagsJson         Json                      @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite         AutomationSuite @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  scriptMappings TestCaseScriptMapping[]
+  testCaseResults TestCaseResult[]
+  externalCaseLinks ExternalTestCaseLink[]
+
+  @@index([suiteId, status, updatedAt])
+  @@index([workspaceId, status])
+  @@map("business_test_cases")
+}
+
+model TestCaseScriptMapping {
+  id                String @id @default(uuid())
+  businessTestCaseId String
+  canonicalTestId    String
+
+  createdAt DateTime @default(now())
+
+  businessTestCase BusinessTestCase @relation(fields: [businessTestCaseId], references: [id], onDelete: Cascade)
+  canonicalTest    CanonicalTest    @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
+
+  @@unique([businessTestCaseId, canonicalTestId])
+  @@index([canonicalTestId])
+  @@map("test_case_script_mappings")
+}
+
+model TestCaseResult {
+  id                 String          @id @default(uuid())
+  testRunId          String
+  businessTestCaseId String
+  verdict            TestCaseVerdict @default(NOT_COVERED)
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  testRun          TestRun          @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  businessTestCase BusinessTestCase @relation(fields: [businessTestCaseId], references: [id])
+  runItems         TestRunItem[]
+
+  @@unique([testRunId, businessTestCaseId])
+  @@index([testRunId, verdict])
+  @@map("test_case_results")
+}
+
 // ──────────────── Retention ────────────────
 
 model RetentionSetting {
@@ -990,4 +1105,24 @@ model RetentionSetting {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("retention_settings")
+}
+
+// ──────────────── In-App Notifications ────────────────
+
+model AppNotification {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  title       String
+  message     String?
+  entityType  String?
+  entityId    String?
+  read        Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@map("app_notifications")
 }

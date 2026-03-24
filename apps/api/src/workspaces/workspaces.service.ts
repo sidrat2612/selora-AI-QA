@@ -2,6 +2,7 @@ import {
   EnvironmentStatus,
   MembershipRole,
   MembershipStatus,
+  WorkspaceStatus,
   type Environment,
   type Membership,
   type RetentionSetting,
@@ -359,6 +360,42 @@ export class WorkspacesService {
     return { revoked: true };
   }
 
+  async resendMembershipInvite(
+    workspaceId: string,
+    membershipId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const membership = await this.prisma.membership.findFirst({
+      where: { id: membershipId, tenantId },
+      include: { user: true },
+    });
+
+    if (!membership) {
+      throw notFound('MEMBERSHIP_NOT_FOUND', 'Membership was not found.');
+    }
+
+    if (membership.status !== MembershipStatus.INVITED || membership.user.emailVerifiedAt) {
+      throw badRequest('MEMBERSHIP_INVITE_NOT_PENDING', 'Only pending invited members can receive a resend.');
+    }
+
+    await this.authService.issueVerificationForUser(membership.user, requestId);
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'membership.invite_resent',
+      entityType: 'membership',
+      entityId: membershipId,
+      requestId,
+      metadataJson: { userId: membership.userId },
+    });
+
+    return { resent: true };
+  }
+
   async listEnvironments(workspaceId: string) {
     return this.prisma.environment.findMany({
       where: { workspaceId },
@@ -550,6 +587,56 @@ export class WorkspacesService {
     return cloned;
   }
 
+  async deleteEnvironment(
+    workspaceId: string,
+    environmentId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const environment = await this.prisma.environment.findFirst({
+      where: { id: environmentId, workspaceId },
+      select: { id: true, name: true, isDefault: true },
+    });
+
+    if (!environment) {
+      throw notFound('ENVIRONMENT_NOT_FOUND', 'Environment was not found.');
+    }
+
+    if (environment.isDefault) {
+      throw badRequest('ENVIRONMENT_DEFAULT_DELETE', 'Cannot delete the default environment. Set another environment as default first.');
+    }
+
+    const runCount = await this.prisma.testRun.count({
+      where: { environmentId },
+    });
+
+    if (runCount > 0) {
+      await this.prisma.environment.update({
+        where: { id: environmentId },
+        data: { status: 'DISABLED' },
+      });
+    } else {
+      await this.prisma.environment.delete({ where: { id: environmentId } });
+    }
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'environment.deleted',
+      entityType: 'environment',
+      entityId: environmentId,
+      requestId,
+      metadataJson: {
+        name: environment.name,
+        softDeleted: runCount > 0,
+      },
+    });
+
+    return { removed: true, archived: runCount > 0 };
+  }
+
   async updateWorkspaceSettings(
     workspaceId: string,
     body: Record<string, unknown>,
@@ -603,6 +690,94 @@ export class WorkspacesService {
     });
 
     return workspace;
+  }
+
+  async updateWorkspaceLifecycle(
+    workspaceId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+      },
+    });
+
+    if (!workspace || workspace.tenantId !== tenantId) {
+      throw notFound('WORKSPACE_NOT_FOUND', 'Workspace was not found.');
+    }
+
+    const status = this.readWorkspaceStatus(body['status']);
+    if (status === workspace.status) {
+      return this.getWorkspaceDetails(workspaceId);
+    }
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { status },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'workspace.lifecycle_updated',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      requestId,
+      metadataJson: {
+        previousStatus: workspace.status,
+        nextStatus: status,
+      },
+    });
+
+    return this.getWorkspaceDetails(workspaceId);
+  }
+
+  async deleteWorkspace(
+    workspaceId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        slug: true,
+      },
+    });
+
+    if (!workspace || workspace.tenantId !== tenantId) {
+      throw notFound('WORKSPACE_NOT_FOUND', 'Workspace was not found.');
+    }
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: null,
+      actorUserId: auth.user.id,
+      eventType: 'workspace.deleted',
+      entityType: 'workspace',
+      entityId: workspaceId,
+      requestId,
+      metadataJson: {
+        name: workspace.name,
+        slug: workspace.slug,
+      },
+    });
+
+    await this.prisma.workspace.delete({
+      where: { id: workspaceId },
+    });
+
+    return { deleted: true };
   }
 
   async getRetention(workspaceId: string) {
@@ -759,6 +934,18 @@ export class WorkspacesService {
     }
 
     return MembershipRole[value as keyof typeof MembershipRole];
+  }
+
+  private readWorkspaceStatus(value: unknown): WorkspaceStatus {
+    if (
+      value === WorkspaceStatus.ACTIVE ||
+      value === WorkspaceStatus.SUSPENDED ||
+      value === WorkspaceStatus.ARCHIVED
+    ) {
+      return value;
+    }
+
+    throw badRequest('WORKSPACE_STATUS_INVALID', 'Workspace status must be ACTIVE, SUSPENDED, or ARCHIVED.');
   }
 
   private readRequiredEnvironmentBody(body: Record<string, unknown>) {

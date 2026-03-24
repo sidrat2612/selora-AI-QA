@@ -132,6 +132,27 @@ export class WorkspacesController {
     );
   }
 
+  @Post('workspaces/:workspaceId/memberships/:membershipId/resend-invite')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  async resendMembershipInvite(
+    @Param('workspaceId') workspaceId: string,
+    @Param('membershipId') membershipId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.workspacesService.resendMembershipInvite(
+        workspaceId,
+        membershipId,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
   @Get('workspaces/:workspaceId/environments')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
   async listEnvironments(@Param('workspaceId') workspaceId: string, @Req() request: AppRequest) {
@@ -176,6 +197,27 @@ export class WorkspacesController {
         workspaceId,
         environmentId,
         body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Delete('workspaces/:workspaceId/environments/:environmentId')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  async deleteEnvironment(
+    @Param('workspaceId') workspaceId: string,
+    @Param('environmentId') environmentId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.workspacesService.deleteEnvironment(
+        workspaceId,
+        environmentId,
         auth,
         request.resourceTenantId as string,
         request.requestId,
@@ -249,6 +291,46 @@ export class WorkspacesController {
       await this.workspacesService.updateWorkspaceSettings(
         workspaceId,
         body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Patch('workspaces/:workspaceId/lifecycle')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  async updateWorkspaceLifecycle(
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.workspacesService.updateWorkspaceLifecycle(
+        workspaceId,
+        body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Delete('workspaces/:workspaceId')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  async deleteWorkspace(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.workspacesService.deleteWorkspace(
+        workspaceId,
         auth,
         request.resourceTenantId as string,
         request.requestId,

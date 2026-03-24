@@ -1,14 +1,72 @@
 import { Save, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { Alert, AlertDescription } from "../../components/ui/alert";
 import { usePermissions } from "../../../lib/auth-context";
+import { useWorkspace } from "../../../lib/workspace-context";
+import { workspaces as workspacesApi } from "../../../lib/api-client";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export function SettingsRetention() {
   const permissions = usePermissions();
   const canEdit = permissions.canManageCompany;
+  const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    screenshotsDays: "30",
+    videosDays: "30",
+    tracesDays: "90",
+    logsDays: "90",
+    auditDays: "730",
+  });
+
+  const retentionQuery = useQuery({
+    queryKey: ["retention-settings", activeWorkspaceId],
+    queryFn: () => workspacesApi.getRetention(activeWorkspaceId!),
+    enabled: !!activeWorkspaceId,
+  });
+
+  useEffect(() => {
+    const retention = retentionQuery.data;
+    if (!retention) return;
+    setForm({
+      screenshotsDays: String(retention.screenshotsDays),
+      videosDays: String(retention.videosDays),
+      tracesDays: String(retention.tracesDays),
+      logsDays: String(retention.logsDays),
+      auditDays: String(retention.auditDays),
+    });
+  }, [retentionQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!activeWorkspaceId) throw new Error("No workspace selected.");
+      return workspacesApi.updateRetention(activeWorkspaceId, {
+        screenshotsDays: Number(form.screenshotsDays),
+        videosDays: Number(form.videosDays),
+        tracesDays: Number(form.tracesDays),
+        logsDays: Number(form.logsDays),
+        auditDays: Number(form.auditDays),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["retention-settings", activeWorkspaceId] });
+      toast.success("Retention settings saved.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to save retention settings.";
+      toast.error(message);
+    },
+  });
+
+  const updateField = (field: keyof typeof form, value: string) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -20,9 +78,9 @@ export function SettingsRetention() {
           </p>
         </div>
         {canEdit && (
-          <Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !activeWorkspaceId}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         )}
       </div>
@@ -45,72 +103,74 @@ export function SettingsRetention() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="screenshots">Screenshots Retention (days)</Label>
-              <Input id="screenshots" type="number" defaultValue="30" />
+              <Input
+                id="screenshots"
+                type="number"
+                value={form.screenshotsDays}
+                onChange={(event) => updateField("screenshotsDays", event.target.value)}
+                disabled={!canEdit || saveMutation.isPending}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="videos">Videos Retention (days)</Label>
-              <Input id="videos" type="number" defaultValue="30" />
+              <Input
+                id="videos"
+                type="number"
+                value={form.videosDays}
+                onChange={(event) => updateField("videosDays", event.target.value)}
+                disabled={!canEdit || saveMutation.isPending}
+              />
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="traces">Trace Files Retention (days)</Label>
-              <Input id="traces" type="number" defaultValue="90" />
+              <Input
+                id="traces"
+                type="number"
+                value={form.tracesDays}
+                onChange={(event) => updateField("tracesDays", event.target.value)}
+                disabled={!canEdit || saveMutation.isPending}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="logs">Execution Logs Retention (days)</Label>
-              <Input id="logs" type="number" defaultValue="90" />
+              <Input
+                id="logs"
+                type="number"
+                value={form.logsDays}
+                onChange={(event) => updateField("logsDays", event.target.value)}
+                disabled={!canEdit || saveMutation.isPending}
+              />
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Run History */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Run History</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Configure retention for test run metadata and results
-        </p>
-        <div className="mt-6 space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="passed-runs">Passed Runs (days)</Label>
-              <Input id="passed-runs" type="number" defaultValue="180" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="failed-runs">Failed Runs (days)</Label>
-              <Input id="failed-runs" type="number" defaultValue="365" />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Audit Events */}
-      <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Audit Events</h3>
+        <h3 className="text-base font-semibold text-slate-900">Audit Retention</h3>
         <p className="mt-1 text-sm text-slate-600">
           Configure retention for audit trail and compliance logs
         </p>
         <div className="mt-6 space-y-2">
           <Label htmlFor="audit">Audit Events Retention (days)</Label>
-          <Input id="audit" type="number" defaultValue="730" />
+          <Input
+            id="audit"
+            type="number"
+            value={form.auditDays}
+            onChange={(event) => updateField("auditDays", event.target.value)}
+            disabled={!canEdit || saveMutation.isPending}
+          />
           <p className="text-xs text-slate-500">
-            Recommended: 2 years (730 days) for compliance requirements
+            Recommended: 2 years (730 days) for compliance requirements.
           </p>
         </div>
       </Card>
 
-      {/* Validation & Repair History */}
-      <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Validation & Repair History</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Configure retention for AI validation and repair attempt history
-        </p>
-        <div className="mt-6 space-y-2">
-          <Label htmlFor="validation">Validation History (days)</Label>
-          <Input id="validation" type="number" defaultValue="90" />
-        </div>
-      </Card>
+      {retentionQuery.isLoading && <p className="text-sm text-slate-500">Loading retention settings...</p>}
+      {retentionQuery.error instanceof Error && (
+        <p className="text-sm text-red-600">{retentionQuery.error.message}</p>
+      )}
     </div>
   );
 }
