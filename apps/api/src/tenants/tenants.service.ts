@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MembershipRole, MembershipStatus, MetricType, TenantStatus, type Prisma } from '@prisma/client';
+import { MembershipRole, MembershipStatus, MetricType, RolloutStage, TenantStatus, type Prisma } from '@prisma/client';
 import { badRequest, conflict, forbidden, notFound } from '../common/http-errors';
 import type { RequestAuthContext } from '../common/types';
 import { AuditService } from '../audit/audit.service';
@@ -519,6 +519,105 @@ export class TenantsService {
     }
 
     return value.trim();
+  }
+
+  // ─── Feature Flags ──────────────────────────────────────────────────────────
+
+  async getFeatureFlags(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        githubPublishingEnabled: true,
+        gitExecutionEnabled: true,
+        testRailSyncEnabled: true,
+        maxRolloutStage: true,
+      },
+    });
+
+    if (!tenant) {
+      throw notFound('TENANT_NOT_FOUND', 'Tenant not found.');
+    }
+
+    return {
+      tenantId: tenant.id,
+      githubPublishingEnabled: tenant.githubPublishingEnabled,
+      gitExecutionEnabled: tenant.gitExecutionEnabled,
+      testRailSyncEnabled: tenant.testRailSyncEnabled,
+      maxRolloutStage: tenant.maxRolloutStage,
+    };
+  }
+
+  async updateFeatureFlags(
+    tenantId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    requestId: string,
+  ) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true },
+    });
+
+    if (!tenant) {
+      throw notFound('TENANT_NOT_FOUND', 'Tenant not found.');
+    }
+
+    const data: Prisma.TenantUpdateInput = {};
+
+    if (typeof body['githubPublishingEnabled'] === 'boolean') {
+      data.githubPublishingEnabled = body['githubPublishingEnabled'];
+    }
+    if (typeof body['gitExecutionEnabled'] === 'boolean') {
+      data.gitExecutionEnabled = body['gitExecutionEnabled'];
+    }
+    if (typeof body['testRailSyncEnabled'] === 'boolean') {
+      data.testRailSyncEnabled = body['testRailSyncEnabled'];
+    }
+    if (body['maxRolloutStage'] !== undefined) {
+      const stage = body['maxRolloutStage'];
+      if (stage === RolloutStage.INTERNAL || stage === RolloutStage.PILOT || stage === RolloutStage.GENERAL) {
+        data.maxRolloutStage = stage;
+      } else {
+        throw badRequest('VALIDATION_ERROR', 'maxRolloutStage must be INTERNAL, PILOT, or GENERAL.');
+      }
+    }
+
+    const updated = await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data,
+      select: {
+        id: true,
+        githubPublishingEnabled: true,
+        gitExecutionEnabled: true,
+        testRailSyncEnabled: true,
+        maxRolloutStage: true,
+      },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: undefined,
+      actorUserId: auth.user.id,
+      eventType: 'tenant.feature_flags_updated',
+      entityType: 'tenant',
+      entityId: tenantId,
+      requestId,
+      metadataJson: {
+        githubPublishingEnabled: updated.githubPublishingEnabled,
+        gitExecutionEnabled: updated.gitExecutionEnabled,
+        testRailSyncEnabled: updated.testRailSyncEnabled,
+        maxRolloutStage: updated.maxRolloutStage,
+      },
+    });
+
+    return {
+      tenantId: updated.id,
+      githubPublishingEnabled: updated.githubPublishingEnabled,
+      gitExecutionEnabled: updated.gitExecutionEnabled,
+      testRailSyncEnabled: updated.testRailSyncEnabled,
+      maxRolloutStage: updated.maxRolloutStage,
+    };
   }
 
   private readNonEmptyString(value: unknown, fieldName: string) {

@@ -43,7 +43,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
-import { testCases as testCasesApi } from "../../lib/api-client";
+import { testCases as testCasesApi, testRailIntegration as testRailApi } from "../../lib/api-client";
 import { MapScriptDialog } from "../components/MapScriptDialog";
 import { toast } from "sonner";
 
@@ -61,6 +61,9 @@ export function TestCaseDetail() {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [mapScriptOpen, setMapScriptOpen] = useState(false);
+  const [caseLinkOpen, setCaseLinkOpen] = useState(false);
+  const [caseLinkExternalId, setCaseLinkExternalId] = useState("");
+  const [caseLinkOwnerEmail, setCaseLinkOwnerEmail] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPriority, setEditPriority] = useState<string>("MEDIUM");
@@ -124,6 +127,24 @@ export function TestCaseDetail() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Failed to remove mapping.");
+    },
+  });
+
+  const upsertCaseLinkMutation = useMutation({
+    mutationFn: () =>
+      testRailApi.upsertCaseLink(activeWorkspaceId!, suiteId!, testCaseId!, {
+        externalCaseId: caseLinkExternalId.trim() || undefined,
+        ownerEmail: caseLinkOwnerEmail.trim() || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["test-case", activeWorkspaceId, suiteId, testCaseId],
+      });
+      toast.success(caseLinkExternalId.trim() ? "TestRail case link saved." : "TestRail case link removed.");
+      setCaseLinkOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Failed to save case link.");
     },
   });
 
@@ -314,8 +335,9 @@ export function TestCaseDetail() {
             Mapped Scripts ({testCase.mappedScripts?.length ?? 0})
           </TabsTrigger>
           {(testCase.externalLinks?.length ?? 0) > 0 && (
-            <TabsTrigger value="external">External Links</TabsTrigger>
+            <TabsTrigger value="external">External Links ({testCase.externalLinks?.length ?? 0})</TabsTrigger>
           )}
+          <TabsTrigger value="case-mapping">TestRail Mapping</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details">
@@ -465,7 +487,110 @@ export function TestCaseDetail() {
             </Card>
           </TabsContent>
         )}
+
+        <TabsContent value="case-mapping">
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-slate-700">TestRail Case Link</h4>
+                <p className="mt-1 text-sm text-slate-500">
+                  Map this test case to a TestRail case for bi-directional sync.
+                </p>
+              </div>
+              {permissions.canManageIntegrations && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const existingLink = testCase.externalLinks?.[0];
+                    setCaseLinkExternalId(existingLink?.externalCaseId ?? "");
+                    setCaseLinkOwnerEmail(existingLink?.ownerEmail ?? "");
+                    setCaseLinkOpen(true);
+                  }}
+                >
+                  <Link2 className="mr-1 h-3 w-3" />
+                  {testCase.externalLinks?.length ? "Edit Mapping" : "Add Mapping"}
+                </Button>
+              )}
+            </div>
+            {testCase.externalLinks && testCase.externalLinks.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>External Case ID</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Last Synced</TableHead>
+                    <TableHead>Error</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {testCase.externalLinks.map((link) => (
+                    <TableRow key={link.id}>
+                      <TableCell className="font-mono text-sm">{link.externalCaseId}</TableCell>
+                      <TableCell>{link.title ?? "—"}</TableCell>
+                      <TableCell className="text-slate-600">{link.ownerEmail ?? "—"}</TableCell>
+                      <TableCell><StatusBadge status={link.status} /></TableCell>
+                      <TableCell className="text-slate-600">{link.lastSyncedAt ?? "—"}</TableCell>
+                      <TableCell>
+                        {link.lastError ? (
+                          <span className="text-xs text-red-600">{link.lastError}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-slate-500 py-4">
+                No TestRail mapping configured. Click "Add Mapping" to link a TestRail case.
+              </p>
+            )}
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* TestRail Case Link Dialog */}
+      <Dialog open={caseLinkOpen} onOpenChange={setCaseLinkOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit TestRail Mapping</DialogTitle>
+            <DialogDescription>
+              Link this test case to a TestRail case ID. Leave empty to remove the mapping.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>TestRail Case ID</Label>
+              <Input
+                placeholder="e.g. C12345"
+                value={caseLinkExternalId}
+                onChange={(e) => setCaseLinkExternalId(e.target.value)}
+                disabled={upsertCaseLinkMutation.isPending}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Owner Email (optional)</Label>
+              <Input
+                placeholder="owner@example.com"
+                value={caseLinkOwnerEmail}
+                onChange={(e) => setCaseLinkOwnerEmail(e.target.value)}
+                disabled={upsertCaseLinkMutation.isPending}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCaseLinkOpen(false)} disabled={upsertCaseLinkMutation.isPending}>
+              Cancel
+            </Button>
+            <Button onClick={() => upsertCaseLinkMutation.mutate()} disabled={upsertCaseLinkMutation.isPending}>
+              {upsertCaseLinkMutation.isPending ? "Saving..." : "Save Mapping"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <MapScriptDialog
         open={mapScriptOpen}

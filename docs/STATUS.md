@@ -1,6 +1,6 @@
 # Selora — Project Status
 
-> Last updated: 2026-03-24
+> Last updated: 2026-03-25
 
 ## Overview
 
@@ -90,13 +90,16 @@ Selora is a vendor-hosted, multi-tenant SaaS platform for web QA automation. It 
 
 ## What's Pending
 
-### 1. Enhancement Phase 1 — Remaining Business Logic
-Core publication and execution pipelines are implemented. Remaining work:
-- **Suite management UX**: Test-to-suite assignment UX, bulk operations, archive cascade confirmation
-- **GitHub publishing UI**: Publication status cards, webhook delivery viewer, secret rotation flow, replay controls
-- **TestRail sync orchestration**: Full sync workflow, case mapping editor, sync status dashboard, partial-failure handling
-- **Git execution UI**: Source mode selector on run creation, lineage display, fallback indicators
-- **Rollout feature flags**: Progressive INTERNAL→PILOT→GENERAL stages per tenant
+### 1. Enhancement Phase 1 — COMPLETE
+
+✅ All Phase 2 items implemented:
+- **Suite management**: Bulk assignment APIs, default suite backfill migration, archive cascade (unassign tests + disconnect integrations + cancel runs)
+- **GitHub integration UI**: Publication status cards, webhook delivery viewer, secret rotation flow, replay controls, repository allowlist CRUD
+- **TestRail integration**: Sync dashboard, case mapping editor UI with upsert/remove, enriched external link data
+- **Git execution**: Source mode selector on run creation, lineage display tab on RunDetail (resolved source, commit SHA, fallback reason)
+- **Per-tenant feature flags**: githubPublishing, gitExecution, testRailSync flags on Tenant model, GET/PATCH API endpoints
+- **Progressive rollout automation**: Hourly cron evaluates INTERNAL→PILOT→GENERAL promotion based on pass rate, run count, failure recency
+- **Observability dashboard**: Pass rate gauge, run breakdown (passed/failed/in-progress), execution metrics (avg duration, totals)
 
 ### 2. Enterprise Auth (Assessed, Deferred)
 Recommended order: OIDC SSO → TOTP MFA → WebAuthn MFA → SAML 2.0.
@@ -139,7 +142,7 @@ All work scoped to local Docker. Hosted infrastructure deferred.
 | 8 | Beta Polish — Repair Analytics & Quotas | ✅ Complete |
 | 9 | Production Hardening — Abuse Controls & DR | ✅ Complete |
 | 10 | Local Operations Readiness — Lifecycle & SLOs | ✅ Complete |
-| EP1 | Enhancement Phase 1 — Suites & External Integrations | ✅ Core pipeline complete |
+| EP1 | Enhancement Phase 1 — Suites & External Integrations | ✅ Complete |
 
 ## Open Decisions
 

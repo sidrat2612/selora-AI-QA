@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square, GitBranch } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card } from "../components/ui/card";
@@ -185,6 +185,7 @@ export function RunDetail() {
       <Tabs defaultValue="results" className="space-y-6">
         <TabsList>
           <TabsTrigger value="results">Test Results</TabsTrigger>
+          <TabsTrigger value="lineage">Source Lineage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="results">
@@ -227,6 +228,65 @@ export function RunDetail() {
                 {runItems.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-slate-500">No test results</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="lineage">
+          <Card>
+            <div className="p-4 border-b">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-slate-600" />
+                <h3 className="text-sm font-medium text-slate-700">Execution Source Lineage</h3>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Shows how each test was resolved for execution — storage artifact, git branch, or pinned commit.
+              </p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Test Name</TableHead>
+                  <TableHead>Source Mode</TableHead>
+                  <TableHead>Git Ref</TableHead>
+                  <TableHead>Commit SHA</TableHead>
+                  <TableHead>Fallback Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {runItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Link to={`/tests/${item.testId}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                        {item.testTitle ?? item.testId}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {item.resolvedSourceMode?.replace(/_/g, " ") ?? "STORAGE"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">
+                      {item.resolvedGitRef ?? "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-600">
+                      {item.resolvedCommitSha ? item.resolvedCommitSha.slice(0, 8) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {item.sourceFallbackReason ? (
+                        <span className="text-xs text-amber-600">{item.sourceFallbackReason}</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {runItems.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-slate-500">No test items</TableCell>
                   </TableRow>
                 )}
               </TableBody>

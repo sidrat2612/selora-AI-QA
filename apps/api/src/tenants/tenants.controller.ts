@@ -66,4 +66,31 @@ export class TenantsController {
     response.setHeader('Content-Disposition', `attachment; filename="${file.fileName}"`);
     return new StreamableFile(file.buffer);
   }
+
+  @Get('tenants/:tenantId/feature-flags')
+  @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN, MembershipRole.TENANT_ADMIN)
+  async getFeatureFlags(
+    @Param('tenantId') tenantId: string,
+    @Req() request: AppRequest,
+  ) {
+    return success(await this.tenantsService.getFeatureFlags(tenantId), {
+      requestId: request.requestId,
+    });
+  }
+
+  @Patch('tenants/:tenantId/feature-flags')
+  @UseGuards(SessionAuthGuard, TenantAccessGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN)
+  async updateFeatureFlags(
+    @Param('tenantId') tenantId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.tenantsService.updateFeatureFlags(tenantId, body, auth, request.requestId),
+      { requestId: request.requestId },
+    );
+  }
 }

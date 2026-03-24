@@ -541,6 +541,10 @@ export type RunItem = {
   status: string;
   duration?: number;
   errorMessage?: string;
+  resolvedSourceMode?: string;
+  resolvedGitRef?: string;
+  resolvedCommitSha?: string;
+  sourceFallbackReason?: string;
   [key: string]: unknown;
 };
 
@@ -788,6 +792,51 @@ export const testRailIntegration = {
       `/workspaces/${workspaceId}/suites/${suiteId}/testrail-integration/import-test-cases`,
       { method: "POST" },
     ),
+
+  upsertCaseLink: (workspaceId: string, suiteId: string, testId: string, body: { externalCaseId?: string; ownerEmail?: string }) =>
+    request<Record<string, unknown>>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/testrail-links/${testId}`,
+      { method: "PATCH", body },
+    ),
+
+  listCaseLinks: (workspaceId: string, suiteId: string) =>
+    requestList<ExternalCaseLink>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/testrail-integration/case-links`,
+    ),
+};
+
+// ─── External Case Link Type ─────────────────────────────────────────────────
+
+export type ExternalCaseLink = {
+  id: string;
+  canonicalTestId?: string;
+  externalCaseId: string;
+  status: string;
+  ownerEmail?: string | null;
+  titleSnapshot?: string | null;
+  sectionNameSnapshot?: string | null;
+  lastSyncedAt?: string | null;
+  lastError?: string | null;
+  retryEligible?: boolean;
+  updatedAt: string;
+};
+
+// ─── Tenant Feature Flags ────────────────────────────────────────────────────
+
+export type TenantFeatureFlags = {
+  tenantId: string;
+  githubPublishingEnabled: boolean;
+  gitExecutionEnabled: boolean;
+  testRailSyncEnabled: boolean;
+  maxRolloutStage: string;
+};
+
+export const featureFlags = {
+  get: (tenantId: string) =>
+    request<TenantFeatureFlags>(`/tenants/${tenantId}/feature-flags`),
+
+  update: (tenantId: string, body: Partial<Omit<TenantFeatureFlags, "tenantId">>) =>
+    request<TenantFeatureFlags>(`/tenants/${tenantId}/feature-flags`, { method: "PATCH", body }),
 };
 
 // ─── Notifications ───────────────────────────────────────────────────────────

@@ -287,6 +287,10 @@ model Tenant {
   archivedAt DateTime?
   softDeleteRequestedAt DateTime?
   softDeleteScheduledFor DateTime?
+  githubPublishingEnabled  Boolean @default(false)
+  gitExecutionEnabled      Boolean @default(false)
+  testRailSyncEnabled      Boolean @default(false)
+  maxRolloutStage          RolloutStage @default(INTERNAL)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 

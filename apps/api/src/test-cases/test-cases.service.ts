@@ -119,8 +119,12 @@ export class TestCasesService {
             id: true,
             externalCaseId: true,
             status: true,
+            ownerEmail: true,
             titleSnapshot: true,
+            sectionNameSnapshot: true,
             lastSyncedAt: true,
+            lastError: true,
+            retryEligible: true,
           },
         },
         _count: {
@@ -165,8 +169,12 @@ export class TestCasesService {
         id: link.id,
         externalCaseId: link.externalCaseId,
         status: link.status,
+        ownerEmail: link.ownerEmail,
         title: link.titleSnapshot,
+        section: link.sectionNameSnapshot,
         lastSyncedAt: link.lastSyncedAt,
+        lastError: link.lastError,
+        retryEligible: link.retryEligible,
       })),
     };
   }

@@ -15,6 +15,7 @@ import { GitHubWebhookController } from './github/github-webhook.controller';
 import { RepositoryAllowlistService } from './github/repository-allowlist.service';
 import { SuitesController } from './suites/suites.controller';
 import { SuitesService } from './suites/suites.service';
+import { RolloutAutomationService } from './suites/rollout-automation.service';
 import { TenantAccessGuard } from './auth/tenant-access.guard';
 import { WorkspaceAccessGuard } from './auth/workspace-access.guard';
 import { AuditService } from './audit/audit.service';
@@ -95,6 +96,7 @@ import { NotificationService } from './notifications/notification.service';
     AuthService,
     WorkspacesService,
     SuitesService,
+    RolloutAutomationService,
     GitHubIntegrationService,
     GitHubPublicationService,
     RepositoryAllowlistService,

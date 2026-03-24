@@ -6,14 +6,18 @@ import {
   Upload,
   PlayCircle,
   Clock,
+  Activity,
+  BarChart3,
+  XCircle,
 } from "lucide-react";
 import { KPICard } from "../components/KPICard";
+import { Progress } from "../components/ui/progress";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "react-router";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CreateRunDialog } from "../components/CreateRunDialog";
 import { UploadRecordingDialog } from "../components/UploadRecordingDialog";
 import { useQuery } from "@tanstack/react-query";
@@ -56,6 +60,27 @@ export function Dashboard() {
   const recentRuns = (runsQuery.data ?? []).slice(0, 4);
   const totalTests = testsQuery.data?.length ?? 0;
   const activeSuites = suitesQuery.data?.length ?? 0;
+
+  const healthMetrics = useMemo(() => {
+    const allRuns = runsQuery.data ?? [];
+    const passed = allRuns.filter((r) => r.status === "PASSED" || r.status === "passed").length;
+    const failed = allRuns.filter((r) => r.status === "FAILED" || r.status === "failed").length;
+    const running = allRuns.filter((r) =>
+      ["RUNNING", "QUEUED", "running", "queued"].includes(r.status),
+    ).length;
+    const completed = passed + failed;
+    const passRate = completed > 0 ? Math.round((passed / completed) * 100) : 0;
+    const avgDuration =
+      allRuns.filter((r) => r.duration != null).length > 0
+        ? Math.round(
+            allRuns.reduce((sum, r) => sum + (r.duration ?? 0), 0) /
+              allRuns.filter((r) => r.duration != null).length /
+              1000,
+          )
+        : 0;
+
+    return { passed, failed, running, completed, passRate, avgDuration, total: allRuns.length };
+  }, [runsQuery.data]);
 
   if (!activeWorkspaceId) {
     return <ErrorState message="No workspace selected" />;
@@ -120,6 +145,73 @@ export function Dashboard() {
           value={String(testsQuery.data?.filter(t => t.status === "needs_human_review").length ?? 0)}
           icon={AlertTriangle}
         />
+      </div>
+
+      {/* Observability — Run Health Overview */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-4 w-4 text-emerald-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Overall Pass Rate</h3>
+          </div>
+          <div className="flex items-end gap-3">
+            <span className="text-3xl font-bold text-emerald-600">{healthMetrics.passRate}%</span>
+            <span className="text-sm text-slate-500 mb-1">of {healthMetrics.completed} completed runs</span>
+          </div>
+          <Progress value={healthMetrics.passRate} className="mt-3 h-2" />
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="h-4 w-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Run Breakdown</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Passed
+              </span>
+              <span className="font-medium">{healthMetrics.passed}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-red-600">
+                <XCircle className="h-3.5 w-3.5" /> Failed
+              </span>
+              <span className="font-medium">{healthMetrics.failed}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-blue-600">
+                <PlayCircle className="h-3.5 w-3.5" /> In Progress
+              </span>
+              <span className="font-medium">{healthMetrics.running}</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="h-4 w-4 text-slate-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Execution Metrics</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Total Runs</span>
+              <span className="font-medium">{healthMetrics.total}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Avg Duration</span>
+              <span className="font-medium">{healthMetrics.avgDuration > 0 ? `${healthMetrics.avgDuration}s` : "—"}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Total Tests</span>
+              <span className="font-medium">{totalTests}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-slate-600">Active Suites</span>
+              <span className="font-medium">{activeSuites}</span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Recent Activity */}

@@ -389,14 +389,65 @@ export class SuitesService {
     tenantId: string,
     requestId: string,
   ) {
-    return this.updateSuite(
-      workspaceId,
-      suiteId,
-      { status: 'ARCHIVED' },
-      auth,
+    const suite = await this.prisma.automationSuite.findFirst({
+      where: { id: suiteId, workspaceId },
+      select: { id: true, isDefault: true, status: true },
+    });
+
+    if (!suite) {
+      throw notFound('SUITE_NOT_FOUND', 'Suite was not found.');
+    }
+
+    if (suite.isDefault) {
+      throw badRequest('SUITE_DEFAULT_ARCHIVE_FORBIDDEN', 'Default suite cannot be archived.');
+    }
+
+    // Archive cascade: unassign tests, disconnect integrations, cancel queued runs
+    await this.prisma.$transaction(async (tx) => {
+      await tx.automationSuite.update({
+        where: { id: suiteId },
+        data: { status: 'ARCHIVED' },
+      });
+
+      // Unassign all canonical tests (move to null suite)
+      const unassigned = await tx.canonicalTest.updateMany({
+        where: { suiteId, workspaceId },
+        data: { suiteId: null },
+      });
+
+      // Disconnect GitHub integration if present
+      await tx.gitHubSuiteIntegration.updateMany({
+        where: { suiteId },
+        data: { status: 'DISCONNECTED' },
+      });
+
+      // Disconnect TestRail integration if present
+      await tx.testRailSuiteIntegration.updateMany({
+        where: { suiteId },
+        data: { status: 'DISCONNECTED' },
+      });
+
+      // Cancel any queued/running runs for this suite
+      await tx.testRun.updateMany({
+        where: { suiteId, status: { in: ['QUEUED', 'VALIDATING', 'REPAIRING', 'READY'] } },
+        data: { status: 'CANCELED' },
+      });
+
+      return unassigned;
+    });
+
+    await this.auditService.record({
       tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'suite.archived',
+      entityType: 'automation_suite',
+      entityId: suiteId,
       requestId,
-    );
+      metadataJson: { cascade: true },
+    });
+
+    return this.getSuiteDetails(workspaceId, suiteId);
   }
 
   async ensureWorkspaceDefaultSuite(workspaceId: string, tenantId: string, workspaceName?: string | null) {
