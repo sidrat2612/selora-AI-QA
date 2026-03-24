@@ -12,6 +12,7 @@ import { GitHubIntegrationController } from './github/github-integration.control
 import { GitHubIntegrationService } from './github/github-integration.service';
 import { GitHubPublicationService } from './github/github-publication.service';
 import { GitHubWebhookController } from './github/github-webhook.controller';
+import { RepositoryAllowlistService } from './github/repository-allowlist.service';
 import { SuitesController } from './suites/suites.controller';
 import { SuitesService } from './suites/suites.service';
 import { TenantAccessGuard } from './auth/tenant-access.guard';
@@ -96,6 +97,7 @@ import { NotificationService } from './notifications/notification.service';
     SuitesService,
     GitHubIntegrationService,
     GitHubPublicationService,
+    RepositoryAllowlistService,
     TestRailIntegrationService,
     TestCasesService,
     ExecutionSourceResolverService,

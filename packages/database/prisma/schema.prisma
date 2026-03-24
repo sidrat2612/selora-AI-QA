@@ -303,6 +303,7 @@ model Tenant {
   quotas      TenantQuota[]
   testRuns    TestRun[]
   betaFeedback BetaFeedback[]
+  githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
 
   @@map("tenants")
 }
@@ -357,6 +358,7 @@ model Workspace {
   retentionSetting       RetentionSetting?
   activeSessions         UserSession[]
   betaFeedback           BetaFeedback[]
+  githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
 
   @@unique([tenantId, slug])
   @@map("workspaces")
@@ -472,6 +474,7 @@ model User {
   submittedFeedback BetaFeedback[]      @relation("SubmittedByUser")
   rotatedGitHubIntegrationSecrets GitHubSuiteIntegration[] @relation("GitHubIntegrationSecretRotatedBy")
   notifications AppNotification[]
+  approvedRepoAllowlistEntries GitHubRepositoryAllowlistEntry[] @relation("RepoAllowlistApprovedBy")
 
   @@map("users")
 }
@@ -729,6 +732,24 @@ model GitHubWebhookDelivery {
   @@index([publicationId, receivedAt])
   @@index([workspaceId, status, receivedAt])
   @@map("github_webhook_deliveries")
+}
+
+model GitHubRepositoryAllowlistEntry {
+  id          String   @id @default(uuid())
+  tenantId    String
+  workspaceId String
+  repoOwner   String
+  repoName    String
+  approvedAt  DateTime @default(now())
+  approvedByUserId String
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  approvedByUser User @relation("RepoAllowlistApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, repoOwner, repoName])
+  @@index([tenantId])
+  @@map("github_repository_allowlist")
 }
 
 model TestRailSuiteIntegration {

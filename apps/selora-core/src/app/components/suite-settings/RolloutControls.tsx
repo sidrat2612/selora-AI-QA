@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { Card } from "../ui/card";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
-import { Slider } from "../ui/slider";
 import { Badge } from "../ui/badge";
 import {
   Select,
@@ -13,117 +11,119 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Save, Zap } from "lucide-react";
+import { useParams } from "react-router";
+import { useWorkspace } from "../../../lib/workspace-context";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { suites as suitesApi } from "../../../lib/api-client";
+import { toast } from "sonner";
+import { useState } from "react";
 
-export function RolloutControls() {
-  const [enableGradual, setEnableGradual] = useState(false);
-  const [rolloutPercentage, setRolloutPercentage] = useState([50]);
-  const [rolloutStrategy, setRolloutStrategy] = useState("percentage");
-  const [canaryEnabled, setCanaryEnabled] = useState(false);
+type RolloutControlsProps = {
+  rollout?: {
+    stage: string;
+    githubPublishingEnabled: boolean;
+    gitExecutionEnabled: boolean;
+    testRailSyncEnabled: boolean;
+  } | null;
+};
 
-  const handleSave = () => {
-    console.log("Saving rollout controls...");
+export function RolloutControls({ rollout }: RolloutControlsProps) {
+  const { id: suiteId } = useParams();
+  const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+
+  const [stage, setStage] = useState(rollout?.stage ?? "INTERNAL");
+  const [githubEnabled, setGithubEnabled] = useState(rollout?.githubPublishingEnabled ?? true);
+  const [gitExecEnabled, setGitExecEnabled] = useState(rollout?.gitExecutionEnabled ?? true);
+  const [testRailEnabled, setTestRailEnabled] = useState(rollout?.testRailSyncEnabled ?? true);
+
+  const saveMutation = useMutation({
+    mutationFn: () => suitesApi.update(activeWorkspaceId!, suiteId!, {
+      rolloutStage: stage,
+      githubPublishingEnabled: githubEnabled,
+      gitExecutionEnabled: gitExecEnabled,
+      testRailSyncEnabled: testRailEnabled,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suite", activeWorkspaceId, suiteId] });
+      toast.success("Rollout settings saved.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Save failed."),
+  });
+
+  const stageColors: Record<string, string> = {
+    INTERNAL: "bg-slate-100 text-slate-700",
+    PILOT: "bg-amber-50 text-amber-700 border-amber-200",
+    GENERAL: "bg-emerald-50 text-emerald-700 border-emerald-200",
   };
 
   return (
     <Card className="p-6">
       <div className="space-y-6">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">Rollout Controls</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage gradual test rollout and canary deployment strategies
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Rollout Controls</h3>
+            <p className="text-sm text-muted-foreground">
+              Manage progressive feature rollout for this suite
+            </p>
+          </div>
+          <Badge className={stageColors[stage] ?? "bg-slate-100 text-slate-700"}>
+            <Zap className="mr-1 h-3 w-3" />
+            {stage}
+          </Badge>
         </div>
 
         <div className="space-y-4">
-          {/* Gradual Rollout */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable gradual rollout</Label>
-              <p className="text-sm text-muted-foreground">
-                Roll out test updates gradually to minimize risk
-              </p>
-            </div>
-            <Switch checked={enableGradual} onCheckedChange={setEnableGradual} />
+          <div className="space-y-2">
+            <Label htmlFor="rollout-stage">Rollout Stage</Label>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger id="rollout-stage"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="INTERNAL">Internal</SelectItem>
+                <SelectItem value="PILOT">Pilot</SelectItem>
+                <SelectItem value="GENERAL">General Availability</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {stage === "INTERNAL" && "Only internal users can access this suite's features."}
+              {stage === "PILOT" && "Available to selected pilot teams."}
+              {stage === "GENERAL" && "Available to all users."}
+            </p>
           </div>
 
-          {enableGradual && (
-            <>
-              {/* Rollout Strategy */}
-              <div className="space-y-2">
-                <Label htmlFor="strategy">Rollout strategy</Label>
-                <Select value={rolloutStrategy} onValueChange={setRolloutStrategy}>
-                  <SelectTrigger id="strategy">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">Percentage-based</SelectItem>
-                    <SelectItem value="environment">Environment-based</SelectItem>
-                    <SelectItem value="manual">Manual approval</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="border-t pt-4 space-y-3">
+            <h4 className="text-sm font-semibold text-foreground">Feature Flags</h4>
 
-              {rolloutStrategy === "percentage" && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Rollout percentage</Label>
-                    <Badge variant="secondary">{rolloutPercentage[0]}%</Badge>
-                  </div>
-                  <Slider
-                    value={rolloutPercentage}
-                    onValueChange={setRolloutPercentage}
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Tests will be rolled out to {rolloutPercentage[0]}% of environments
-                  </p>
-                </div>
-              )}
-
-              {rolloutStrategy === "environment" && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-foreground mb-2">Environment order:</p>
-                  <ol className="text-sm text-muted-foreground space-y-1 ml-4 list-decimal">
-                    <li>Development</li>
-                    <li>Staging</li>
-                    <li>Production</li>
-                  </ol>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Canary Testing */}
-          <div className="pt-4 border-t">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-500" />
-                <div className="space-y-0.5">
-                  <Label>Canary testing</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Run new test versions on a small subset first
-                  </p>
-                </div>
+              <div className="space-y-0.5">
+                <Label>GitHub Publishing</Label>
+                <p className="text-sm text-muted-foreground">Allow artifact publication to GitHub</p>
               </div>
-              <Switch checked={canaryEnabled} onCheckedChange={setCanaryEnabled} />
+              <Switch checked={githubEnabled} onCheckedChange={setGithubEnabled} />
             </div>
 
-            {canaryEnabled && (
-              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-900">
-                  <strong>Canary mode active:</strong> New test versions will run on 10% of traffic before full rollout
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Git Execution</Label>
+                <p className="text-sm text-muted-foreground">Allow execution from git sources</p>
               </div>
-            )}
+              <Switch checked={gitExecEnabled} onCheckedChange={setGitExecEnabled} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>TestRail Sync</Label>
+                <p className="text-sm text-muted-foreground">Allow TestRail synchronization</p>
+              </div>
+              <Switch checked={testRailEnabled} onCheckedChange={setTestRailEnabled} />
+            </div>
           </div>
         </div>
 
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={handleSave}>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>

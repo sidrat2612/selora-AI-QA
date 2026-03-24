@@ -119,4 +119,58 @@ export class SuitesController {
       { requestId: request.requestId },
     );
   }
+
+  @Post('workspaces/:workspaceId/suites/:suiteId/assign-tests')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async assignTests(
+    @Param('workspaceId') workspaceId: string,
+    @Param('suiteId') suiteId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.suitesService.bulkAssignTests(
+        workspaceId,
+        suiteId,
+        body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Post('workspaces/:workspaceId/suites/:suiteId/unassign-tests')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async unassignTests(
+    @Param('workspaceId') workspaceId: string,
+    @Param('suiteId') suiteId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.suitesService.bulkUnassignTests(
+        workspaceId,
+        suiteId,
+        body,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
 }

@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Label } from "./ui/label";
+import { Input } from "./ui/input";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,8 @@ interface CreateRunDialogProps {
 export function CreateRunDialog({ open, onOpenChange, defaultSuiteId }: CreateRunDialogProps) {
   const [selectedSuite, setSelectedSuite] = useState(defaultSuiteId || "");
   const [selectedEnvironment, setSelectedEnvironment] = useState("");
+  const [sourceMode, setSourceMode] = useState("SUITE_DEFAULT");
+  const [gitRef, setGitRef] = useState("");
   const [notifyOnComplete, setNotifyOnComplete] = useState(true);
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
@@ -52,12 +55,16 @@ export function CreateRunDialog({ open, onOpenChange, defaultSuiteId }: CreateRu
       runsApi.create(activeWorkspaceId!, {
         suiteId: selectedSuite,
         environmentId: selectedEnvironment,
-      }),
+        ...(sourceMode !== "SUITE_DEFAULT" ? { sourceMode } : {}),
+        ...(sourceMode === "PINNED_COMMIT" && gitRef ? { gitRef } : {}),
+      } as Parameters<typeof runsApi.create>[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["runs"] });
       onOpenChange(false);
       if (!defaultSuiteId) setSelectedSuite("");
       setSelectedEnvironment("");
+      setSourceMode("SUITE_DEFAULT");
+      setGitRef("");
       setNotifyOnComplete(true);
     },
   });
@@ -108,6 +115,34 @@ export function CreateRunDialog({ open, onOpenChange, defaultSuiteId }: CreateRu
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="source-mode">Execution Source</Label>
+            <Select value={sourceMode} onValueChange={setSourceMode}>
+              <SelectTrigger id="source-mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SUITE_DEFAULT">Suite Default</SelectItem>
+                <SelectItem value="STORAGE_ARTIFACT">Storage artifact</SelectItem>
+                <SelectItem value="BRANCH_HEAD">Branch HEAD (latest)</SelectItem>
+                <SelectItem value="PINNED_COMMIT">Pinned commit</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {sourceMode === "SUITE_DEFAULT" && "Uses the suite execution source policy."}
+              {sourceMode === "STORAGE_ARTIFACT" && "Run from stored generated artifact."}
+              {sourceMode === "BRANCH_HEAD" && "Fetch latest from the configured branch."}
+              {sourceMode === "PINNED_COMMIT" && "Run from a specific git commit SHA."}
+            </p>
+          </div>
+
+          {sourceMode === "PINNED_COMMIT" && (
+            <div className="space-y-2">
+              <Label htmlFor="git-ref">Commit SHA</Label>
+              <Input id="git-ref" placeholder="e.g., abc1234" value={gitRef} onChange={(e) => setGitRef(e.target.value)} className="font-mono" />
+            </div>
+          )}
 
           <div className="flex items-center space-x-2">
             <Checkbox

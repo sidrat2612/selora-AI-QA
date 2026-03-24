@@ -643,4 +643,64 @@ export class GitHubIntegrationService {
 
     return `${frontendOrigin}/workspaces/${workspaceId}/suites/${suiteId}/settings/github?${params.toString()}`;
   }
+
+  async rotateSecret(
+    workspaceId: string,
+    suiteId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const suite = await this.prisma.automationSuite.findFirst({
+      where: { id: suiteId, workspaceId },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!suite || suite.tenantId !== tenantId) {
+      throw notFound('SUITE_NOT_FOUND', 'Suite was not found.');
+    }
+
+    const existing = await this.prisma.gitHubSuiteIntegration.findUnique({
+      where: { suiteId },
+      select: githubIntegrationSelect,
+    });
+
+    if (!existing) {
+      throw notFound('GITHUB_INTEGRATION_NOT_FOUND', 'GitHub integration was not found for this suite.');
+    }
+
+    const newToken = typeof body['newToken'] === 'string' ? body['newToken'].trim() : '';
+    if (!newToken) {
+      throw badRequest('GITHUB_TOKEN_REQUIRED', 'newToken is required for secret rotation.');
+    }
+
+    const secretRef = `github:${suiteId}:pat`;
+    const encryptedSecretJson = encryptSecretValue(newToken);
+    const now = new Date();
+
+    const updated = await this.prisma.gitHubSuiteIntegration.update({
+      where: { suiteId },
+      data: {
+        secretRef,
+        encryptedSecretJson,
+        secretRotatedAt: now,
+        secretRotatedByUserId: auth.user.id,
+      },
+      select: githubIntegrationSelect,
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'github_integration.secret_rotated',
+      entityType: 'github_suite_integration',
+      entityId: updated.id,
+      requestId,
+      metadataJson: { credentialMode: updated.credentialMode },
+    });
+
+    return this.toIntegrationSummary(updated);
+  }
 }

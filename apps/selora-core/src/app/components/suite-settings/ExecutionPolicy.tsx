@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card } from "../ui/card";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
 import {
@@ -12,17 +11,41 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Save } from "lucide-react";
+import { useParams } from "react-router";
+import { useWorkspace } from "../../../lib/workspace-context";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { suites as suitesApi } from "../../../lib/api-client";
+import { toast } from "sonner";
 
-export function ExecutionPolicy() {
-  const [enableRetries, setEnableRetries] = useState(true);
-  const [maxRetries, setMaxRetries] = useState("3");
-  const [timeout, setTimeout] = useState("30");
-  const [parallelism, setParallelism] = useState("4");
-  const [failFast, setFailFast] = useState(false);
+type ExecutionPolicyProps = {
+  policy?: {
+    defaultMode: string;
+    allowBranchHeadExecution: boolean;
+    allowStorageExecutionFallback: boolean;
+  } | null;
+};
 
-  const handleSave = () => {
-    console.log("Saving execution policy...");
-  };
+export function ExecutionPolicy({ policy }: ExecutionPolicyProps) {
+  const { id: suiteId } = useParams();
+  const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+
+  const [sourceMode, setSourceMode] = useState(policy?.defaultMode ?? "STORAGE_ARTIFACT");
+  const [allowBranchHead, setAllowBranchHead] = useState(policy?.allowBranchHeadExecution ?? false);
+  const [allowFallback, setAllowFallback] = useState(policy?.allowStorageExecutionFallback ?? true);
+
+  const saveMutation = useMutation({
+    mutationFn: () => suitesApi.update(activeWorkspaceId!, suiteId!, {
+      executionSourcePolicy: sourceMode,
+      allowBranchHeadExecution: allowBranchHead,
+      allowStorageExecutionFallback: allowFallback,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["suite", activeWorkspaceId, suiteId] });
+      toast.success("Execution policy saved.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Save failed."),
+  });
 
   return (
     <Card className="p-6">
@@ -30,85 +53,53 @@ export function ExecutionPolicy() {
         <div>
           <h3 className="text-base font-semibold text-foreground">Execution Policy</h3>
           <p className="text-sm text-muted-foreground">
-            Configure retry behavior, timeouts, and execution settings for this suite
+            Configure source resolution and fallback behavior for this suite
           </p>
         </div>
 
         <div className="space-y-4">
-          {/* Retry Settings */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Enable automatic retries</Label>
-              <p className="text-sm text-muted-foreground">
-                Automatically retry failed tests
-              </p>
-            </div>
-            <Switch checked={enableRetries} onCheckedChange={setEnableRetries} />
-          </div>
-
-          {enableRetries && (
-            <div className="space-y-2">
-              <Label htmlFor="max-retries">Maximum retry attempts</Label>
-              <Input
-                id="max-retries"
-                type="number"
-                min="1"
-                max="10"
-                value={maxRetries}
-                onChange={(e) => setMaxRetries(e.target.value)}
-              />
-            </div>
-          )}
-
-          {/* Timeout */}
           <div className="space-y-2">
-            <Label htmlFor="timeout">Test timeout (seconds)</Label>
-            <Input
-              id="timeout"
-              type="number"
-              min="5"
-              max="300"
-              value={timeout}
-              onChange={(e) => setTimeout(e.target.value)}
-            />
+            <Label htmlFor="exec-source-mode">Default source mode</Label>
+            <Select value={sourceMode} onValueChange={setSourceMode}>
+              <SelectTrigger id="exec-source-mode"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="STORAGE_ARTIFACT">Storage artifact</SelectItem>
+                <SelectItem value="PINNED_COMMIT">Pinned commit</SelectItem>
+                <SelectItem value="BRANCH_HEAD">Branch HEAD</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-xs text-muted-foreground">
-              Maximum time allowed for a single test to complete
+              {sourceMode === "STORAGE_ARTIFACT" && "Execute from stored generated artifacts."}
+              {sourceMode === "PINNED_COMMIT" && "Execute from a specific git commit."}
+              {sourceMode === "BRANCH_HEAD" && "Always fetch latest from the default branch."}
             </p>
           </div>
 
-          {/* Parallelism */}
-          <div className="space-y-2">
-            <Label htmlFor="parallelism">Parallel execution workers</Label>
-            <Select value={parallelism} onValueChange={setParallelism}>
-              <SelectTrigger id="parallelism">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 worker (sequential)</SelectItem>
-                <SelectItem value="2">2 workers</SelectItem>
-                <SelectItem value="4">4 workers</SelectItem>
-                <SelectItem value="8">8 workers</SelectItem>
-                <SelectItem value="16">16 workers</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Fail Fast */}
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Fail fast</Label>
+              <Label>Allow branch HEAD execution</Label>
               <p className="text-sm text-muted-foreground">
-                Stop execution immediately when a test fails
+                Permit runs to use the latest branch HEAD
               </p>
             </div>
-            <Switch checked={failFast} onCheckedChange={setFailFast} />
+            <Switch checked={allowBranchHead} onCheckedChange={setAllowBranchHead} />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Allow storage fallback</Label>
+              <p className="text-sm text-muted-foreground">
+                Fall back to storage artifacts if git resolution fails
+              </p>
+            </div>
+            <Switch checked={allowFallback} onCheckedChange={setAllowFallback} />
           </div>
         </div>
 
         <div className="flex justify-end pt-4 border-t">
-          <Button onClick={handleSave}>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>

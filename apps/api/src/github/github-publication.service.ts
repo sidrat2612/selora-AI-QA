@@ -1404,4 +1404,74 @@ export class GitHubPublicationService {
   private readNumber(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) ? value : null;
   }
+
+  async listPublicationsForSuite(workspaceId: string, suiteId: string) {
+    return this.prisma.generatedArtifactPublication.findMany({
+      where: { workspaceId, suiteId },
+      select: publicationSelect,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async replaySingleDelivery(
+    workspaceId: string,
+    suiteId: string,
+    deliveryId: string,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const delivery = await this.prisma.gitHubWebhookDelivery.findFirst({
+      where: { id: deliveryId, workspaceId, suiteId },
+      select: {
+        id: true,
+        tenantId: true,
+        workspaceId: true,
+        suiteId: true,
+        githubIntegrationId: true,
+        publicationId: true,
+        deliveryId: true,
+        eventName: true,
+        action: true,
+        status: true,
+        payloadJson: true,
+        processingAttempts: true,
+        lastError: true,
+        receivedAt: true,
+        processedAt: true,
+        replayedAt: true,
+        githubIntegration: {
+          select: {
+            id: true,
+            repoOwner: true,
+            repoName: true,
+          },
+        },
+      },
+    });
+
+    if (!delivery || delivery.tenantId !== tenantId) {
+      throw notFound('GITHUB_DELIVERY_NOT_FOUND', 'Webhook delivery was not found.');
+    }
+
+    if (delivery.status !== GitHubWebhookDeliveryStatus.FAILED) {
+      throw badRequest('GITHUB_DELIVERY_NOT_FAILED', 'Only failed deliveries can be replayed.');
+    }
+
+    await this.processStoredDelivery(delivery.id, { replayedAt: new Date() });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'github_webhook_delivery.replayed',
+      entityType: 'github_webhook_delivery',
+      entityId: deliveryId,
+      requestId,
+      metadataJson: { eventName: delivery.eventName, action: delivery.action },
+    });
+
+    return { replayed: true, deliveryId };
+  }
 }

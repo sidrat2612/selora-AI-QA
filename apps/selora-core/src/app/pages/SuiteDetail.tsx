@@ -413,10 +413,10 @@ export function SuiteDetail() {
             <h3 className="text-base font-semibold text-slate-900">Suite Settings</h3>
             <p className="mt-1 text-sm text-slate-600">Configure execution policy and integrations</p>
             <div className="mt-6 space-y-4">
-              <ExecutionPolicy />
-              <GitHubIntegration licenseStatus={licenseQuery.data} />
-              <TestRailIntegration licenseStatus={licenseQuery.data} />
-              <RolloutControls />
+              <ExecutionPolicy policy={suite.executionPolicy ?? null} />
+              <GitHubIntegration licenseStatus={licenseQuery.data} integration={suite.linkedSystems?.github ?? null} />
+              <TestRailIntegration licenseStatus={licenseQuery.data} integration={suite.linkedSystems?.testrail ?? null} />
+              <RolloutControls rollout={suite.rollout ?? null} />
             </div>
           </Card>
         </TabsContent>

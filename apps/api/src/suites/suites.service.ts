@@ -514,4 +514,107 @@ export class SuitesService {
 
     throw badRequest('SUITE_ROLLOUT_STAGE_INVALID', 'rolloutStage must be INTERNAL, PILOT, or GENERAL.');
   }
+
+  async bulkAssignTests(
+    workspaceId: string,
+    suiteId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const suite = await this.prisma.automationSuite.findFirst({
+      where: { id: suiteId, workspaceId },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!suite || suite.tenantId !== tenantId) {
+      throw notFound('SUITE_NOT_FOUND', 'Suite was not found.');
+    }
+
+    const testIds = this.readStringArray(body['testIds'], 'testIds');
+    if (testIds.length === 0) {
+      throw badRequest('SUITE_ASSIGN_EMPTY', 'At least one test ID is required.');
+    }
+    if (testIds.length > 200) {
+      throw badRequest('SUITE_ASSIGN_TOO_MANY', 'Cannot assign more than 200 tests at once.');
+    }
+
+    const tests = await this.prisma.canonicalTest.findMany({
+      where: { id: { in: testIds }, workspaceId },
+      select: { id: true, suiteId: true },
+    });
+
+    const found = new Set(tests.map((t) => t.id));
+    const missing = testIds.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw badRequest('SUITE_ASSIGN_TESTS_NOT_FOUND', `Tests not found: ${missing.slice(0, 5).join(', ')}`);
+    }
+
+    const updated = await this.prisma.canonicalTest.updateMany({
+      where: { id: { in: testIds }, workspaceId },
+      data: { suiteId },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'suite.tests_assigned',
+      entityType: 'automation_suite',
+      entityId: suiteId,
+      requestId,
+      metadataJson: { testIds, assignedCount: updated.count },
+    });
+
+    return { assignedCount: updated.count };
+  }
+
+  async bulkUnassignTests(
+    workspaceId: string,
+    suiteId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    tenantId: string,
+    requestId: string,
+  ) {
+    const suite = await this.prisma.automationSuite.findFirst({
+      where: { id: suiteId, workspaceId },
+      select: { id: true, tenantId: true },
+    });
+
+    if (!suite || suite.tenantId !== tenantId) {
+      throw notFound('SUITE_NOT_FOUND', 'Suite was not found.');
+    }
+
+    const testIds = this.readStringArray(body['testIds'], 'testIds');
+    if (testIds.length === 0) {
+      throw badRequest('SUITE_UNASSIGN_EMPTY', 'At least one test ID is required.');
+    }
+
+    const updated = await this.prisma.canonicalTest.updateMany({
+      where: { id: { in: testIds }, workspaceId, suiteId },
+      data: { suiteId: null },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId,
+      actorUserId: auth.user.id,
+      eventType: 'suite.tests_unassigned',
+      entityType: 'automation_suite',
+      entityId: suiteId,
+      requestId,
+      metadataJson: { testIds, unassignedCount: updated.count },
+    });
+
+    return { unassignedCount: updated.count };
+  }
+
+  private readStringArray(value: unknown, fieldName: string): string[] {
+    if (!Array.isArray(value) || !value.every((v) => typeof v === 'string' && v.trim().length > 0)) {
+      throw badRequest('SUITE_FIELD_INVALID', `${fieldName} must be an array of non-empty strings.`);
+    }
+    return value.map((v: string) => v.trim());
+  }
 }

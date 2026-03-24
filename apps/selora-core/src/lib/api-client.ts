@@ -295,6 +295,18 @@ export const suites = {
 
   delete: (workspaceId: string, suiteId: string) =>
     request<Suite>(`/workspaces/${workspaceId}/suites/${suiteId}`, { method: "DELETE" }),
+
+  assignTests: (workspaceId: string, suiteId: string, testIds: string[]) =>
+    request<{ assignedCount: number }>(`/workspaces/${workspaceId}/suites/${suiteId}/assign-tests`, {
+      method: "POST",
+      body: { testIds },
+    }),
+
+  unassignTests: (workspaceId: string, suiteId: string, testIds: string[]) =>
+    request<{ unassignedCount: number }>(`/workspaces/${workspaceId}/suites/${suiteId}/unassign-tests`, {
+      method: "POST",
+      body: { testIds },
+    }),
 };
 
 // ─── Tests / Recordings ─────────────────────────────────────────────────────
@@ -674,6 +686,79 @@ export const githubIntegration = {
 
   delete: (workspaceId: string, suiteId: string) =>
     request<void>(`/workspaces/${workspaceId}/suites/${suiteId}/github-integration`, { method: "DELETE" }),
+
+  getInstallUrl: (workspaceId: string, suiteId: string) =>
+    request<{ url: string }>(`/workspaces/${workspaceId}/suites/${suiteId}/github-integration/install-url`),
+
+  rotateSecret: (workspaceId: string, suiteId: string, body: { newToken: string }) =>
+    request<Record<string, unknown>>(`/workspaces/${workspaceId}/suites/${suiteId}/github-integration/rotate-secret`, {
+      method: "POST",
+      body,
+    }),
+
+  listPublications: (workspaceId: string, suiteId: string) =>
+    request<Publication[]>(`/workspaces/${workspaceId}/suites/${suiteId}/github-integration/publications`),
+
+  replayDelivery: (workspaceId: string, suiteId: string, deliveryId: string) =>
+    request<Record<string, unknown>>(
+      `/workspaces/${workspaceId}/suites/${suiteId}/github-integration/deliveries/${deliveryId}/replay`,
+      { method: "POST" },
+    ),
+};
+
+export type Publication = {
+  id: string;
+  status: string;
+  targetPath: string;
+  branchName: string;
+  pullRequestNumber?: number | null;
+  pullRequestUrl?: string | null;
+  pullRequestState?: string | null;
+  headCommitSha?: string | null;
+  lastError?: string | null;
+  publishedAt?: string | null;
+  mergedAt?: string | null;
+  createdAt: string;
+  webhookDeliveries?: WebhookDelivery[];
+};
+
+export type WebhookDelivery = {
+  id: string;
+  deliveryId: string;
+  eventName: string;
+  action?: string | null;
+  status: string;
+  processingAttempts: number;
+  lastError?: string | null;
+  receivedAt: string;
+  processedAt?: string | null;
+  replayedAt?: string | null;
+};
+
+// ─── Repository Allowlist ────────────────────────────────────────────────────
+
+export type AllowlistEntry = {
+  id: string;
+  repoOwner: string;
+  repoName: string;
+  approvedAt: string;
+  approvedByUser?: { id: string; email: string; name: string };
+};
+
+export const repositoryAllowlist = {
+  list: (workspaceId: string) =>
+    request<AllowlistEntry[]>(`/workspaces/${workspaceId}/repository-allowlist`),
+
+  add: (workspaceId: string, body: { repoOwner: string; repoName: string }) =>
+    request<AllowlistEntry>(`/workspaces/${workspaceId}/repository-allowlist`, {
+      method: "POST",
+      body,
+    }),
+
+  remove: (workspaceId: string, entryId: string) =>
+    request<{ removed: true }>(`/workspaces/${workspaceId}/repository-allowlist/${entryId}`, {
+      method: "DELETE",
+    }),
 };
 
 // ─── TestRail Integration ────────────────────────────────────────────────────
