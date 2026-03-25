@@ -12,6 +12,7 @@ import {
   Menu
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,9 +140,12 @@ export function AppLayout() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-medium text-emerald-700">
-                    {userInitials}
-                  </div>
+                  <Avatar className="h-8 w-8 border border-emerald-200">
+                    <AvatarImage src={user?.avatarUrl ?? undefined} alt={user?.name ?? "User avatar"} />
+                    <AvatarFallback className="bg-emerald-100 text-sm font-medium text-emerald-700">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1 text-left">
                     <p className="text-sm font-medium text-slate-900">{user?.name ?? "User"}</p>
                     <p className="text-xs text-slate-500">Platform Admin</p>
@@ -152,7 +156,9 @@ export function AppLayout() {
               <DropdownMenuContent align="start" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile Settings</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/account/profile">Profile Settings</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()}>Sign Out</DropdownMenuItem>
               </DropdownMenuContent>

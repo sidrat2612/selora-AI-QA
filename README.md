@@ -1,4 +1,4 @@
-# Selora — AI-Powered QA Automation Platform
+# Selora — AI Powered QA Automation Platform
 
 Selora is a vendor-hosted, multi-tenant SaaS platform for web QA automation. It ingests Playwright browser recordings, uses AI to convert them into canonical test definitions, generates executable Playwright tests, validates and repairs generated tests using bounded AI, and provides a full web UI for test management and execution.
 

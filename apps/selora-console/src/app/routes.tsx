@@ -41,6 +41,7 @@ export const router = createBrowserRouter([
           { path: "tenants", lazy: () => loadRoute(() => import("./pages/PlatformAdmin"), "PlatformAdmin") },
           { path: "tenants/:id", lazy: () => loadRoute(() => import("./pages/TenantDetail"), "TenantDetail") },
           { path: "audit", lazy: () => loadRoute(() => import("./pages/Audit"), "Audit") },
+          { path: "account/profile", lazy: () => loadRoute(() => import("./pages/AccountProfile"), "AccountProfile") },
           { path: "usage", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
           { path: "settings/lifecycle", lazy: () => loadRoute(() => import("./pages/settings/SettingsLifecycle"), "SettingsLifecycle") },
           { path: "settings/quotas", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },

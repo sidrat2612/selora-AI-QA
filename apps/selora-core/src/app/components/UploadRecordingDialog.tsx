@@ -93,7 +93,7 @@ export function UploadRecordingDialog({ open, onOpenChange }: UploadRecordingDia
         <DialogHeader>
           <DialogTitle>Upload Test Recording</DialogTitle>
           <DialogDescription>
-            Upload a Playwright, Selenium, or Cypress recording to generate an AI-powered test
+            Upload a Playwright, Selenium, or Cypress recording to generate an AI Powered test
           </DialogDescription>
         </DialogHeader>
 

@@ -454,6 +454,10 @@ model User {
   email            String     @unique
   name             String
   avatarUrl        String?
+  prefersCompactNavigation Boolean @default(false)
+  prefersEmailNotifications Boolean @default(true)
+  prefersRunDigest Boolean @default(true)
+  prefersAutoOpenFailures Boolean @default(true)
   passwordHash     String
   passwordVersion  Int        @default(1)
   emailVerifiedAt  DateTime?

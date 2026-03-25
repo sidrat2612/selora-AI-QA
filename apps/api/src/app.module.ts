@@ -56,6 +56,8 @@ import { WorkspacesController } from './workspaces/workspaces.controller';
 import { WorkspacesService } from './workspaces/workspaces.service';
 import { NotificationController } from './notifications/notification.controller';
 import { NotificationService } from './notifications/notification.service';
+import { AccountController } from './account/account.controller';
+import { AccountService } from './account/account.service';
 
 @Module({
   imports: [
@@ -87,6 +89,7 @@ import { NotificationService } from './notifications/notification.service';
     RetentionCleanupController,
     LicenseController,
     NotificationController,
+    AccountController,
   ],
   providers: [
     PrismaService,
@@ -114,6 +117,7 @@ import { NotificationService } from './notifications/notification.service';
     RecordingsService,
     RetentionCleanupService,
     NotificationService,
+    AccountService,
     TenantsService,
     UsageMeterService,
     QuotaService,

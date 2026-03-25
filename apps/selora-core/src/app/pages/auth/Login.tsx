@@ -33,7 +33,7 @@ export function Login() {
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-semibold text-foreground mb-2">Selora</h1>
-          <p className="text-sm text-muted-foreground">AI-Powered QA Automation</p>
+          <p className="text-sm text-muted-foreground">AI Powered QA Automation</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

@@ -101,9 +101,28 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  avatarUrl: string | null;
+  status: string;
+  emailVerifiedAt: string | null;
+  preferences: AccountPreferences;
+  memberships: AuthMembership[];
+};
+
+export type AccountProfile = {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
   status: string;
   emailVerifiedAt: string | null;
   memberships: AuthMembership[];
+};
+
+export type AccountPreferences = {
+  compactNavigation: boolean;
+  emailNotifications: boolean;
+  runDigest: boolean;
+  autoOpenFailures: boolean;
 };
 
 export type PermissionFlags = {
@@ -144,6 +163,15 @@ export const auth = {
 
   resetPassword: (token: string, newPassword: string) =>
     request<{ reset: boolean }>("/auth/reset-password", { method: "POST", body: { token, newPassword } }),
+};
+
+export const account = {
+  getProfile: () => request<AccountProfile>("/account/profile"),
+  updateProfile: (body: Pick<AccountProfile, "name" | "avatarUrl">) =>
+    request<AccountProfile>("/account/profile", { method: "PATCH", body }),
+  getPreferences: () => request<AccountPreferences>("/account/preferences"),
+  updatePreferences: (body: Partial<AccountPreferences>) =>
+    request<AccountPreferences>("/account/preferences", { method: "PATCH", body }),
 };
 
 // ─── Workspaces ──────────────────────────────────────────────────────────────

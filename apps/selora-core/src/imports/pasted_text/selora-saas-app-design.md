@@ -1,7 +1,7 @@
 Design a complete, production-ready enterprise SaaS web application UI/UX for a product called Selora.
 
 Product summary:
-Selora is an AI-powered QA automation platform for engineering and QA teams. It ingests Playwright codegen recordings, converts them into executable Playwright tests using AI, validates and repairs generated tests with bounded AI assistance, and allows teams to organize suites, execute runs, inspect artifacts, manage environments, audit activity, and control tenant/workspace governance.
+Selora is an AI Powered QA automation platform for engineering and QA teams. It ingests Playwright codegen recordings, converts them into executable Playwright tests using AI, validates and repairs generated tests with bounded AI assistance, and allows teams to organize suites, execute runs, inspect artifacts, manage environments, audit activity, and control tenant/workspace governance.
 
 Primary goal:
 Create a professional, modern, premium B2B web app that feels credible for enterprise buyers, operationally clear for QA teams, and robust enough for multi-tenant admin workflows. The current UI should be fully replaced with a more polished, systematic, higher-trust experience.
@@ -20,7 +20,7 @@ Deliverables to generate in one design system:
 
 Brand and positioning:
 Brand name: Selora
-Tagline: AI-Powered QA for Faster Releases
+Tagline: AI Powered QA for Faster Releases
 Tone: precise, reliable, technical, confident, enterprise-grade, high-trust
 Audience: QA leaders, engineering managers, SRE/platform teams, test automation engineers, workspace operators, tenant admins, platform admins
 Avoid startup toy aesthetics. Avoid generic template dashboards. Avoid overly playful consumer styling.

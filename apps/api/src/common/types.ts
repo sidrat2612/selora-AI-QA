@@ -15,9 +15,16 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  avatarUrl: string | null;
   status: UserStatus;
   emailVerifiedAt: Date | null;
   passwordVersion: number;
+  preferences: {
+    compactNavigation: boolean;
+    emailNotifications: boolean;
+    runDigest: boolean;
+    autoOpenFailures: boolean;
+  };
   memberships: AuthMembership[];
 };
 
