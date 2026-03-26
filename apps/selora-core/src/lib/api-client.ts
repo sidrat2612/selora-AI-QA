@@ -596,6 +596,14 @@ export const runs = {
 
   cancel: (workspaceId: string, runId: string) =>
     request<Run>(`/workspaces/${workspaceId}/runs/${runId}/cancel`, { method: "POST" }),
+
+  getItemLog: (workspaceId: string, runId: string, itemId: string) =>
+    request<{ log: string | null; fileName?: string; status: string }>(
+      `/workspaces/${workspaceId}/runs/${runId}/items/${itemId}/console/log`,
+    ),
+
+  liveLogUrl: (workspaceId: string, runId: string, itemId: string) =>
+    `${API_BASE}/workspaces/${workspaceId}/runs/${runId}/items/${itemId}/console/live`,
 };
 
 // ─── Audit ───────────────────────────────────────────────────────────────────
@@ -700,6 +708,54 @@ export const quotas = {
 
   update: (tenantId: string, body: Record<string, unknown>) =>
     request<QuotaData>(`/tenants/${tenantId}/quotas`, { method: "PATCH", body }),
+};
+
+// ─── Integrations Overview ───────────────────────────────────────────────────
+
+export type SuiteIntegrationSummary = {
+  suiteId: string;
+  suiteName: string;
+  suiteSlug: string;
+  suiteStatus: string;
+  github: {
+    id: string;
+    status: string;
+    repoOwner: string;
+    repoName: string;
+    defaultBranch: string;
+    allowedWriteScope: string;
+    credentialMode: string;
+    lastValidatedAt: string | null;
+    secretRotatedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  testrail: {
+    id: string;
+    status: string;
+    baseUrl: string;
+    projectId: string;
+    suiteIdExternal: string | null;
+    syncPolicy: string;
+    lastValidatedAt: string | null;
+    lastSyncedAt: string | null;
+    latestSync: {
+      id: string;
+      status: string;
+      totalCount: number;
+      syncedCount: number;
+      failedCount: number;
+      startedAt: string | null;
+      finishedAt: string | null;
+    } | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export const integrations = {
+  list: (workspaceId: string) =>
+    requestList<SuiteIntegrationSummary>(`/workspaces/${workspaceId}/integrations`),
 };
 
 // ─── GitHub Integration ──────────────────────────────────────────────────────

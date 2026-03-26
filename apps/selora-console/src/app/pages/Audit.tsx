@@ -128,7 +128,7 @@ export function Audit() {
       </div>
 
       {/* Audit Table */}
-      <div className="rounded-lg border border-slate-200 bg-white">
+      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>

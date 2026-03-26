@@ -47,6 +47,7 @@ export const router = createBrowserRouter([
           { path: "runs/:id", lazy: () => loadRoute(() => import("./pages/RunDetail"), "RunDetail") },
           { path: "feedback", lazy: () => loadRoute(() => import("./pages/Feedback"), "Feedback") },
           { path: "audit", lazy: () => loadRoute(() => import("./pages/Audit"), "Audit") },
+          { path: "settings/integrations", lazy: () => loadRoute(() => import("./pages/Integrations"), "Integrations") },
           { path: "account/profile", lazy: () => loadRoute(() => import("./pages/AccountProfile"), "AccountProfile") },
           { path: "account/preferences", lazy: () => loadRoute(() => import("./pages/AccountPreferences"), "AccountPreferences") },
           { path: "settings/members", lazy: () => loadRoute(() => import("./pages/settings/SettingsMembers"), "SettingsMembers") },

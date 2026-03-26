@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Building2,
   Shield,
-  Menu
+  Menu,
+  Plug
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -92,6 +93,7 @@ export function AppLayout() {
     if (permissions.canManageCompany) items.push({ name: "Quotas", href: "/settings/quotas" });
     if (permissions.canManageCompany) items.push({ name: "Retention", href: "/settings/retention" });
     if (permissions.canManageEnvironments) items.push({ name: "Environments", href: "/settings/environments" });
+    items.push({ name: "Integrations", href: "/settings/integrations" });
     return items;
   }, [permissions]);
 
@@ -125,24 +127,29 @@ export function AppLayout() {
           <div className="border-b border-slate-200 p-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span className="text-sm truncate">{activeWs?.workspaceName ?? "Select Workspace"}</span>
+                  <Button variant="outline" className="w-full justify-between overflow-hidden">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      <span className="block truncate text-sm" title={activeWs?.workspaceName ?? "Select Workspace"}>
+                        {activeWs?.workspaceName ?? "Select Workspace"}
+                      </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuContent align="start" className="w-72 max-w-[calc(100vw-2rem)]">
                 <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {workspaceMemberships.map((m) => (
                   <DropdownMenuItem
                     key={m.workspaceId}
+                      className="flex items-center gap-2"
                     onClick={() => m.workspaceId && setActiveWorkspaceId(m.workspaceId)}
                   >
-                    <Building2 className="mr-2 h-4 w-4" />
-                    {m.workspaceName ?? m.workspaceId}
+                      <Building2 className="h-4 w-4 shrink-0" />
+                      <span className="truncate" title={m.workspaceName ?? m.workspaceId}>
+                        {m.workspaceName ?? m.workspaceId}
+                      </span>
                   </DropdownMenuItem>
                 ))}
                 {workspaceMemberships.length === 0 && (

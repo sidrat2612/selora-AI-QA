@@ -137,11 +137,14 @@ export function validateGeneratedPlaywrightTest(input: { code: string }): Valida
 			};
 }
 
+export type LogLineCallback = (stream: 'stdout' | 'stderr', line: string) => void;
+
 export async function runPlaywrightValidation(input: {
 	code: string;
 	baseUrl?: string;
 	timeoutMs?: number;
 	env?: Record<string, string>;
+	onLogLine?: LogLineCallback;
 }): Promise<ValidationResult> {
 	const timeoutMs = input.timeoutMs ?? 60_000;
 	const validationHostRoot = getValidationHostRoot();
@@ -202,12 +205,13 @@ export async function runPlaywrightValidation(input: {
 			'-v', `${hostDir}:/test`,
 			...envFlags,
 			playwrightRunnerImage,
-		], { cwd: workingDirectory });
+		], { cwd: workingDirectory, onLogLine: input.onLogLine });
 	} else {
 		// Local fallback: run Playwright CLI directly (dev machine).
 		commandResult = await runCommand(PLAYWRIGHT_CLI, ['test', specPath, '--config', configPath], {
 			cwd: WORKSPACE_ROOT,
 			env: input.env,
+			onLogLine: input.onLogLine,
 		});
 	}
 
@@ -282,7 +286,7 @@ export async function cleanupValidationWorkspace(workingDirectory: string | unde
 	await rm(workingDirectory, { recursive: true, force: true });
 }
 
-async function runCommand(command: string, args: string[], options: { cwd: string; env?: Record<string, string> }) {
+async function runCommand(command: string, args: string[], options: { cwd: string; env?: Record<string, string>; onLogLine?: LogLineCallback }) {
 	return new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve, reject) => {
 		const child = spawn(command, args, {
 			cwd: options.cwd,
@@ -297,11 +301,23 @@ async function runCommand(command: string, args: string[], options: { cwd: strin
 		let stderr = '';
 
 		child.stdout.on('data', (chunk) => {
-			stdout += String(chunk);
+			const text = String(chunk);
+			stdout += text;
+			if (options.onLogLine) {
+				for (const line of text.split('\n')) {
+					if (line) options.onLogLine('stdout', line);
+				}
+			}
 		});
 
 		child.stderr.on('data', (chunk) => {
-			stderr += String(chunk);
+			const text = String(chunk);
+			stderr += text;
+			if (options.onLogLine) {
+				for (const line of text.split('\n')) {
+					if (line) options.onLogLine('stderr', line);
+				}
+			}
 		});
 
 		child.on('error', reject);

@@ -114,7 +114,7 @@ export function TenantDetail() {
         </TabsList>
 
         <TabsContent value="workspaces">
-          <Card>
+          <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>

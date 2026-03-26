@@ -9,7 +9,8 @@ import {
   Bell,
   ChevronDown,
   Shield,
-  Menu
+  Menu,
+  Plug
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -37,6 +38,7 @@ const navigation = [
 ];
 
 const settingsNav = [
+  { name: "Integrations", href: "/settings/integrations" },
   { name: "Lifecycle", href: "/settings/lifecycle" },
   { name: "Quotas", href: "/settings/quotas" },
 ];

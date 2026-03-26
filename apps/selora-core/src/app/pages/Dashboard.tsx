@@ -224,7 +224,7 @@ export function Dashboard() {
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
             {runsQuery.isLoading && <p className="text-sm text-slate-500">Loading...</p>}
             {recentRuns.length === 0 && !runsQuery.isLoading && (
               <p className="text-sm text-slate-500">No runs yet</p>
@@ -265,7 +265,7 @@ export function Dashboard() {
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
             {suitesQuery.isLoading && <p className="text-sm text-slate-500">Loading...</p>}
             {(suitesQuery.data ?? []).length === 0 && !suitesQuery.isLoading && (
               <p className="text-sm text-slate-500">No suites yet</p>

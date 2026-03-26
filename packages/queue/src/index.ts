@@ -1,4 +1,5 @@
 import type { ConnectionOptions } from 'bullmq';
+import Redis from 'ioredis';
 export { Queue, Worker } from 'bullmq';
 export type { Job } from 'bullmq';
 
@@ -81,4 +82,42 @@ export function getRedisConnection(): ConnectionOptions {
     password: parsed.password || undefined,
     maxRetriesPerRequest: null,
   };
+}
+
+// ─── Redis Pub/Sub for log streaming ─────────────────────────────────────────
+
+export function getRedisUrl() {
+  return process.env['REDIS_URL'] ?? 'redis://localhost:6379';
+}
+
+export function runLogChannel(runItemId: string) {
+  return `selora:run-log:${runItemId}`;
+}
+
+export type RunLogEvent = {
+  stream: 'stdout' | 'stderr' | 'system';
+  line: string;
+  ts: number;
+};
+
+let publisherClient: Redis | null = null;
+
+function getPublisher(): Redis {
+  if (!publisherClient) {
+    publisherClient = new Redis(getRedisUrl());
+  }
+  return publisherClient;
+}
+
+export async function publishRunLog(runItemId: string, event: RunLogEvent) {
+  try {
+    const client = getPublisher();
+    await client.publish(runLogChannel(runItemId), JSON.stringify(event));
+  } catch {
+    // Best-effort — don't fail the execution if pub/sub is down.
+  }
+}
+
+export function createRedisSubscriber() {
+  return new Redis(getRedisUrl());
 }

@@ -58,6 +58,8 @@ import { NotificationController } from './notifications/notification.controller'
 import { NotificationService } from './notifications/notification.service';
 import { AccountController } from './account/account.controller';
 import { AccountService } from './account/account.service';
+import { RunConsoleController } from './recordings/run-console.controller';
+import { IntegrationsController } from './integrations/integrations.controller';
 
 @Module({
   imports: [
@@ -90,6 +92,8 @@ import { AccountService } from './account/account.service';
     LicenseController,
     NotificationController,
     AccountController,
+    RunConsoleController,
+    IntegrationsController,
   ],
   providers: [
     PrismaService,

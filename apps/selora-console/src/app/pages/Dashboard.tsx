@@ -103,7 +103,7 @@ export function Dashboard() {
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
             {tenantList.length === 0 && (
               <p className="text-sm text-slate-500">No tenants yet</p>
             )}

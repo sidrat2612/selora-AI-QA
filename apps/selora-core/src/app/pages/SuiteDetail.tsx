@@ -282,6 +282,7 @@ export function SuiteDetail() {
                 )}
               </div>
             </div>
+            <div className="max-h-[calc(100vh-360px)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -331,11 +332,12 @@ export function SuiteDetail() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
         <TabsContent value="tests">
-          <Card>
+          <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -372,7 +374,7 @@ export function SuiteDetail() {
         </TabsContent>
 
         <TabsContent value="runs">
-          <Card>
+          <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>

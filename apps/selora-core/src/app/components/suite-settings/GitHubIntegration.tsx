@@ -24,6 +24,7 @@ import { toast } from "sonner";
 
 type GitHubIntegrationProps = {
   licenseStatus?: LicenseStatus | null;
+  suiteId?: string;
   integration?: {
     id: string;
     status: string;
@@ -36,8 +37,9 @@ type GitHubIntegrationProps = {
   } | null;
 };
 
-export function GitHubIntegration({ licenseStatus, integration }: GitHubIntegrationProps) {
-  const { id: suiteId } = useParams();
+export function GitHubIntegration({ licenseStatus, integration, suiteId: suiteIdProp }: GitHubIntegrationProps) {
+  const params = useParams();
+  const suiteId = suiteIdProp ?? params.id;
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const isLicenseBlocked = isCommercialFeatureBlocked(licenseStatus);

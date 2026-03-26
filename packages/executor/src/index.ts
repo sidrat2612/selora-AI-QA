@@ -2,11 +2,12 @@ import { createDecipheriv, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Prisma } from '@prisma/client';
 import type { PrismaClient, RunStatus, ScreenshotPolicy } from '@selora/database';
-import type { TestExecutionJobData } from '@selora/queue';
+import { type TestExecutionJobData, publishRunLog } from '@selora/queue';
 import { buildArtifactKey, getStorageConfig, putStoredObject, readStoredText } from '@selora/storage';
 import {
 	cleanupValidationWorkspace,
 	runPlaywrightValidation,
+	type LogLineCallback,
 	type ValidationArtifactCandidate,
 	type ValidationResult,
 } from '@selora/test-validator';
@@ -204,6 +205,10 @@ export async function processExecutionJob(input: {
 			env['SELORA_SECRET_VALUE'] = runtimeSecret.value;
 		}
 
+		const onLogLine: LogLineCallback = (stream, line) => {
+			publishRunLog(runItem.id, { stream, line, ts: Date.now() });
+		};
+
 		for (let attempt = 0; attempt <= maxRetries; attempt++) {
 			if (hasRunTimedOut(runStartedAt, environment.runTimeoutMs)) {
 				await markRunTimedOut({
@@ -222,11 +227,18 @@ export async function processExecutionJob(input: {
 				};
 			}
 
+			publishRunLog(runItem.id, {
+				stream: 'system',
+				line: `Running test (attempt ${attempt + 1}/${maxRetries + 1}) against ${environment.baseUrl ?? 'default'}...`,
+				ts: Date.now(),
+			});
+
 			execution = await runPlaywrightValidation({
 				code: executionCode.code,
 				baseUrl: environment.baseUrl,
 				timeoutMs,
 				env,
+				onLogLine,
 			});
 
 			persistedArtifacts.push(
@@ -290,6 +302,12 @@ export async function processExecutionJob(input: {
 				retryCount: execution.ok ? runItem.retryCount : maxRetries,
 				summary: execution.summary,
 			},
+		});
+
+		publishRunLog(runItem.id, {
+			stream: 'system',
+			line: `[done] status=${itemStatus} summary=${execution.summary}`,
+			ts: Date.now(),
 		});
 
 		return {

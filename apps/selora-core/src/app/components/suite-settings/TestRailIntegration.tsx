@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 type TestRailIntegrationProps = {
   licenseStatus?: LicenseStatus | null;
+  suiteId?: string;
   integration?: {
     id: string;
     status: string;
@@ -36,8 +37,9 @@ type TestRailIntegrationProps = {
   } | null;
 };
 
-export function TestRailIntegration({ licenseStatus, integration }: TestRailIntegrationProps) {
-  const { id: suiteId } = useParams();
+export function TestRailIntegration({ licenseStatus, integration, suiteId: suiteIdProp }: TestRailIntegrationProps) {
+  const params = useParams();
+  const suiteId = suiteIdProp ?? params.id;
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const isLicenseBlocked = isCommercialFeatureBlocked(licenseStatus);

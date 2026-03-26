@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square, GitBranch } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square, GitBranch, Terminal } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card } from "../components/ui/card";
@@ -20,6 +20,7 @@ import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
 import { runs as runsApi } from "../../lib/api-client";
 import { toast } from "sonner";
+import { RunConsole } from "../components/RunConsole";
 
 export function RunDetail() {
   const { id } = useParams();
@@ -31,12 +32,20 @@ export function RunDetail() {
     queryKey: ["run", activeWorkspaceId, id],
     queryFn: () => runsApi.get(activeWorkspaceId!, id!),
     enabled: !!activeWorkspaceId && !!id,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status?.toUpperCase();
+      return status === "RUNNING" || status === "QUEUED" ? 3000 : false;
+    },
   });
 
   const itemsQuery = useQuery({
     queryKey: ["runItems", activeWorkspaceId, id],
     queryFn: () => runsApi.listItems(activeWorkspaceId!, id!),
     enabled: !!activeWorkspaceId && !!id,
+    refetchInterval: (query) => {
+      const runStatus = runQuery.data?.status?.toUpperCase();
+      return runStatus === "RUNNING" || runStatus === "QUEUED" ? 3000 : false;
+    },
   });
 
   const runData = runQuery.data;
@@ -185,11 +194,15 @@ export function RunDetail() {
       <Tabs defaultValue="results" className="space-y-6">
         <TabsList>
           <TabsTrigger value="results">Test Results</TabsTrigger>
+          <TabsTrigger value="console">
+            <Terminal className="mr-2 h-4 w-4" />
+            Console
+          </TabsTrigger>
           <TabsTrigger value="lineage">Source Lineage</TabsTrigger>
         </TabsList>
 
         <TabsContent value="results">
-          <Card>
+          <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -235,8 +248,12 @@ export function RunDetail() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="console">
+          <RunConsole runId={runData.id} items={runItems} runStatus={runData.status} />
+        </TabsContent>
+
         <TabsContent value="lineage">
-          <Card>
+          <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <div className="p-4 border-b">
               <div className="flex items-center gap-2">
                 <GitBranch className="h-4 w-4 text-slate-600" />
