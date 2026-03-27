@@ -1,5 +1,12 @@
 import type { ConnectionOptions } from 'bullmq';
 import Redis from 'ioredis';
+import {
+  SQSClient,
+  SendMessageCommand,
+  ReceiveMessageCommand,
+  DeleteMessageCommand,
+  type Message,
+} from '@aws-sdk/client-sqs';
 export { Queue, Worker } from 'bullmq';
 export type { Job } from 'bullmq';
 
@@ -60,10 +67,12 @@ export type TestExecutionJobData = {
   publicationId: string | null;
 };
 
-export function getQueueMode() {
-  if (process.env['QUEUE_MODE'] === 'inline') {
-    return 'inline';
-  }
+export type QueueMode = 'inline' | 'bullmq' | 'sqs';
+
+export function getQueueMode(): QueueMode {
+  const mode = process.env['QUEUE_MODE'];
+  if (mode === 'inline') return 'inline';
+  if (mode === 'sqs') return 'sqs';
 
   if (!process.env['REDIS_URL']) {
     return 'inline';
@@ -82,6 +91,128 @@ export function getRedisConnection(): ConnectionOptions {
     password: parsed.password || undefined,
     maxRetriesPerRequest: null,
   };
+}
+
+// ─── SQS Support ─────────────────────────────────────────────────────────────
+
+const SQS_QUEUE_URL_ENV: Record<QueueName, string> = {
+  'recording-ingestion': 'SQS_QUEUE_URL_RECORDING_INGESTION',
+  'test-validation': 'SQS_QUEUE_URL_TEST_VALIDATION',
+  'test-execution': 'SQS_QUEUE_URL_TEST_EXECUTION',
+  'ai-repair': 'SQS_QUEUE_URL_AI_REPAIR',
+};
+
+export function getSqsQueueUrl(queueName: QueueName): string {
+  const envVar = SQS_QUEUE_URL_ENV[queueName];
+  const url = process.env[envVar];
+  if (!url) {
+    throw new Error(`SQS queue URL not configured: env ${envVar} is empty`);
+  }
+  return url;
+}
+
+let sqsClient: SQSClient | null = null;
+
+export function getSqsClient(): SQSClient {
+  if (!sqsClient) {
+    sqsClient = new SQSClient({
+      region: process.env['AWS_REGION'] ?? process.env['S3_REGION'] ?? 'us-east-1',
+    });
+  }
+  return sqsClient;
+}
+
+export async function sqsSendMessage<T>(queueName: QueueName, data: T, deduplicationId?: string): Promise<void> {
+  const client = getSqsClient();
+  const queueUrl = getSqsQueueUrl(queueName);
+  await client.send(
+    new SendMessageCommand({
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(data),
+      ...(deduplicationId ? { MessageDeduplicationId: deduplicationId, MessageGroupId: queueName } : {}),
+    }),
+  );
+}
+
+export interface SqsConsumerOptions<T> {
+  queueName: QueueName;
+  handler: (data: T) => Promise<void>;
+  maxConcurrency?: number;
+  waitTimeSeconds?: number;
+  visibilityTimeout?: number;
+}
+
+export class SqsConsumer<T> {
+  private running = false;
+  private activeCount = 0;
+  private readonly client: SQSClient;
+  private readonly queueUrl: string;
+  private readonly maxConcurrency: number;
+  private readonly waitTimeSeconds: number;
+  private readonly visibilityTimeout: number;
+  private readonly handler: (data: T) => Promise<void>;
+
+  constructor(options: SqsConsumerOptions<T>) {
+    this.client = getSqsClient();
+    this.queueUrl = getSqsQueueUrl(options.queueName);
+    this.handler = options.handler;
+    this.maxConcurrency = options.maxConcurrency ?? 1;
+    this.waitTimeSeconds = options.waitTimeSeconds ?? 20;
+    this.visibilityTimeout = options.visibilityTimeout ?? 300;
+  }
+
+  start(): void {
+    this.running = true;
+    void this.pollLoop();
+  }
+
+  stop(): void {
+    this.running = false;
+  }
+
+  private async pollLoop(): Promise<void> {
+    while (this.running) {
+      try {
+        const maxMessages = Math.max(1, Math.min(10, this.maxConcurrency - this.activeCount));
+        const response = await this.client.send(
+          new ReceiveMessageCommand({
+            QueueUrl: this.queueUrl,
+            MaxNumberOfMessages: maxMessages,
+            WaitTimeSeconds: this.waitTimeSeconds,
+            VisibilityTimeout: this.visibilityTimeout,
+          }),
+        );
+
+        const messages = response.Messages ?? [];
+        const tasks = messages.map((msg) => this.processMessage(msg));
+        await Promise.allSettled(tasks);
+      } catch (error) {
+        console.error('[SQS] Poll error:', error instanceof Error ? error.message : error);
+        // Back off on errors
+        await new Promise((r) => setTimeout(r, 5_000));
+      }
+    }
+  }
+
+  private async processMessage(message: Message): Promise<void> {
+    this.activeCount++;
+    try {
+      const data = JSON.parse(message.Body ?? '{}') as T;
+      await this.handler(data);
+      // Delete on success
+      await this.client.send(
+        new DeleteMessageCommand({
+          QueueUrl: this.queueUrl,
+          ReceiptHandle: message.ReceiptHandle,
+        }),
+      );
+    } catch (error) {
+      // Let SQS retry via visibility timeout
+      console.error('[SQS] Message processing failed:', error instanceof Error ? error.message : error);
+    } finally {
+      this.activeCount--;
+    }
+  }
 }
 
 // ─── Redis Pub/Sub for log streaming ─────────────────────────────────────────

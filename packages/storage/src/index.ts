@@ -66,9 +66,19 @@ export interface StorageConfig {
   secretAccessKey: string;
   forcePathStyle?: boolean;
   localDir: string;
+  /** Use IAM role credentials (no explicit keys). True on AWS (ECS/App Runner). */
+  useIamAuth: boolean;
 }
 
 export function createStorageClient(config: StorageConfig): S3Client {
+  if (config.useIamAuth) {
+    // On AWS, the SDK automatically resolves credentials from the IAM role
+    return new S3Client({
+      region: config.region,
+      forcePathStyle: config.forcePathStyle ?? false,
+    });
+  }
+
   return new S3Client({
     endpoint: config.endpoint,
     region: config.region,
@@ -81,18 +91,20 @@ export function createStorageClient(config: StorageConfig): S3Client {
 }
 
 export function getStorageConfig(): StorageConfig {
+  const useIamAuth = !process.env['S3_ACCESS_KEY'] && !process.env['S3_SECRET_KEY'];
   return {
     driver: process.env['STORAGE_DRIVER'] === 'local' ? 'local' : 's3',
     endpoint: process.env['S3_ENDPOINT'] ?? 'http://localhost:9000',
     region: process.env['S3_REGION'] ?? 'us-east-1',
     bucket: process.env['S3_BUCKET'] ?? 'selora-artifacts',
-    accessKeyId: process.env['S3_ACCESS_KEY'] ?? 'selora',
-    secretAccessKey: process.env['S3_SECRET_KEY'] ?? 'selora_dev_password',
+    accessKeyId: process.env['S3_ACCESS_KEY'] ?? '',
+    secretAccessKey: process.env['S3_SECRET_KEY'] ?? '',
     forcePathStyle:
       process.env['S3_FORCE_PATH_STYLE'] === undefined
-        ? true
+        ? !useIamAuth
         : process.env['S3_FORCE_PATH_STYLE'] === 'true',
     localDir: process.env['LOCAL_STORAGE_DIR'] ?? path.resolve(process.cwd(), '.tmp/storage'),
+    useIamAuth,
   };
 }
 

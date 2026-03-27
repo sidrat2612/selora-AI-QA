@@ -4,6 +4,7 @@ import {
   Queue,
   getQueueMode,
   getRedisConnection,
+  sqsSendMessage,
   type AIRepairJobData,
 } from '@selora/queue';
 import { serviceUnavailable } from '../common/http-errors';
@@ -30,10 +31,17 @@ export class AIRepairQueueService implements OnModuleInit, OnModuleDestroy {
   }
 
   async enqueue(job: AIRepairJobData) {
-    if (getQueueMode() === 'inline') {
+    const mode = getQueueMode();
+
+    if (mode === 'inline') {
       queueMicrotask(() => {
         void this.processor.process(job).catch(() => undefined);
       });
+      return;
+    }
+
+    if (mode === 'sqs') {
+      await sqsSendMessage(QUEUE_NAMES.AI_REPAIR, job);
       return;
     }
 

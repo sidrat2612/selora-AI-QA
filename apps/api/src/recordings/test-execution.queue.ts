@@ -4,6 +4,7 @@ import {
   Queue,
   getQueueMode,
   getRedisConnection,
+  sqsSendMessage,
   type TestExecutionJobData,
 } from '@selora/queue';
 import { serviceUnavailable } from '../common/http-errors';
@@ -30,8 +31,15 @@ export class TestExecutionQueueService implements OnModuleInit, OnModuleDestroy 
   }
 
   async enqueue(job: TestExecutionJobData) {
-    if (getQueueMode() === 'inline') {
+    const mode = getQueueMode();
+
+    if (mode === 'inline') {
       return this.processor.process(job);
+    }
+
+    if (mode === 'sqs') {
+      await sqsSendMessage(QUEUE_NAMES.TEST_EXECUTION, job);
+      return null;
     }
 
     if (!this.queue) {
@@ -49,7 +57,8 @@ export class TestExecutionQueueService implements OnModuleInit, OnModuleDestroy 
   }
 
   async remove(testRunId: string, testRunItemId: string) {
-    if (!this.queue) {
+    // SQS doesn't support job removal by ID
+    if (getQueueMode() !== 'bullmq' || !this.queue) {
       return false;
     }
 

@@ -5,8 +5,10 @@ import {
   QUEUE_NAMES,
   Queue,
   Worker,
+  SqsConsumer,
   getQueueMode,
   getRedisConnection,
+  sqsSendMessage,
   type AIRepairJobData,
   type Job,
   type TestExecutionJobData,
@@ -26,6 +28,11 @@ import { cleanupValidationWorkspace, runPlaywrightValidation } from '@selora/tes
 const prisma = new PrismaClient();
 
 async function enqueueRepairJob(job: TestValidationJobData) {
+  if (getQueueMode() === 'sqs') {
+    await sqsSendMessage(QUEUE_NAMES.AI_REPAIR, job);
+    return;
+  }
+
   const queue = new Queue<AIRepairJobData>(QUEUE_NAMES.AI_REPAIR, {
     connection: getRedisConnection(),
   });
@@ -268,8 +275,42 @@ function serializeError(error: unknown) {
 }
 
 async function bootstrap() {
-  if (getQueueMode() === 'inline') {
-    console.log('Worker-execution not starting BullMQ consumer because QUEUE_MODE=inline.');
+  const mode = getQueueMode();
+
+  if (mode === 'inline') {
+    console.log('Worker-execution not starting consumer because QUEUE_MODE=inline.');
+    return;
+  }
+
+  if (mode === 'sqs') {
+    const validationConsumer = new SqsConsumer<TestValidationJobData>({
+      queueName: QUEUE_NAMES.TEST_VALIDATION,
+      handler: processValidationJob,
+      maxConcurrency: 2,
+      visibilityTimeout: 300,
+    });
+
+    const executionConsumer = new SqsConsumer<TestExecutionJobData>({
+      queueName: QUEUE_NAMES.TEST_EXECUTION,
+      handler: async (data) => {
+        await processExecutionJob({ prisma, job: data });
+      },
+      maxConcurrency: 2,
+      visibilityTimeout: 300,
+    });
+
+    validationConsumer.start();
+    executionConsumer.start();
+    console.log('Worker-execution started (SQS), waiting for validation and execution jobs...');
+
+    const shutdown = () => {
+      console.log('Shutting down SQS consumers...');
+      validationConsumer.stop();
+      executionConsumer.stop();
+      process.exit(0);
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
     return;
   }
 
@@ -311,7 +352,7 @@ async function bootstrap() {
     console.error(`Execution job ${job?.id} failed:`, err.message);
   });
 
-  console.log('Worker-execution started, waiting for validation and execution jobs...');
+  console.log('Worker-execution started (BullMQ), waiting for validation and execution jobs...');
 }
 
 void bootstrap();

@@ -1,0 +1,25 @@
+# ─── Required ───────────────────────────────────────────────────────────────
+# Generate secrets with:
+#   openssl rand -hex 32    (for encryption keys)
+#   openssl rand -base64 48 (for session/signing secrets)
+
+database_url          = "postgresql://user:pass@ep-xxx.us-east-1.aws.neon.tech/selora?sslmode=require"
+redis_url             = "rediss://default:xxx@us1-xxx.upstash.io:6379"
+secret_encryption_key = "your-64-char-hex-key-here"
+api_session_secret    = "your-session-secret-here"
+artifact_signing_secret = "your-artifact-signing-secret-here"
+
+# ─── Optional (uncomment to override defaults) ─────────────────────────────
+
+# aws_region    = "us-east-1"
+# environment   = "dev"
+# domain_name   = "seloratech.com"
+
+# smtp_host     = "email-smtp.us-east-1.amazonaws.com"
+# smtp_port     = "587"
+# smtp_user     = "AKIA..."
+# smtp_password = "..."
+# smtp_from     = "noreply@seloratech.com"
+
+# api_cpu       = "1024"   # 1 vCPU
+# api_memory    = "2048"   # 2 GB

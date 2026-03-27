@@ -3,6 +3,7 @@ import { PrismaClient } from '@selora/database';
 import {
   QUEUE_NAMES,
   Worker,
+  SqsConsumer,
   getQueueMode,
   getRedisConnection,
   type Job,
@@ -120,8 +121,30 @@ function serializeError(error: unknown) {
 }
 
 async function bootstrap() {
-  if (getQueueMode() === 'inline') {
-    console.log('Worker-ingestion not starting BullMQ consumer because QUEUE_MODE=inline.');
+  const mode = getQueueMode();
+
+  if (mode === 'inline') {
+    console.log('Worker-ingestion not starting consumer because QUEUE_MODE=inline.');
+    return;
+  }
+
+  if (mode === 'sqs') {
+    const consumer = new SqsConsumer<RecordingIngestionJobData>({
+      queueName: QUEUE_NAMES.RECORDING_INGESTION,
+      handler: processRecordingIngestion,
+      maxConcurrency: 2,
+      visibilityTimeout: 120,
+    });
+    consumer.start();
+    console.log('Worker-ingestion started (SQS), waiting for recording ingestion jobs...');
+
+    const shutdown = () => {
+      console.log('Shutting down SQS consumer...');
+      consumer.stop();
+      process.exit(0);
+    };
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
     return;
   }
 
@@ -143,7 +166,7 @@ async function bootstrap() {
     console.error(`Recording ingestion job ${job?.id} failed:`, err.message);
   });
 
-  console.log('Worker-ingestion started, waiting for recording ingestion jobs...');
+  console.log('Worker-ingestion started (BullMQ), waiting for recording ingestion jobs...');
 }
 
 void bootstrap();

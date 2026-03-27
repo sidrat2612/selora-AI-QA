@@ -4,6 +4,7 @@ import {
   Queue,
   getQueueMode,
   getRedisConnection,
+  sqsSendMessage,
   type TestValidationJobData,
 } from '@selora/queue';
 import { serviceUnavailable } from '../common/http-errors';
@@ -30,8 +31,15 @@ export class TestValidationQueueService implements OnModuleInit, OnModuleDestroy
   }
 
   async enqueue(job: TestValidationJobData) {
-    if (getQueueMode() === 'inline') {
+    const mode = getQueueMode();
+
+    if (mode === 'inline') {
       return this.processor.process(job);
+    }
+
+    if (mode === 'sqs') {
+      await sqsSendMessage(QUEUE_NAMES.TEST_VALIDATION, job);
+      return null;
     }
 
     if (!this.queue) {

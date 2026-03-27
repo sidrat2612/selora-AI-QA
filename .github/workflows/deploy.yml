@@ -1,0 +1,227 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ─── Build & Push Docker Images ──────────────────────────────────────────
+  build:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: api
+            dockerfile: infrastructure/docker/api.prod.Dockerfile
+            ecr_repo: selora-api
+          - name: worker-execution
+            dockerfile: infrastructure/docker/worker-execution.prod.Dockerfile
+            ecr_repo: selora-worker-execution
+          - name: worker-ingestion
+            dockerfile: infrastructure/docker/worker-ingestion.prod.Dockerfile
+            ecr_repo: selora-worker-ingestion
+          - name: worker-ai-repair
+            dockerfile: infrastructure/docker/worker-ai-repair.prod.Dockerfile
+            ecr_repo: selora-worker-ai-repair
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile }} \
+            -t $ECR_REGISTRY/${{ matrix.ecr_repo }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ matrix.ecr_repo }}:latest \
+            .
+          docker push $ECR_REGISTRY/${{ matrix.ecr_repo }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ matrix.ecr_repo }}:latest
+
+  # ─── Deploy Static Frontends ─────────────────────────────────────────────
+  deploy-frontends:
+    name: Deploy Frontends
+    runs-on: ubuntu-latest
+    needs: []
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        env:
+          VITE_API_BASE_URL: https://api.seloratech.com/api/v1
+        run: pnpm --filter @selora/selora-core build
+
+      - name: Build console app
+        env:
+          VITE_API_BASE_URL: https://api.seloratech.com/api/v1
+        run: pnpm --filter @selora/selora-console build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy web to S3
+        run: |
+          aws s3 sync apps/selora-core/dist/ s3://selora-${{ env.ENVIRONMENT }}-web-static/ \
+            --delete --cache-control "public,max-age=31536000,immutable"
+          # index.html should not be cached
+          aws s3 cp apps/selora-core/dist/index.html s3://selora-${{ env.ENVIRONMENT }}-web-static/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Deploy console to S3
+        run: |
+          aws s3 sync apps/selora-console/dist/ s3://selora-${{ env.ENVIRONMENT }}-console-static/ \
+            --delete --cache-control "public,max-age=31536000,immutable"
+          aws s3 cp apps/selora-console/dist/index.html s3://selora-${{ env.ENVIRONMENT }}-console-static/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
+
+      - name: Invalidate CloudFront caches
+        run: |
+          # Get distribution IDs by comment/tag
+          WEB_DIST_ID=$(aws cloudfront list-distributions --query \
+            "DistributionList.Items[?Comment=='selora-${{ env.ENVIRONMENT }}-web'].Id" --output text)
+          CONSOLE_DIST_ID=$(aws cloudfront list-distributions --query \
+            "DistributionList.Items[?Comment=='selora-${{ env.ENVIRONMENT }}-console'].Id" --output text)
+
+          if [ -n "$WEB_DIST_ID" ]; then
+            aws cloudfront create-invalidation --distribution-id "$WEB_DIST_ID" --paths "/*"
+          fi
+          if [ -n "$CONSOLE_DIST_ID" ]; then
+            aws cloudfront create-invalidation --distribution-id "$CONSOLE_DIST_ID" --paths "/*"
+          fi
+
+  # ─── Deploy API (App Runner) ─────────────────────────────────────────────
+  deploy-api:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy App Runner
+        run: |
+          SERVICE_ARN=$(aws apprunner list-services --query \
+            "ServiceSummaryList[?ServiceName=='selora-${{ env.ENVIRONMENT }}-api'].ServiceArn" --output text)
+
+          if [ -n "$SERVICE_ARN" ]; then
+            aws apprunner start-deployment --service-arn "$SERVICE_ARN"
+            echo "Triggered App Runner deployment for $SERVICE_ARN"
+          else
+            echo "::error::App Runner service not found"
+            exit 1
+          fi
+
+  # ─────── Deploy Workers (ECS Fargate) ────────────────────────────────────
+  deploy-workers:
+    name: Deploy Workers
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force new deployment for ECS services
+        run: |
+          CLUSTER="selora-${{ env.ENVIRONMENT }}-workers"
+          PREFIX="selora-${{ env.ENVIRONMENT }}"
+
+          for SERVICE in worker-execution worker-ingestion worker-ai-repair; do
+            echo "Updating ${PREFIX}-${SERVICE}..."
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "${PREFIX}-${SERVICE}" \
+              --force-new-deployment \
+              --no-cli-pager || echo "Warning: ${SERVICE} update failed (may not exist yet)"
+          done
+
+  # ─── Run Prisma Migrations ──────────────────────────────────────────────
+  migrate:
+    name: Database Migration
+    runs-on: ubuntu-latest
+    needs: []
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm db:migrate:deploy
