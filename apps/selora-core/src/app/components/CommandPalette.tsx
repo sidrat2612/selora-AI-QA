@@ -6,7 +6,8 @@ import {
   PlayCircle,
   Settings,
   Users,
-  Database
+  Database,
+  Brain
 } from "lucide-react";
 import {
   CommandDialog,
@@ -65,6 +66,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem onSelect={() => handleSelect("/settings/quotas")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Quotas</span>
+          </CommandItem>
+          <CommandItem onSelect={() => handleSelect("/settings/ai")}>
+            <Brain className="mr-2 h-4 w-4" />
+            <span>AI / LLM</span>
           </CommandItem>
         </CommandGroup>
       </CommandList>

@@ -71,10 +71,10 @@ export function Dashboard() {
     const completed = passed + failed;
     const passRate = completed > 0 ? Math.round((passed / completed) * 100) : 0;
     const avgDuration =
-      allRuns.filter((r) => r.duration != null).length > 0
+      allRuns.filter((r) => r.durationMs != null).length > 0
         ? Math.round(
-            allRuns.reduce((sum, r) => sum + (r.duration ?? 0), 0) /
-              allRuns.filter((r) => r.duration != null).length /
+            allRuns.reduce((sum, r) => sum + (r.durationMs ?? 0), 0) /
+              allRuns.filter((r) => r.durationMs != null).length /
               1000,
           )
         : 0;
@@ -238,14 +238,14 @@ export function Dashboard() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-900">{run.suiteName ?? "Run"}</p>
+                      <p className="font-medium text-slate-900">{run.suite?.name ?? "Run"}</p>
                       <StatusBadge status={run.status} />
                     </div>
                     <div className="mt-2 flex items-center gap-4 text-xs text-slate-600">
-                      {run.duration != null && (
+                      {run.durationMs != null && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {Math.round(run.duration / 1000)}s
+                          {Math.round(run.durationMs / 1000)}s
                         </span>
                       )}
                       <span>{run.createdAt}</span>

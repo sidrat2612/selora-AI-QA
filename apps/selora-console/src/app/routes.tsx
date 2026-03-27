@@ -46,6 +46,7 @@ export const router = createBrowserRouter([
           { path: "usage", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
           { path: "settings/lifecycle", lazy: () => loadRoute(() => import("./pages/settings/SettingsLifecycle"), "SettingsLifecycle") },
           { path: "settings/quotas", lazy: () => loadRoute(() => import("./pages/settings/SettingsQuotas"), "SettingsQuotas") },
+          { path: "settings/ai", lazy: () => loadRoute(() => import("./pages/settings/SettingsAI"), "SettingsAI") },
           { path: "*", lazy: () => loadRoute(() => import("./pages/NotFound"), "NotFound") },
         ],
       },

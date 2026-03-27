@@ -2658,6 +2658,29 @@ async function main() {
   });
   console.log('  Retention settings: defaults applied');
 
+  // ─── LLM Configuration ────────────────────────────────────────────────
+  await prisma.workspaceLlmConfig.upsert({
+    where: { workspaceId: workspace.id },
+    update: {
+      provider: 'OPENAI',
+      modelName: 'gpt-4o',
+      baseUrl: 'https://api.openai.com/v1',
+      repairModelName: 'gpt-4.1-mini',
+      isActive: true,
+    },
+    create: {
+      id: randomUUID(),
+      workspaceId: workspace.id,
+      provider: 'OPENAI',
+      modelName: 'gpt-4o',
+      baseUrl: 'https://api.openai.com/v1',
+      encryptedApiKey: null,
+      repairModelName: 'gpt-4.1-mini',
+      isActive: true,
+    },
+  });
+  console.log('  LLM configuration: OpenAI gpt-4o (repair: gpt-4.1-mini)');
+
   await prisma.userSession.deleteMany();
   await prisma.emailVerificationToken.deleteMany();
   await prisma.passwordResetToken.deleteMany();

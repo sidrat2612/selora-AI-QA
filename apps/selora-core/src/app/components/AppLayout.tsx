@@ -37,6 +37,9 @@ const navigation = [
   { name: "Suites", href: "/suites", icon: FolderKanban },
   { name: "Tests", href: "/tests", icon: FileCheck2 },
   { name: "Runs", href: "/runs", icon: PlayCircle },
+];
+
+const bottomNav = [
   { name: "Feedback", href: "/feedback", icon: MessageSquare },
   { name: "Audit", href: "/audit", icon: FileText },
 ];
@@ -44,6 +47,7 @@ const navigation = [
 const settingsNav = [
   { name: "Members", href: "/settings/members" },
   { name: "Execution", href: "/settings/execution" },
+  { name: "AI / LLM", href: "/settings/ai" },
   { name: "Lifecycle", href: "/settings/lifecycle" },
   { name: "Quotas", href: "/settings/quotas" },
   { name: "Retention", href: "/settings/retention" },
@@ -210,6 +214,28 @@ export function AppLayout() {
               )}
             </div>
           </nav>
+
+          {/* Bottom Nav */}
+          <div className="border-t border-slate-200 px-4 pt-3 pb-1 space-y-1">
+            {bottomNav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
           {/* User Menu */}
           <div className="border-t border-slate-200 p-4">

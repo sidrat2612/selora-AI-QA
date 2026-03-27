@@ -352,14 +352,14 @@ export function SuiteDetail() {
                   <TableRow key={test.id}>
                     <TableCell>
                       <Link to={`/tests/${test.id}`} className="font-medium text-slate-900 hover:text-emerald-600">
-                        {test.title}
+                        {test.name}
                       </Link>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={test.status} />
                     </TableCell>
                     <TableCell>
-                      {test.lastRunStatus ? <StatusBadge status={test.lastRunStatus} /> : "—"}
+                      {"—"}
                     </TableCell>
                     <TableCell>
                       <Link to={`/tests/${test.id}`}>
@@ -397,7 +397,7 @@ export function SuiteDetail() {
                     <TableCell>
                       <StatusBadge status={run.status} />
                     </TableCell>
-                    <TableCell className="text-slate-600">{run.duration != null ? `${Math.round(run.duration / 1000)}s` : "—"}</TableCell>
+                    <TableCell className="text-slate-600">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
                     <TableCell>
                       <Link to={`/runs/${run.id}`}>
                         <Button variant="ghost" size="sm">View Details</Button>

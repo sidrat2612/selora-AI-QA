@@ -60,6 +60,8 @@ import { AccountController } from './account/account.controller';
 import { AccountService } from './account/account.service';
 import { RunConsoleController } from './recordings/run-console.controller';
 import { IntegrationsController } from './integrations/integrations.controller';
+import { LlmConfigController } from './llm-config/llm-config.controller';
+import { LlmConfigService } from './llm-config/llm-config.service';
 
 @Module({
   imports: [
@@ -94,6 +96,7 @@ import { IntegrationsController } from './integrations/integrations.controller';
     AccountController,
     RunConsoleController,
     IntegrationsController,
+    LlmConfigController,
   ],
   providers: [
     PrismaService,
@@ -128,6 +131,7 @@ import { IntegrationsController } from './integrations/integrations.controller';
     LicenseService,
     LicenseGuard,
     RequestRateLimitService,
+    LlmConfigService,
     SessionAuthGuard,
     RolesGuard,
     TenantAccessGuard,

@@ -174,7 +174,7 @@ export function RunConsole({ runId, items, runStatus }: RunConsoleProps) {
               <div className="flex items-center gap-2">
                 <StatusDot status={item.status} />
                 <span className="truncate font-medium text-slate-800">
-                  {item.testTitle ?? item.testId}
+                  {item.canonicalTest?.name ?? item.canonicalTestId}
                 </span>
               </div>
               <div className="mt-1 flex items-center gap-2">
@@ -184,9 +184,9 @@ export function RunConsole({ runId, items, runStatus }: RunConsoleProps) {
                 >
                   {item.status}
                 </Badge>
-                {item.duration != null && (
+                {item.startedAt && item.finishedAt && (
                   <span className="text-[10px] text-slate-400">
-                    {Math.round(item.duration / 1000)}s
+                    {Math.round((new Date(item.finishedAt).getTime() - new Date(item.startedAt).getTime()) / 1000)}s
                   </span>
                 )}
               </div>
@@ -343,7 +343,7 @@ export function RunConsole({ runId, items, runStatus }: RunConsoleProps) {
             {searchQuery && ` (filtered)`}
           </span>
           <span>
-            {selectedItem?.testTitle ?? "No selection"} — {selectedItem?.status ?? ""}
+            {selectedItem?.canonicalTest?.name ?? "No selection"} — {selectedItem?.status ?? ""}
           </span>
         </div>
       </div>

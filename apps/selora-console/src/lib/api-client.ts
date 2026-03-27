@@ -409,3 +409,92 @@ export const integrations = {
     requestList<SuiteIntegrationSummary>(`/workspaces/${workspaceId}/integrations`),
 };
 
+// ─── LLM Configuration ──────────────────────────────────────────────────────
+
+export type LlmProviderType =
+  | "OPENAI"
+  | "ANTHROPIC"
+  | "GOOGLE_GEMINI"
+  | "OLLAMA"
+  | "AZURE_OPENAI"
+  | "CUSTOM";
+
+export type PlatformLlmConfig = {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  workspaceSlug: string;
+  provider: LlmProviderType;
+  modelName: string;
+  baseUrl: string | null;
+  repairModelName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LlmConfig = {
+  id: string;
+  workspaceId: string;
+  provider: LlmProviderType;
+  modelName: string;
+  baseUrl: string | null;
+  hasApiKey: boolean;
+  maskedApiKey: string | null;
+  repairModelName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LlmProviderPresets = Record<
+  string,
+  { baseUrl: string; models: string[] }
+>;
+
+export type LlmConnectionTestResult = {
+  success: boolean;
+  error: string | null;
+};
+
+export const llmConfig = {
+  listAll: () =>
+    requestList<PlatformLlmConfig>("/platform/llm-configs"),
+
+  get: (workspaceId: string) =>
+    request<LlmConfig | null>(`/workspaces/${workspaceId}/llm-config`),
+
+  upsert: (
+    workspaceId: string,
+    body: {
+      provider: LlmProviderType;
+      modelName: string;
+      baseUrl?: string | null;
+      apiKey?: string | null;
+      repairModelName?: string | null;
+      isActive?: boolean;
+    },
+  ) =>
+    request<LlmConfig>(`/workspaces/${workspaceId}/llm-config`, { method: "PUT", body }),
+
+  delete: (workspaceId: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}/llm-config`, { method: "DELETE" }),
+
+  testConnection: (
+    workspaceId: string,
+    body: {
+      provider: string;
+      modelName: string;
+      baseUrl?: string | null;
+      apiKey?: string | null;
+    },
+  ) =>
+    request<LlmConnectionTestResult>(`/workspaces/${workspaceId}/llm-config/test`, {
+      method: "POST",
+      body,
+    }),
+
+  getProviderPresets: () =>
+    request<LlmProviderPresets>("/llm-config/providers"),
+};
+

@@ -33,12 +33,16 @@ import { license as licenseApi } from "../../lib/api-client";
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Tenants", href: "/tenants", icon: Building2 },
-  { name: "Audit", href: "/audit", icon: FileText },
   { name: "Usage & Quotas", href: "/usage", icon: BarChart3 },
+];
+
+const bottomNav = [
+  { name: "Audit", href: "/audit", icon: FileText },
 ];
 
 const settingsNav = [
   { name: "Integrations", href: "/settings/integrations" },
+  { name: "AI / LLM", href: "/settings/ai" },
   { name: "Lifecycle", href: "/settings/lifecycle" },
   { name: "Quotas", href: "/settings/quotas" },
 ];
@@ -136,6 +140,28 @@ export function AppLayout() {
               </DropdownMenu>
             </div>
           </nav>
+
+          {/* Bottom Nav */}
+          <div className="border-t border-slate-200 px-4 pt-3 pb-1 space-y-1">
+            {bottomNav.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "text-slate-700 hover:bg-slate-100"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
 
           {/* User Menu */}
           <div className="border-t border-slate-200 p-4">

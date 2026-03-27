@@ -276,6 +276,15 @@ enum FeedbackStatus {
   CLOSED
 }
 
+enum LlmProviderType {
+  OPENAI
+  ANTHROPIC
+  GOOGLE_GEMINI
+  OLLAMA
+  AZURE_OPENAI
+  CUSTOM
+}
+
 // ──────────────── Ownership & Auth Models ────────────────
 
 model Tenant {
@@ -363,6 +372,7 @@ model Workspace {
   activeSessions         UserSession[]
   betaFeedback           BetaFeedback[]
   githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
+  llmConfig              WorkspaceLlmConfig?
 
   @@unique([tenantId, slug])
   @@map("workspaces")
@@ -1154,4 +1164,24 @@ model AppNotification {
 
   @@index([userId, read, createdAt])
   @@map("app_notifications")
+}
+
+// ──────────────── LLM Configuration ────────────────
+
+model WorkspaceLlmConfig {
+  id                  String          @id @default(uuid())
+  workspaceId         String          @unique
+  provider            LlmProviderType
+  modelName           String
+  baseUrl             String?
+  encryptedApiKey     String?
+  repairModelName     String?
+  isActive            Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_llm_configs")
 }

@@ -341,18 +341,23 @@ export const suites = {
 
 export type Test = {
   id: string;
-  title: string;
+  name: string;
   status: string;
   description?: string | null;
-  tags?: string[];
+  tagsJson?: unknown[];
   suiteId?: string;
-  suiteName?: string;
-  lastRunStatus?: string;
-  lastRunAt?: string;
-  generatedAt?: string;
-  publicationStatus?: string | null;
-  publicationBranch?: string | null;
-  publicationPrUrl?: string | null;
+  suite?: { id: string; slug?: string; name: string; isDefault?: boolean };
+  recordingAsset?: { id: string; filename: string; version?: number; status?: string; createdAt?: string };
+  generatedArtifacts?: Array<{
+    id: string;
+    version?: number;
+    status?: string;
+    createdAt?: string;
+    publication?: { status?: string; branchName?: string; publishedAt?: string; pullRequestUrl?: string } | null;
+  }>;
+  canonicalVersion?: number;
+  createdAt?: string;
+  updatedAt?: string;
   [key: string]: unknown;
 };
 
@@ -548,31 +553,34 @@ export const recordings = {
 export type Run = {
   id: string;
   suiteId?: string;
-  suiteName?: string;
   environmentId?: string;
-  environmentName?: string;
   status: string;
-  totalTests?: number;
-  passedTests?: number;
-  failedTests?: number;
-  duration?: number;
-  startedAt?: string;
-  completedAt?: string;
+  totalCount?: number;
+  passedCount?: number;
+  failedCount?: number;
+  durationMs?: number | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
   createdAt: string;
+  suite?: { id: string; name: string; slug?: string } | null;
+  environment?: { id: string; name: string; baseUrl?: string; isDefault?: boolean } | null;
+  triggeredBy?: { id: string; email: string; name: string } | null;
   [key: string]: unknown;
 };
 
 export type RunItem = {
   id: string;
-  testId: string;
-  testTitle?: string;
+  canonicalTestId: string;
   status: string;
-  duration?: number;
-  errorMessage?: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  failureSummary?: string | null;
   resolvedSourceMode?: string;
   resolvedGitRef?: string;
   resolvedCommitSha?: string;
   sourceFallbackReason?: string;
+  canonicalTest?: { id: string; name: string; status?: string } | null;
+  generatedTestArtifact?: { id: string; version: number; fileName: string; status: string } | null;
   [key: string]: unknown;
 };
 
@@ -945,4 +953,76 @@ export const notifications = {
 
   markAllRead: () =>
     request<void>("/notifications/read-all", { method: "PATCH" }),
+};
+
+// ─── LLM Configuration ──────────────────────────────────────────────────────
+
+export type LlmProviderType =
+  | "OPENAI"
+  | "ANTHROPIC"
+  | "GOOGLE_GEMINI"
+  | "OLLAMA"
+  | "AZURE_OPENAI"
+  | "CUSTOM";
+
+export type LlmConfig = {
+  id: string;
+  workspaceId: string;
+  provider: LlmProviderType;
+  modelName: string;
+  baseUrl: string | null;
+  hasApiKey: boolean;
+  maskedApiKey: string | null;
+  repairModelName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LlmProviderPresets = Record<
+  string,
+  { baseUrl: string; models: string[] }
+>;
+
+export type LlmConnectionTestResult = {
+  success: boolean;
+  error: string | null;
+};
+
+export const llmConfig = {
+  get: (workspaceId: string) =>
+    request<LlmConfig | null>(`/workspaces/${workspaceId}/llm-config`),
+
+  upsert: (
+    workspaceId: string,
+    body: {
+      provider: LlmProviderType;
+      modelName: string;
+      baseUrl?: string | null;
+      apiKey?: string | null;
+      repairModelName?: string | null;
+      isActive?: boolean;
+    },
+  ) =>
+    request<LlmConfig>(`/workspaces/${workspaceId}/llm-config`, { method: "PUT", body }),
+
+  delete: (workspaceId: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}/llm-config`, { method: "DELETE" }),
+
+  testConnection: (
+    workspaceId: string,
+    body: {
+      provider: string;
+      modelName: string;
+      baseUrl?: string | null;
+      apiKey?: string | null;
+    },
+  ) =>
+    request<LlmConnectionTestResult>(`/workspaces/${workspaceId}/llm-config/test`, {
+      method: "POST",
+      body,
+    }),
+
+  getProviderPresets: () =>
+    request<LlmProviderPresets>("/llm-config/providers"),
 };

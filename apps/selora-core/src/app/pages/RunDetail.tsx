@@ -67,6 +67,13 @@ export function RunDetail() {
     },
   });
 
+  const passRate = runData?.totalCount ? ((runData.passedCount ?? 0) / runData.totalCount) * 100 : 0;
+  const durationStr = runData?.durationMs != null ? `${Math.round(runData.durationMs / 1000)}s` : "—";
+  const canCancelRun = useMemo(
+    () => permissions.canOperateRuns && !!runData && ["running", "queued", "RUNNING", "QUEUED"].includes(runData.status),
+    [permissions.canOperateRuns, runData?.status],
+  );
+
   if (!runData && runQuery.isLoading) {
     return <div className="p-8 text-center text-slate-500">Loading...</div>;
   }
@@ -74,13 +81,6 @@ export function RunDetail() {
   if (!runData) {
     return <div className="p-8 text-center text-slate-500">Run not found</div>;
   }
-
-  const passRate = runData.totalTests ? ((runData.passedTests ?? 0) / runData.totalTests) * 100 : 0;
-  const durationStr = runData.duration != null ? `${Math.round(runData.duration / 1000)}s` : "—";
-  const canCancelRun = useMemo(
-    () => permissions.canOperateRuns && ["running", "queued", "RUNNING", "QUEUED"].includes(runData.status),
-    [permissions.canOperateRuns, runData.status],
-  );
 
   const handleExportReport = () => {
     const report = {
@@ -116,11 +116,11 @@ export function RunDetail() {
             <StatusBadge status={runData.status} />
           </div>
           <p className="mt-2 text-sm text-slate-600">
-            <span className="font-medium text-emerald-600">{runData.suiteName ?? "Suite"}</span>
-            {runData.environmentName && (
+            <span className="font-medium text-emerald-600">{runData.suite?.name ?? "Suite"}</span>
+            {runData.environment?.name && (
               <>
                 {" • "}
-                <Badge variant="outline" className="ml-1">{runData.environmentName}</Badge>
+                <Badge variant="outline" className="ml-1">{runData.environment.name}</Badge>
               </>
             )}
           </p>
@@ -163,21 +163,21 @@ export function RunDetail() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">Tests Passed</p>
-              <p className="mt-1 text-2xl font-semibold text-green-600">{runData.passedTests ?? 0}</p>
+              <p className="mt-1 text-2xl font-semibold text-green-600">{runData.passedCount ?? 0}</p>
             </div>
             <CheckCircle2 className="h-8 w-8 text-green-100" />
           </div>
-          <p className="mt-2 text-xs text-slate-600">of {runData.totalTests ?? 0} total</p>
+          <p className="mt-2 text-xs text-slate-600">of {runData.totalCount ?? 0} total</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">Tests Failed</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{runData.failedTests ?? 0}</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-900">{runData.failedCount ?? 0}</p>
             </div>
             <XCircle className="h-8 w-8 text-slate-100" />
           </div>
-          <p className="mt-2 text-xs text-slate-600">of {runData.totalTests ?? 0} total</p>
+          <p className="mt-2 text-xs text-slate-600">of {runData.totalCount ?? 0} total</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
@@ -213,16 +213,20 @@ export function RunDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {runItems.map((item) => (
+                {runItems.map((item) => {
+                  const itemDurationMs = item.startedAt && item.finishedAt
+                    ? new Date(item.finishedAt).getTime() - new Date(item.startedAt).getTime()
+                    : null;
+                  return (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Link to={`/tests/${item.testId}`} className="font-medium text-slate-900 hover:text-emerald-600">
-                        {item.testTitle ?? item.testId}
+                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                        {item.canonicalTest?.name ?? item.canonicalTestId}
                       </Link>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {item.status === "passed" ? (
+                        {item.status === "PASSED" || item.status === "passed" ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
@@ -230,14 +234,15 @@ export function RunDetail() {
                         <StatusBadge status={item.status} />
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-600">{item.duration != null ? `${Math.round(item.duration / 1000)}s` : "—"}</TableCell>
+                    <TableCell className="text-slate-600">{itemDurationMs != null ? `${Math.round(itemDurationMs / 1000)}s` : "—"}</TableCell>
                     <TableCell>
-                      <Link to={`/tests/${item.testId}`}>
+                      <Link to={`/tests/${item.canonicalTestId}`}>
                         <Button variant="ghost" size="sm">View Details</Button>
                       </Link>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {runItems.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-slate-500">No test results</TableCell>
@@ -277,8 +282,8 @@ export function RunDetail() {
                 {runItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Link to={`/tests/${item.testId}`} className="font-medium text-slate-900 hover:text-emerald-600">
-                        {item.testTitle ?? item.testId}
+                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                        {item.canonicalTest?.name ?? item.canonicalTestId}
                       </Link>
                     </TableCell>
                     <TableCell>

@@ -78,7 +78,7 @@ export function TestDetail() {
   };
 
   const handleArchiveTest = () => {
-    if (!window.confirm(`Archive test ${testData.title}?`)) {
+    if (!window.confirm(`Archive test ${testData.name}?`)) {
       return;
     }
 
@@ -99,12 +99,12 @@ export function TestDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">{testData.title}</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">{testData.name}</h1>
             <StatusBadge status={testData.status} />
           </div>
           <div className="mt-3 flex items-center gap-4 text-sm text-slate-600">
-            {testData.suiteName && (
-              <span>Suite: <span className="font-medium text-emerald-600">{testData.suiteName}</span></span>
+            {testData.suite?.name && (
+              <span>Suite: <span className="font-medium text-emerald-600">{testData.suite.name}</span></span>
             )}
           </div>
         </div>
@@ -141,11 +141,8 @@ export function TestDetail() {
             <span>Last Run</span>
           </div>
           <p className="mt-2 text-sm font-medium text-slate-900">
-            {testData.lastRunAt ?? "Never"}
+            {testData.updatedAt ? new Date(testData.updatedAt).toLocaleString() : "Never"}
           </p>
-          {testData.lastRunStatus && (
-            <div className="mt-1"><StatusBadge status={testData.lastRunStatus} /></div>
-          )}
         </Card>
       </div>
 

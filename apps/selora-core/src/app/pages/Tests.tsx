@@ -155,8 +155,8 @@ export function Tests() {
   });
 
   const filteredTests = tests.filter(test => {
-    const matchesSearch = test.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (test.suiteName ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (test.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (test.suite?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || test.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -205,9 +205,9 @@ export function Tests() {
 
   const openEditMetadata = (test: Test) => {
     setSelectedTest(test);
-    setTestName((test.title as string | undefined) ?? ((test as Test & { name?: string }).name ?? ""));
+    setTestName(test.name ?? "");
     setTestDescription((test.description as string | undefined | null) ?? "");
-    setTestTags((test.tags ?? []).join(", "));
+    setTestTags(((test.tagsJson ?? []) as string[]).join(", "));
     setEditOpen(true);
   };
 
@@ -377,7 +377,7 @@ export function Tests() {
                     to={`/tests/${test.id}`}
                     className="font-medium text-slate-900 hover:text-emerald-600"
                   >
-                    {test.title}
+                    {test.name}
                   </Link>
                 </TableCell>
                 <TableCell>
@@ -385,12 +385,12 @@ export function Tests() {
                 </TableCell>
                 <TableCell>
                   <span className="text-slate-600">
-                    {test.suiteName ?? "—"}
+                    {test.suite?.name ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">{test.lastRunStatus ?? "—"}</span>
+                    <span className="text-sm text-slate-600">—</span>
                   </div>
                 </TableCell>
                 <TableCell>

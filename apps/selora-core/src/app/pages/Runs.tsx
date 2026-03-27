@@ -44,10 +44,10 @@ export function Runs() {
   const runs = runsQuery.data ?? [];
 
   const filteredRuns = runs.filter(run => {
-    const matchesSearch = (run.suiteName ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = (run.suite?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                          run.id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || run.status === statusFilter;
-    const matchesEnvironment = environmentFilter === "all" || run.environmentName === environmentFilter;
+    const matchesEnvironment = environmentFilter === "all" || run.environment?.name === environmentFilter;
     return matchesSearch && matchesStatus && matchesEnvironment;
   });
 
@@ -191,10 +191,10 @@ export function Runs() {
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <span className="font-medium text-slate-900">{run.suiteName ?? "—"}</span>
+                  <span className="font-medium text-slate-900">{run.suite?.name ?? "—"}</span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">{run.environmentName ?? "—"}</Badge>
+                  <Badge variant="outline">{run.environment?.name ?? "—"}</Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -202,11 +202,11 @@ export function Runs() {
                     <StatusBadge status={run.status} />
                   </div>
                 </TableCell>
-                <TableCell className="text-slate-600">{run.duration != null ? `${Math.round(run.duration / 1000)}s` : "—"}</TableCell>
+                <TableCell className="text-slate-600">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
                 <TableCell>
-                  {run.totalTests != null && run.passedTests != null ? (
-                    <span className={`font-medium ${run.passedTests === run.totalTests ? 'text-green-600' : 'text-amber-600'}`}>
-                      {((run.passedTests / run.totalTests) * 100).toFixed(1)}%
+                  {run.totalCount != null && run.passedCount != null && run.totalCount > 0 ? (
+                    <span className={`font-medium ${run.passedCount === run.totalCount ? 'text-green-600' : 'text-amber-600'}`}>
+                      {((run.passedCount / run.totalCount) * 100).toFixed(1)}%
                     </span>
                   ) : (
                     <span className="text-slate-400">-</span>
