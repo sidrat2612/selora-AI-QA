@@ -117,7 +117,7 @@ export function AppLayout() {
           {/* Logo */}
           <div className="flex h-16 items-center border-b border-slate-200 px-6">
             <Shield className="h-7 w-7 text-emerald-600" />
-            <span className="ml-3 text-xl font-semibold text-slate-900">Selora</span>
+            <span className="ml-3 text-xl font-semibold text-slate-900">Selora<sub className="text-[0.55em] font-medium text-slate-500">QA</sub></span>
           </div>
 
           {/* Workspace Switcher */}

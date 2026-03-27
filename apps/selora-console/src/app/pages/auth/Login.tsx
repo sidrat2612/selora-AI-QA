@@ -32,7 +32,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Selora</h1>
+          <h1 className="text-3xl font-semibold text-foreground mb-2">Selora<sub className="text-[0.55em] font-medium text-muted-foreground">QA</sub></h1>
           <p className="text-sm text-muted-foreground">AI Powered QA Automation</p>
         </div>
 
