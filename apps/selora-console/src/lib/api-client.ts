@@ -421,26 +421,12 @@ export type LlmProviderType =
 
 export type PlatformLlmConfig = {
   id: string;
-  workspaceId: string;
-  workspaceName: string;
-  workspaceSlug: string;
+  displayName: string;
   provider: LlmProviderType;
   modelName: string;
   baseUrl: string | null;
-  repairModelName: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type LlmConfig = {
-  id: string;
-  workspaceId: string;
-  provider: LlmProviderType;
-  modelName: string;
-  baseUrl: string | null;
-  hasApiKey: boolean;
-  maskedApiKey: string | null;
+  hasApiKey?: boolean;
+  maskedApiKey?: string | null;
   repairModelName: string | null;
   isActive: boolean;
   createdAt: string;
@@ -461,12 +447,24 @@ export const llmConfig = {
   listAll: () =>
     requestList<PlatformLlmConfig>("/platform/llm-configs"),
 
-  get: (workspaceId: string) =>
-    request<LlmConfig | null>(`/workspaces/${workspaceId}/llm-config`),
+  get: (id: string) =>
+    request<PlatformLlmConfig>(`/platform/llm-configs/${id}`),
 
-  upsert: (
-    workspaceId: string,
+  create: (body: {
+    displayName: string;
+    provider: LlmProviderType;
+    modelName: string;
+    baseUrl?: string | null;
+    apiKey?: string | null;
+    repairModelName?: string | null;
+    isActive?: boolean;
+  }) =>
+    request<PlatformLlmConfig>("/platform/llm-configs", { method: "POST", body }),
+
+  update: (
+    id: string,
     body: {
+      displayName: string;
       provider: LlmProviderType;
       modelName: string;
       baseUrl?: string | null;
@@ -475,21 +473,19 @@ export const llmConfig = {
       isActive?: boolean;
     },
   ) =>
-    request<LlmConfig>(`/workspaces/${workspaceId}/llm-config`, { method: "PUT", body }),
+    request<PlatformLlmConfig>(`/platform/llm-configs/${id}`, { method: "PUT", body }),
 
-  delete: (workspaceId: string) =>
-    request<{ deleted: true }>(`/workspaces/${workspaceId}/llm-config`, { method: "DELETE" }),
+  delete: (id: string) =>
+    request<{ deleted: true }>(`/platform/llm-configs/${id}`, { method: "DELETE" }),
 
-  testConnection: (
-    workspaceId: string,
-    body: {
-      provider: string;
-      modelName: string;
-      baseUrl?: string | null;
-      apiKey?: string | null;
-    },
-  ) =>
-    request<LlmConnectionTestResult>(`/workspaces/${workspaceId}/llm-config/test`, {
+  testConnection: (body: {
+    provider: string;
+    modelName: string;
+    baseUrl?: string | null;
+    apiKey?: string | null;
+    configId?: string;
+  }) =>
+    request<LlmConnectionTestResult>("/platform/llm-configs/test", {
       method: "POST",
       body,
     }),

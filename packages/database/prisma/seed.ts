@@ -2659,9 +2659,10 @@ async function main() {
   console.log('  Retention settings: defaults applied');
 
   // ─── LLM Configuration ────────────────────────────────────────────────
-  await prisma.workspaceLlmConfig.upsert({
-    where: { workspaceId: workspace.id },
+  const platformLlmConfig = await prisma.platformLlmConfig.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000100' },
     update: {
+      displayName: 'OpenAI GPT-4o',
       provider: 'OPENAI',
       modelName: 'gpt-4o',
       baseUrl: 'https://api.openai.com/v1',
@@ -2669,8 +2670,8 @@ async function main() {
       isActive: true,
     },
     create: {
-      id: randomUUID(),
-      workspaceId: workspace.id,
+      id: '00000000-0000-0000-0000-000000000100',
+      displayName: 'OpenAI GPT-4o',
       provider: 'OPENAI',
       modelName: 'gpt-4o',
       baseUrl: 'https://api.openai.com/v1',
@@ -2679,7 +2680,16 @@ async function main() {
       isActive: true,
     },
   });
-  console.log('  LLM configuration: OpenAI gpt-4o (repair: gpt-4.1-mini)');
+
+  await prisma.tenantLlmSelection.upsert({
+    where: { tenantId: tenant.id },
+    update: { platformLlmConfigId: platformLlmConfig.id },
+    create: {
+      tenantId: tenant.id,
+      platformLlmConfigId: platformLlmConfig.id,
+    },
+  });
+  console.log('  LLM configuration: OpenAI gpt-4o (platform-level, tenant-selected)');
 
   await prisma.userSession.deleteMany();
   await prisma.emailVerificationToken.deleteMany();

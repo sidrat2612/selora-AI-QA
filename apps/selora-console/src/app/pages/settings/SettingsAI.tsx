@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save, Trash2, Zap, CheckCircle2, XCircle, Brain, Key, Globe, Server, ChevronDown, ChevronUp } from "lucide-react";
+import { Save, Trash2, Zap, CheckCircle2, XCircle, Brain, Key, Globe, Server, Plus } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Label } from "../../components/ui/label";
@@ -32,7 +32,6 @@ import {
 import {
   llmConfig as llmConfigApi,
   type LlmProviderType,
-  type LlmConfig,
   type LlmProviderPresets,
   type PlatformLlmConfig,
 } from "../../../lib/api-client";
@@ -54,6 +53,7 @@ const PROVIDER_META: Record<
 const ALL_PROVIDERS: LlmProviderType[] = ["OPENAI", "ANTHROPIC", "GOOGLE_GEMINI", "OLLAMA", "AZURE_OPENAI", "CUSTOM"];
 
 type FormState = {
+  displayName: string;
   provider: LlmProviderType;
   modelName: string;
   baseUrl: string;
@@ -64,6 +64,7 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
+  displayName: "",
   provider: "OPENAI",
   modelName: "",
   baseUrl: "",
@@ -75,9 +76,10 @@ const EMPTY_FORM: FormState = {
 
 export function SettingsAI() {
   const queryClient = useQueryClient();
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [configureOpen, setConfigureOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [testResult, setTestResult] = useState<{ success: boolean; error: string | null } | null>(null);
 
@@ -91,81 +93,61 @@ export function SettingsAI() {
     queryFn: () => llmConfigApi.getProviderPresets(),
   });
 
-  const selectedConfigQuery = useQuery({
-    queryKey: ["llm-config", selectedWorkspaceId],
-    queryFn: () => llmConfigApi.get(selectedWorkspaceId!),
-    enabled: !!selectedWorkspaceId && configureOpen,
-  });
-
   const presets: LlmProviderPresets = presetsQuery.data ?? {};
   const allConfigs: PlatformLlmConfig[] = allConfigsQuery.data ?? [];
 
-  useEffect(() => {
-    if (!configureOpen) return;
-    const config = selectedConfigQuery.data;
-    if (!config) {
-      setForm(EMPTY_FORM);
-      return;
-    }
-    setForm({
-      provider: config.provider,
-      modelName: config.modelName,
-      baseUrl: config.baseUrl ?? "",
-      apiKey: "",
-      repairModelName: config.repairModelName ?? "",
-      useRepairOverride: !!config.repairModelName,
-      isActive: config.isActive,
-    });
-  }, [selectedConfigQuery.data, configureOpen]);
-
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedWorkspaceId) throw new Error("No workspace selected.");
-      return llmConfigApi.upsert(selectedWorkspaceId, {
+      const payload = {
+        displayName: form.displayName,
         provider: form.provider,
         modelName: form.modelName,
         baseUrl: form.baseUrl || null,
         apiKey: form.apiKey || null,
         repairModelName: form.useRepairOverride && form.repairModelName ? form.repairModelName : null,
         isActive: form.isActive,
-      });
+      };
+      if (editingId) {
+        return llmConfigApi.update(editingId, payload);
+      }
+      return llmConfigApi.create(payload);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["platform-llm-configs"] });
-      await queryClient.invalidateQueries({ queryKey: ["llm-config", selectedWorkspaceId] });
-      toast.success("AI model configuration saved.");
-      setForm((prev) => ({ ...prev, apiKey: "" }));
+      toast.success(editingId ? "LLM configuration updated." : "LLM configuration created.");
       setConfigureOpen(false);
+      setEditingId(null);
+      setForm(EMPTY_FORM);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to save AI configuration.");
+      toast.error(error instanceof Error ? error.message : "Failed to save configuration.");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedWorkspaceId) throw new Error("No workspace selected.");
-      return llmConfigApi.delete(selectedWorkspaceId);
+      if (!deleteTargetId) throw new Error("No config selected.");
+      return llmConfigApi.delete(deleteTargetId);
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["platform-llm-configs"] });
       setDeleteOpen(false);
-      setSelectedWorkspaceId(null);
-      toast.success("AI configuration removed.");
+      setDeleteTargetId(null);
+      toast.success("LLM configuration removed.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to delete AI configuration.");
+      toast.error(error instanceof Error ? error.message : "Failed to delete configuration.");
     },
   });
 
   const testMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedWorkspaceId) throw new Error("No workspace selected.");
-      return llmConfigApi.testConnection(selectedWorkspaceId, {
+      return llmConfigApi.testConnection({
         provider: form.provider,
         modelName: form.modelName,
         baseUrl: form.baseUrl || null,
         apiKey: form.apiKey || null,
+        configId: editingId ?? undefined,
       });
     },
     onSuccess: (result) => {
@@ -197,35 +179,57 @@ export function SettingsAI() {
     setTestResult(null);
   };
 
-  const openConfigure = (workspaceId: string) => {
-    setSelectedWorkspaceId(workspaceId);
-    setConfigureOpen(true);
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
     setTestResult(null);
+    setConfigureOpen(true);
   };
 
-  const openDelete = (workspaceId: string) => {
-    setSelectedWorkspaceId(workspaceId);
+  const openEdit = (config: PlatformLlmConfig) => {
+    setEditingId(config.id);
+    setForm({
+      displayName: config.displayName,
+      provider: config.provider,
+      modelName: config.modelName,
+      baseUrl: config.baseUrl ?? "",
+      apiKey: "",
+      repairModelName: config.repairModelName ?? "",
+      useRepairOverride: !!config.repairModelName,
+      isActive: config.isActive,
+    });
+    setTestResult(null);
+    setConfigureOpen(true);
+  };
+
+  const openDelete = (id: string) => {
+    setDeleteTargetId(id);
     setDeleteOpen(true);
   };
 
   const providerModels = presets[form.provider]?.models ?? [];
   const meta = PROVIDER_META[form.provider];
-  const hasExistingConfig = !!selectedConfigQuery.data;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">AI / LLM Management</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          View and manage AI model configurations across all workspaces
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">AI / LLM Management</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Manage platform-wide AI providers available to all tenants
+          </p>
+        </div>
+        <Button onClick={openCreate}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Provider
+        </Button>
       </div>
 
       {/* Overview Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
-          <div className="text-xs font-medium text-slate-500">Total Configs</div>
+          <div className="text-xs font-medium text-slate-500">Total Providers</div>
           <p className="mt-1 text-2xl font-bold text-slate-900">{allConfigs.length}</p>
         </Card>
         <Card className="p-4">
@@ -235,32 +239,32 @@ export function SettingsAI() {
           </p>
         </Card>
         <Card className="p-4">
-          <div className="text-xs font-medium text-slate-500">Providers in Use</div>
+          <div className="text-xs font-medium text-slate-500">Provider Types</div>
           <p className="mt-1 text-2xl font-bold text-slate-900">
             {new Set(allConfigs.map((c) => c.provider)).size}
           </p>
         </Card>
       </div>
 
-      {/* Workspace Configs Table */}
+      {/* Platform LLM Configs Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Workspace LLM Configurations</CardTitle>
+          <CardTitle className="text-base">Platform LLM Providers</CardTitle>
           <CardDescription>
-            Each workspace can have its own AI provider and model configuration
+            These AI providers are available for tenants to select from
           </CardDescription>
         </CardHeader>
         <CardContent>
           {allConfigs.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">
-              No workspaces have configured an AI model yet.
+              No AI providers configured yet. Click "Add Provider" to get started.
             </p>
           ) : (
             <div className="max-h-[400px] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Workspace</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Provider</TableHead>
                     <TableHead>Model</TableHead>
                     <TableHead>Repair Model</TableHead>
@@ -272,7 +276,7 @@ export function SettingsAI() {
                 <TableBody>
                   {allConfigs.map((config) => (
                     <TableRow key={config.id}>
-                      <TableCell className="font-medium">{config.workspaceName}</TableCell>
+                      <TableCell className="font-medium">{config.displayName}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{PROVIDER_META[config.provider]?.label ?? config.provider}</Badge>
                       </TableCell>
@@ -288,14 +292,14 @@ export function SettingsAI() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => openConfigure(config.workspaceId)}>
+                          <Button size="sm" variant="ghost" onClick={() => openEdit(config)}>
                             Edit
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => openDelete(config.workspaceId)}
+                            onClick={() => openDelete(config.id)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -314,16 +318,25 @@ export function SettingsAI() {
       <Dialog open={configureOpen} onOpenChange={setConfigureOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Configure AI Model</DialogTitle>
+            <DialogTitle>{editingId ? "Edit AI Provider" : "Add AI Provider"}</DialogTitle>
             <DialogDescription>
-              Set the AI provider and model for workspace{" "}
-              <span className="font-medium text-slate-700">
-                {allConfigs.find((c) => c.workspaceId === selectedWorkspaceId)?.workspaceName ?? selectedWorkspaceId}
-              </span>
+              {editingId
+                ? "Update this platform AI provider configuration."
+                : "Add a new AI provider that tenants can select from."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 py-2">
+            {/* Display Name */}
+            <div className="space-y-2">
+              <Label>Display Name</Label>
+              <Input
+                placeholder="e.g. OpenAI GPT-4o (Production)"
+                value={form.displayName}
+                onChange={(e) => updateField("displayName", e.target.value)}
+              />
+            </div>
+
             {/* Provider Selection */}
             <div className="space-y-2">
               <Label>Provider</Label>
@@ -418,8 +431,8 @@ export function SettingsAI() {
               <Input
                 type="password"
                 placeholder={
-                  hasExistingConfig && selectedConfigQuery.data?.hasApiKey
-                    ? `Current: ${selectedConfigQuery.data.maskedApiKey ?? "••••••••"} — leave blank to keep`
+                  editingId
+                    ? "Leave blank to keep existing key"
                     : "Enter API key"
                 }
                 value={form.apiKey}
@@ -488,8 +501,8 @@ export function SettingsAI() {
             {/* Active Toggle */}
             <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
               <div className="space-y-0.5">
-                <Label>Enable AI Features</Label>
-                <p className="text-xs text-slate-500">When disabled, AI falls back to environment-level defaults</p>
+                <Label>Active</Label>
+                <p className="text-xs text-slate-500">When disabled, tenants cannot select this provider</p>
               </div>
               <Switch
                 checked={form.isActive}
@@ -500,9 +513,9 @@ export function SettingsAI() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfigureOpen(false)}>Cancel</Button>
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.modelName}>
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.modelName || !form.displayName}>
               <Save className="mr-2 h-4 w-4" />
-              {saveMutation.isPending ? "Saving..." : "Save Configuration"}
+              {saveMutation.isPending ? "Saving..." : editingId ? "Update Provider" : "Add Provider"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -512,16 +525,16 @@ export function SettingsAI() {
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove AI Configuration</DialogTitle>
+            <DialogTitle>Remove AI Provider</DialogTitle>
             <DialogDescription>
-              This will delete the stored provider, model, and API key for this workspace. AI features
-              will fall back to environment-level defaults.
+              This will delete this AI provider configuration. Any tenants currently using it will
+              lose their selection and need to pick a different provider.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
-              {deleteMutation.isPending ? "Removing..." : "Remove Configuration"}
+              {deleteMutation.isPending ? "Removing..." : "Remove Provider"}
             </Button>
           </DialogFooter>
         </DialogContent>

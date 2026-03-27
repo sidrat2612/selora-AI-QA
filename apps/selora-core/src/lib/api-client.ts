@@ -965,18 +965,38 @@ export type LlmProviderType =
   | "AZURE_OPENAI"
   | "CUSTOM";
 
-export type LlmConfig = {
+export type AvailableLlmConfig = {
   id: string;
-  workspaceId: string;
+  displayName: string;
   provider: LlmProviderType;
   modelName: string;
   baseUrl: string | null;
-  hasApiKey: boolean;
-  maskedApiKey: string | null;
   repairModelName: string | null;
-  isActive: boolean;
+};
+
+export type TenantLlmSelection = {
+  id: string;
+  tenantId: string;
+  platformLlmConfigId: string | null;
+  isCustom: boolean;
+  config: {
+    id: string;
+    displayName: string;
+    provider: LlmProviderType;
+    modelName: string;
+    baseUrl: string | null;
+    repairModelName: string | null;
+    isActive: boolean;
+    hasApiKey?: boolean;
+    maskedApiKey?: string | null;
+  };
   createdAt: string;
   updatedAt: string;
+};
+
+export type LlmConnectionTestResult = {
+  success: boolean;
+  error: string | null;
 };
 
 export type LlmProviderPresets = Record<
@@ -984,41 +1004,43 @@ export type LlmProviderPresets = Record<
   { baseUrl: string; models: string[] }
 >;
 
-export type LlmConnectionTestResult = {
-  success: boolean;
-  error: string | null;
-};
-
 export const llmConfig = {
-  get: (workspaceId: string) =>
-    request<LlmConfig | null>(`/workspaces/${workspaceId}/llm-config`),
+  listAvailable: () =>
+    requestList<AvailableLlmConfig>("/llm-configs/available"),
 
-  upsert: (
-    workspaceId: string,
-    body: {
-      provider: LlmProviderType;
-      modelName: string;
-      baseUrl?: string | null;
-      apiKey?: string | null;
-      repairModelName?: string | null;
-      isActive?: boolean;
-    },
-  ) =>
-    request<LlmConfig>(`/workspaces/${workspaceId}/llm-config`, { method: "PUT", body }),
+  getTenantSelection: (tenantId: string) =>
+    request<TenantLlmSelection | null>(`/tenants/${tenantId}/llm-selection`),
 
-  delete: (workspaceId: string) =>
-    request<{ deleted: true }>(`/workspaces/${workspaceId}/llm-config`, { method: "DELETE" }),
+  selectForTenant: (tenantId: string, platformLlmConfigId: string) =>
+    request<TenantLlmSelection>(`/tenants/${tenantId}/llm-selection`, {
+      method: "PUT",
+      body: { platformLlmConfigId },
+    }),
 
-  testConnection: (
-    workspaceId: string,
+  clearTenantSelection: (tenantId: string) =>
+    request<{ deleted: true }>(`/tenants/${tenantId}/llm-selection`, { method: "DELETE" }),
+
+  saveCustomConfig: (
+    tenantId: string,
     body: {
       provider: string;
       modelName: string;
-      baseUrl?: string | null;
-      apiKey?: string | null;
+      displayName?: string;
+      baseUrl?: string;
+      apiKey?: string;
+      repairModelName?: string;
     },
   ) =>
-    request<LlmConnectionTestResult>(`/workspaces/${workspaceId}/llm-config/test`, {
+    request<TenantLlmSelection>(`/tenants/${tenantId}/llm-custom`, {
+      method: "PUT",
+      body,
+    }),
+
+  testCustomConnection: (
+    tenantId: string,
+    body: { provider: string; modelName: string; baseUrl?: string; apiKey?: string },
+  ) =>
+    request<LlmConnectionTestResult>(`/tenants/${tenantId}/llm-custom/test`, {
       method: "POST",
       body,
     }),

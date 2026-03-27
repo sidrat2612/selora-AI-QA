@@ -317,6 +317,7 @@ model Tenant {
   testRuns    TestRun[]
   betaFeedback BetaFeedback[]
   githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
+  llmSelection TenantLlmSelection?
 
   @@map("tenants")
 }
@@ -372,7 +373,6 @@ model Workspace {
   activeSessions         UserSession[]
   betaFeedback           BetaFeedback[]
   githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
-  llmConfig              WorkspaceLlmConfig?
 
   @@unique([tenantId, slug])
   @@map("workspaces")
@@ -1168,9 +1168,9 @@ model AppNotification {
 
 // ──────────────── LLM Configuration ────────────────
 
-model WorkspaceLlmConfig {
+model PlatformLlmConfig {
   id                  String          @id @default(uuid())
-  workspaceId         String          @unique
+  displayName         String
   provider            LlmProviderType
   modelName           String
   baseUrl             String?
@@ -1181,7 +1181,31 @@ model WorkspaceLlmConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantSelections TenantLlmSelection[]
 
-  @@map("workspace_llm_configs")
+  @@map("platform_llm_configs")
+}
+
+model TenantLlmSelection {
+  id                    String @id @default(uuid())
+  tenantId              String @unique
+
+  // Platform config selection (null when using BYO custom config)
+  platformLlmConfigId   String?
+
+  // BYO custom config fields (used when platformLlmConfigId is null)
+  customProvider        LlmProviderType?
+  customModelName       String?
+  customBaseUrl         String?
+  customEncryptedApiKey String?
+  customRepairModelName String?
+  customDisplayName     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  platformLlmConfig   PlatformLlmConfig? @relation(fields: [platformLlmConfigId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_llm_selections")
 }

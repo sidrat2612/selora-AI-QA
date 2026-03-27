@@ -44,15 +44,7 @@ const bottomNav = [
   { name: "Audit", href: "/audit", icon: FileText },
 ];
 
-const settingsNav = [
-  { name: "Members", href: "/settings/members" },
-  { name: "Execution", href: "/settings/execution" },
-  { name: "AI / LLM", href: "/settings/ai" },
-  { name: "Lifecycle", href: "/settings/lifecycle" },
-  { name: "Quotas", href: "/settings/quotas" },
-  { name: "Retention", href: "/settings/retention" },
-  { name: "Environments", href: "/settings/environments" },
-];
+// Settings nav is built dynamically in the component based on permissions
 
 export function AppLayout() {
   const location = useLocation();
@@ -97,6 +89,7 @@ export function AppLayout() {
     if (permissions.canManageCompany) items.push({ name: "Quotas", href: "/settings/quotas" });
     if (permissions.canManageCompany) items.push({ name: "Retention", href: "/settings/retention" });
     if (permissions.canManageEnvironments) items.push({ name: "Environments", href: "/settings/environments" });
+    items.push({ name: "AI / LLM", href: "/settings/ai" });
     items.push({ name: "Integrations", href: "/settings/integrations" });
     return items;
   }, [permissions]);

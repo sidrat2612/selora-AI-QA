@@ -42,19 +42,16 @@ export class LlmConfigService {
     private readonly auditService: AuditService,
   ) {}
 
-  async listAllConfigs() {
-    const configs = await this.prisma.workspaceLlmConfig.findMany({
-      include: {
-        workspace: { select: { id: true, name: true, slug: true } },
-      },
+  // ─── Platform LLM Config CRUD (Platform Admin) ───────────────────────
+
+  async listPlatformConfigs() {
+    const configs = await this.prisma.platformLlmConfig.findMany({
       orderBy: { updatedAt: 'desc' },
     });
 
     return configs.map((c) => ({
       id: c.id,
-      workspaceId: c.workspaceId,
-      workspaceName: c.workspace.name,
-      workspaceSlug: c.workspace.slug,
+      displayName: c.displayName,
       provider: c.provider,
       modelName: c.modelName,
       baseUrl: c.baseUrl,
@@ -65,18 +62,15 @@ export class LlmConfigService {
     }));
   }
 
-  async getConfig(workspaceId: string) {
-    const config = await this.prisma.workspaceLlmConfig.findUnique({
-      where: { workspaceId },
-    });
-
+  async getPlatformConfig(id: string) {
+    const config = await this.prisma.platformLlmConfig.findUnique({ where: { id } });
     if (!config) {
-      return null;
+      throw notFound('LLM_CONFIG_NOT_FOUND', 'Platform LLM configuration not found.');
     }
 
     return {
       id: config.id,
-      workspaceId: config.workspaceId,
+      displayName: config.displayName,
       provider: config.provider,
       modelName: config.modelName,
       baseUrl: config.baseUrl,
@@ -89,13 +83,8 @@ export class LlmConfigService {
     };
   }
 
-  async upsertConfig(
-    workspaceId: string,
-    body: Record<string, unknown>,
-    auth: RequestAuthContext,
-    tenantId: string,
-    requestId: string,
-  ) {
+  async createPlatformConfig(body: Record<string, unknown>) {
+    const displayName = this.readNonEmptyString(body['displayName'], 'displayName');
     const provider = this.readProvider(body['provider']);
     const modelName = this.readNonEmptyString(body['modelName'], 'modelName');
     const baseUrl = this.readOptionalString(body['baseUrl']);
@@ -103,34 +92,49 @@ export class LlmConfigService {
     const repairModelName = this.readOptionalString(body['repairModelName']);
     const isActive = body['isActive'] === undefined ? true : Boolean(body['isActive']);
 
-    // Validate base URL is required for CUSTOM, OLLAMA, AZURE_OPENAI
-    if (['CUSTOM', 'OLLAMA', 'AZURE_OPENAI'].includes(provider) && !baseUrl) {
-      throw badRequest('LLM_CONFIG_INVALID', 'Base URL is required for this provider.');
+    this.validateBaseUrl(provider, baseUrl);
+
+    const resolvedBaseUrl = baseUrl || PROVIDER_PRESETS[provider]?.baseUrl || null;
+    const encryptedApiKey = apiKey ? encryptSecretValue(apiKey) : null;
+
+    const config = await this.prisma.platformLlmConfig.create({
+      data: {
+        displayName,
+        provider: provider as LlmProviderType,
+        modelName,
+        baseUrl: resolvedBaseUrl,
+        encryptedApiKey,
+        repairModelName: repairModelName ?? null,
+        isActive,
+      },
+    });
+
+    return this.formatPlatformConfigResponse(config);
+  }
+
+  async updatePlatformConfig(id: string, body: Record<string, unknown>) {
+    const existing = await this.prisma.platformLlmConfig.findUnique({ where: { id } });
+    if (!existing) {
+      throw notFound('LLM_CONFIG_NOT_FOUND', 'Platform LLM configuration not found.');
     }
 
-    // Validate base URL uses HTTPS for external providers
-    if (baseUrl && provider !== 'OLLAMA') {
-      const urlLower = baseUrl.toLowerCase();
-      if (!urlLower.startsWith('https://') && !urlLower.startsWith('http://localhost') && !urlLower.startsWith('http://127.0.0.1')) {
-        throw badRequest('LLM_CONFIG_INVALID', 'Base URL must use HTTPS for external providers.');
-      }
-    }
+    const displayName = this.readNonEmptyString(body['displayName'], 'displayName');
+    const provider = this.readProvider(body['provider']);
+    const modelName = this.readNonEmptyString(body['modelName'], 'modelName');
+    const baseUrl = this.readOptionalString(body['baseUrl']);
+    const apiKey = this.readOptionalString(body['apiKey']);
+    const repairModelName = this.readOptionalString(body['repairModelName']);
+    const isActive = body['isActive'] === undefined ? true : Boolean(body['isActive']);
+
+    this.validateBaseUrl(provider, baseUrl);
 
     const resolvedBaseUrl = baseUrl || PROVIDER_PRESETS[provider]?.baseUrl || null;
     const encryptedApiKey = apiKey ? encryptSecretValue(apiKey) : undefined;
 
-    const config = await this.prisma.workspaceLlmConfig.upsert({
-      where: { workspaceId },
-      create: {
-        workspaceId,
-        provider: provider as LlmProviderType,
-        modelName,
-        baseUrl: resolvedBaseUrl,
-        encryptedApiKey: encryptedApiKey ?? null,
-        repairModelName: repairModelName ?? null,
-        isActive,
-      },
-      update: {
+    const config = await this.prisma.platformLlmConfig.update({
+      where: { id },
+      data: {
+        displayName,
         provider: provider as LlmProviderType,
         modelName,
         baseUrl: resolvedBaseUrl,
@@ -140,68 +144,21 @@ export class LlmConfigService {
       },
     });
 
-    await this.auditService.record({
-      tenantId,
-      workspaceId,
-      actorUserId: auth.user.id,
-      eventType: 'workspace.llm_config_updated',
-      entityType: 'workspace_llm_config',
-      entityId: config.id,
-      requestId,
-      metadataJson: {
-        provider: config.provider,
-        modelName: config.modelName,
-        repairModelName: config.repairModelName,
-        isActive: config.isActive,
-      },
-    });
-
-    return {
-      id: config.id,
-      workspaceId: config.workspaceId,
-      provider: config.provider,
-      modelName: config.modelName,
-      baseUrl: config.baseUrl,
-      hasApiKey: !!config.encryptedApiKey,
-      maskedApiKey: config.encryptedApiKey ? this.maskKey(config.encryptedApiKey) : null,
-      repairModelName: config.repairModelName,
-      isActive: config.isActive,
-      createdAt: config.createdAt,
-      updatedAt: config.updatedAt,
-    };
+    return this.formatPlatformConfigResponse(config);
   }
 
-  async deleteConfig(
-    workspaceId: string,
-    auth: RequestAuthContext,
-    tenantId: string,
-    requestId: string,
-  ) {
-    const existing = await this.prisma.workspaceLlmConfig.findUnique({
-      where: { workspaceId },
-    });
-
+  async deletePlatformConfig(id: string) {
+    const existing = await this.prisma.platformLlmConfig.findUnique({ where: { id } });
     if (!existing) {
-      throw notFound('LLM_CONFIG_NOT_FOUND', 'No LLM configuration found for this workspace.');
+      throw notFound('LLM_CONFIG_NOT_FOUND', 'Platform LLM configuration not found.');
     }
 
-    await this.prisma.workspaceLlmConfig.delete({ where: { workspaceId } });
-
-    await this.auditService.record({
-      tenantId,
-      workspaceId,
-      actorUserId: auth.user.id,
-      eventType: 'workspace.llm_config_deleted',
-      entityType: 'workspace_llm_config',
-      entityId: existing.id,
-      requestId,
-      metadataJson: { provider: existing.provider },
-    });
+    await this.prisma.platformLlmConfig.delete({ where: { id } });
 
     return { deleted: true };
   }
 
-  async testConnection(workspaceId: string, body: Record<string, unknown>) {
+  async testConnection(body: Record<string, unknown>, configId?: string) {
     const provider = this.readProvider(body['provider']);
     const modelName = this.readNonEmptyString(body['modelName'], 'modelName');
     const baseUrl = this.readOptionalString(body['baseUrl']) || PROVIDER_PRESETS[provider]?.baseUrl;
@@ -211,11 +168,10 @@ export class LlmConfigService {
       throw badRequest('LLM_CONFIG_INVALID', 'Cannot resolve base URL for connection test.');
     }
 
-    // If no apiKey in request, try to get from stored config
     let resolvedApiKey = apiKey;
-    if (!resolvedApiKey) {
-      const stored = await this.prisma.workspaceLlmConfig.findUnique({
-        where: { workspaceId },
+    if (!resolvedApiKey && configId) {
+      const stored = await this.prisma.platformLlmConfig.findUnique({
+        where: { id: configId },
         select: { encryptedApiKey: true },
       });
       if (stored?.encryptedApiKey) {
@@ -227,16 +183,312 @@ export class LlmConfigService {
       throw badRequest('LLM_CONFIG_INVALID', 'API key is required for connection test.');
     }
 
+    return this.performConnectionTest(provider, baseUrl, resolvedApiKey);
+  }
+
+  // ─── Tenant LLM Selection ────────────────────────────────────────────
+
+  async getTenantSelection(tenantId: string) {
+    const selection = await this.prisma.tenantLlmSelection.findUnique({
+      where: { tenantId },
+      include: { platformLlmConfig: true },
+    });
+
+    if (!selection) return null;
+
+    // BYO custom config
+    if (!selection.platformLlmConfigId && selection.customProvider) {
+      return {
+        id: selection.id,
+        tenantId: selection.tenantId,
+        platformLlmConfigId: null,
+        isCustom: true,
+        config: {
+          id: selection.id,
+          displayName: selection.customDisplayName ?? 'Custom Model',
+          provider: selection.customProvider,
+          modelName: selection.customModelName!,
+          baseUrl: selection.customBaseUrl ?? null,
+          repairModelName: selection.customRepairModelName ?? null,
+          isActive: true,
+          hasApiKey: !!selection.customEncryptedApiKey,
+          maskedApiKey: selection.customEncryptedApiKey ? this.maskKey(selection.customEncryptedApiKey) : null,
+        },
+        createdAt: selection.createdAt,
+        updatedAt: selection.updatedAt,
+      };
+    }
+
+    // Platform config selection
+    if (!selection.platformLlmConfig) return null;
+
+    return {
+      id: selection.id,
+      tenantId: selection.tenantId,
+      platformLlmConfigId: selection.platformLlmConfigId,
+      isCustom: false,
+      config: {
+        id: selection.platformLlmConfig.id,
+        displayName: selection.platformLlmConfig.displayName,
+        provider: selection.platformLlmConfig.provider,
+        modelName: selection.platformLlmConfig.modelName,
+        baseUrl: selection.platformLlmConfig.baseUrl,
+        repairModelName: selection.platformLlmConfig.repairModelName,
+        isActive: selection.platformLlmConfig.isActive,
+      },
+      createdAt: selection.createdAt,
+      updatedAt: selection.updatedAt,
+    };
+  }
+
+  async selectForTenant(
+    tenantId: string,
+    platformLlmConfigId: string,
+    auth: RequestAuthContext,
+    requestId: string,
+  ) {
+    const platformConfig = await this.prisma.platformLlmConfig.findUnique({
+      where: { id: platformLlmConfigId },
+    });
+
+    if (!platformConfig) {
+      throw notFound('LLM_CONFIG_NOT_FOUND', 'Platform LLM configuration not found.');
+    }
+
+    if (!platformConfig.isActive) {
+      throw badRequest('LLM_CONFIG_INACTIVE', 'This LLM configuration is currently disabled.');
+    }
+
+    const selection = await this.prisma.tenantLlmSelection.upsert({
+      where: { tenantId },
+      create: { tenantId, platformLlmConfigId },
+      update: {
+        platformLlmConfigId,
+        // Clear BYO fields when selecting a platform config
+        customProvider: null,
+        customModelName: null,
+        customBaseUrl: null,
+        customEncryptedApiKey: null,
+        customRepairModelName: null,
+        customDisplayName: null,
+      },
+      include: { platformLlmConfig: true },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: null,
+      actorUserId: auth.user.id,
+      eventType: 'tenant.llm_selection_updated',
+      entityType: 'tenant_llm_selection',
+      entityId: selection.id,
+      requestId,
+      metadataJson: {
+        platformLlmConfigId,
+        provider: selection.platformLlmConfig!.provider,
+        modelName: selection.platformLlmConfig!.modelName,
+      },
+    });
+
+    return {
+      id: selection.id,
+      tenantId: selection.tenantId,
+      platformLlmConfigId: selection.platformLlmConfigId,
+      isCustom: false,
+      config: {
+        id: selection.platformLlmConfig!.id,
+        displayName: selection.platformLlmConfig!.displayName,
+        provider: selection.platformLlmConfig!.provider,
+        modelName: selection.platformLlmConfig!.modelName,
+        baseUrl: selection.platformLlmConfig!.baseUrl,
+        repairModelName: selection.platformLlmConfig!.repairModelName,
+        isActive: selection.platformLlmConfig!.isActive,
+      },
+      createdAt: selection.createdAt,
+      updatedAt: selection.updatedAt,
+    };
+  }
+
+  async clearTenantSelection(
+    tenantId: string,
+    auth: RequestAuthContext,
+    requestId: string,
+  ) {
+    const existing = await this.prisma.tenantLlmSelection.findUnique({
+      where: { tenantId },
+    });
+
+    if (!existing) {
+      throw notFound('LLM_SELECTION_NOT_FOUND', 'No LLM selection found for this tenant.');
+    }
+
+    await this.prisma.tenantLlmSelection.delete({ where: { tenantId } });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: null,
+      actorUserId: auth.user.id,
+      eventType: 'tenant.llm_selection_cleared',
+      entityType: 'tenant_llm_selection',
+      entityId: existing.id,
+      requestId,
+      metadataJson: {},
+    });
+
+    return { deleted: true };
+  }
+
+  // ─── Tenant BYO Custom Config ────────────────────────────────────────
+
+  async saveTenantCustomConfig(
+    tenantId: string,
+    body: Record<string, unknown>,
+    auth: RequestAuthContext,
+    requestId: string,
+  ) {
+    const provider = this.readProvider(body['provider']);
+    const modelName = this.readNonEmptyString(body['modelName'], 'modelName');
+    const displayName = this.readOptionalString(body['displayName']) || 'Custom Model';
+    const baseUrl = this.readOptionalString(body['baseUrl']);
+    const apiKey = this.readOptionalString(body['apiKey']);
+    const repairModelName = this.readOptionalString(body['repairModelName']);
+
+    this.validateBaseUrl(provider, baseUrl);
+
+    const resolvedBaseUrl = baseUrl || PROVIDER_PRESETS[provider]?.baseUrl || null;
+
+    // Determine API key: new value, or keep existing
+    let encryptedApiKey: string | null | undefined;
+    if (apiKey) {
+      encryptedApiKey = encryptSecretValue(apiKey);
+    } else {
+      // Check if there's an existing custom key to keep
+      const existing = await this.prisma.tenantLlmSelection.findUnique({
+        where: { tenantId },
+        select: { customEncryptedApiKey: true },
+      });
+      encryptedApiKey = existing?.customEncryptedApiKey ?? null;
+    }
+
+    const selection = await this.prisma.tenantLlmSelection.upsert({
+      where: { tenantId },
+      create: {
+        tenantId,
+        platformLlmConfigId: null,
+        customProvider: provider as LlmProviderType,
+        customModelName: modelName,
+        customBaseUrl: resolvedBaseUrl,
+        customEncryptedApiKey: encryptedApiKey,
+        customRepairModelName: repairModelName ?? null,
+        customDisplayName: displayName,
+      },
+      update: {
+        platformLlmConfigId: null,
+        customProvider: provider as LlmProviderType,
+        customModelName: modelName,
+        customBaseUrl: resolvedBaseUrl,
+        customEncryptedApiKey: encryptedApiKey,
+        customRepairModelName: repairModelName ?? null,
+        customDisplayName: displayName,
+      },
+    });
+
+    await this.auditService.record({
+      tenantId,
+      workspaceId: null,
+      actorUserId: auth.user.id,
+      eventType: 'tenant.llm_custom_config_saved',
+      entityType: 'tenant_llm_selection',
+      entityId: selection.id,
+      requestId,
+      metadataJson: { provider, modelName, displayName },
+    });
+
+    return {
+      id: selection.id,
+      tenantId: selection.tenantId,
+      platformLlmConfigId: null,
+      isCustom: true,
+      config: {
+        id: selection.id,
+        displayName,
+        provider: selection.customProvider!,
+        modelName: selection.customModelName!,
+        baseUrl: selection.customBaseUrl ?? null,
+        repairModelName: selection.customRepairModelName ?? null,
+        isActive: true,
+        hasApiKey: !!selection.customEncryptedApiKey,
+        maskedApiKey: selection.customEncryptedApiKey ? this.maskKey(selection.customEncryptedApiKey) : null,
+      },
+      createdAt: selection.createdAt,
+      updatedAt: selection.updatedAt,
+    };
+  }
+
+  async testTenantConnection(tenantId: string, body: Record<string, unknown>) {
+    const provider = this.readProvider(body['provider']);
+    const modelName = this.readNonEmptyString(body['modelName'], 'modelName');
+    const baseUrl = this.readOptionalString(body['baseUrl']) || PROVIDER_PRESETS[provider]?.baseUrl;
+    const apiKey = this.readOptionalString(body['apiKey']);
+
+    if (!baseUrl) {
+      throw badRequest('LLM_CONFIG_INVALID', 'Cannot resolve base URL for connection test.');
+    }
+
+    // If no API key provided, try to use existing custom key
+    let resolvedApiKey = apiKey;
+    if (!resolvedApiKey) {
+      const existing = await this.prisma.tenantLlmSelection.findUnique({
+        where: { tenantId },
+        select: { customEncryptedApiKey: true },
+      });
+      if (existing?.customEncryptedApiKey) {
+        resolvedApiKey = decryptSecretValue(existing.customEncryptedApiKey);
+      }
+    }
+
+    if (!resolvedApiKey && provider !== 'OLLAMA') {
+      throw badRequest('LLM_CONFIG_INVALID', 'API key is required for connection test.');
+    }
+
+    return this.performConnectionTest(provider, baseUrl, resolvedApiKey);
+  }
+
+  // ─── Available configs for tenant (active only) ─────────────────────
+
+  async listAvailableConfigs() {
+    const configs = await this.prisma.platformLlmConfig.findMany({
+      where: { isActive: true },
+      orderBy: { displayName: 'asc' },
+    });
+
+    return configs.map((c) => ({
+      id: c.id,
+      displayName: c.displayName,
+      provider: c.provider,
+      modelName: c.modelName,
+      baseUrl: c.baseUrl,
+      repairModelName: c.repairModelName,
+    }));
+  }
+
+  getProviderPresets() {
+    return PROVIDER_PRESETS;
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────
+
+  private async performConnectionTest(provider: string, baseUrl: string, apiKey: string | null) {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (resolvedApiKey) {
+      if (apiKey) {
         if (provider === 'ANTHROPIC') {
-          headers['x-api-key'] = resolvedApiKey;
+          headers['x-api-key'] = apiKey;
           headers['anthropic-version'] = '2023-06-01';
         } else if (provider === 'AZURE_OPENAI') {
-          headers['api-key'] = resolvedApiKey;
+          headers['api-key'] = apiKey;
         } else {
-          headers['Authorization'] = `Bearer ${resolvedApiKey}`;
+          headers['Authorization'] = `Bearer ${apiKey}`;
         }
       }
 
@@ -260,11 +512,45 @@ export class LlmConfigService {
     }
   }
 
-  getProviderPresets() {
-    return PROVIDER_PRESETS;
+  private formatPlatformConfigResponse(config: {
+    id: string;
+    displayName: string;
+    provider: LlmProviderType;
+    modelName: string;
+    baseUrl: string | null;
+    encryptedApiKey: string | null;
+    repairModelName: string | null;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
+    return {
+      id: config.id,
+      displayName: config.displayName,
+      provider: config.provider,
+      modelName: config.modelName,
+      baseUrl: config.baseUrl,
+      hasApiKey: !!config.encryptedApiKey,
+      maskedApiKey: config.encryptedApiKey ? this.maskKey(config.encryptedApiKey) : null,
+      repairModelName: config.repairModelName,
+      isActive: config.isActive,
+      createdAt: config.createdAt,
+      updatedAt: config.updatedAt,
+    };
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────
+  private validateBaseUrl(provider: string, baseUrl: string | null) {
+    if (['CUSTOM', 'OLLAMA', 'AZURE_OPENAI'].includes(provider) && !baseUrl) {
+      throw badRequest('LLM_CONFIG_INVALID', 'Base URL is required for this provider.');
+    }
+
+    if (baseUrl && provider !== 'OLLAMA') {
+      const urlLower = baseUrl.toLowerCase();
+      if (!urlLower.startsWith('https://') && !urlLower.startsWith('http://localhost') && !urlLower.startsWith('http://127.0.0.1')) {
+        throw badRequest('LLM_CONFIG_INVALID', 'Base URL must use HTTPS for external providers.');
+      }
+    }
+  }
 
   private maskKey(encryptedPayload: string): string {
     try {
