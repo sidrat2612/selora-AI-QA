@@ -6,6 +6,7 @@ import {
   SqsConsumer,
   getQueueMode,
   getRedisConnection,
+  createWorkerLogger,
   type Job,
   type RecordingIngestionJobData,
 } from '@selora/queue';
@@ -121,10 +122,11 @@ function serializeError(error: unknown) {
 }
 
 async function bootstrap() {
+  const logger = createWorkerLogger('worker-ingestion');
   const mode = getQueueMode();
 
   if (mode === 'inline') {
-    console.log('Worker-ingestion not starting consumer because QUEUE_MODE=inline.');
+    logger.info('Not starting consumer because QUEUE_MODE=inline.');
     return;
   }
 
@@ -136,10 +138,10 @@ async function bootstrap() {
       visibilityTimeout: 120,
     });
     consumer.start();
-    console.log('Worker-ingestion started (SQS), waiting for recording ingestion jobs...');
+    logger.info('Started (SQS), waiting for recording ingestion jobs...');
 
     const shutdown = () => {
-      console.log('Shutting down SQS consumer...');
+      logger.info('Shutting down SQS consumer...');
       consumer.stop();
       process.exit(0);
     };
@@ -159,14 +161,14 @@ async function bootstrap() {
   );
 
   worker.on('completed', (job: Job<RecordingIngestionJobData>) => {
-    console.log(`Recording ingestion job ${job.id} completed`);
+    logger.info('Recording ingestion job completed', { jobId: job.id });
   });
 
   worker.on('failed', (job: Job<RecordingIngestionJobData> | undefined, err: Error) => {
-    console.error(`Recording ingestion job ${job?.id} failed:`, err.message);
+    logger.error('Recording ingestion job failed', { jobId: job?.id, error: err.message });
   });
 
-  console.log('Worker-ingestion started (BullMQ), waiting for recording ingestion jobs...');
+  logger.info('Started (BullMQ), waiting for recording ingestion jobs...');
 }
 
 void bootstrap();

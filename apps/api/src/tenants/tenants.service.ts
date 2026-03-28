@@ -620,6 +620,15 @@ export class TenantsService {
     };
   }
 
+  async getPlatformStats() {
+    const [userCount, tenantCount, workspaceCount] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.tenant.count(),
+      this.prisma.workspace.count(),
+    ]);
+    return { userCount, tenantCount, workspaceCount };
+  }
+
   private readNonEmptyString(value: unknown, fieldName: string) {
     if (typeof value !== 'string' || value.trim().length === 0) {
       throw badRequest('VALIDATION_ERROR', `${fieldName} is required.`);

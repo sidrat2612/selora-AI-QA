@@ -1,0 +1,71 @@
+name: 'Selora QA — Run Tests'
+description: 'Run Selora QA tests with AI self-healing in your CI pipeline'
+author: 'Selora QA'
+
+inputs:
+  api-url:
+    description: 'Selora API base URL'
+    required: true
+  api-key:
+    description: 'Selora API key'
+    required: true
+  workspace-id:
+    description: 'Selora workspace ID'
+    required: true
+  suite:
+    description: 'Suite slug, name, or ID to run'
+    required: true
+  environment:
+    description: 'Target environment name or ID'
+    required: false
+  repair:
+    description: 'Enable AI self-healing on failure'
+    required: false
+    default: 'true'
+  max-repair-attempts:
+    description: 'Maximum repair attempts per failing test'
+    required: false
+    default: '2'
+  timeout:
+    description: 'Timeout in minutes'
+    required: false
+    default: '30'
+
+outputs:
+  run-id:
+    description: 'The Selora run ID'
+  status:
+    description: 'Final run status (PASSED, FAILED, etc.)'
+  passed:
+    description: 'Number of passed tests'
+  failed:
+    description: 'Number of failed tests'
+  total:
+    description: 'Total number of tests'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Run Selora Tests
+      id: selora
+      shell: bash
+      env:
+        SELORA_API_URL: ${{ inputs.api-url }}
+        SELORA_API_KEY: ${{ inputs.api-key }}
+        SELORA_WORKSPACE_ID: ${{ inputs.workspace-id }}
+      run: |
+        npx @selora/cli run \
+          --suite "${{ inputs.suite }}" \
+          ${{ inputs.environment && format('--environment "{0}"', inputs.environment) || '' }} \
+          ${{ inputs.repair == 'false' && '--no-repair' || '' }} \
+          --max-repair-attempts ${{ inputs.max-repair-attempts }} \
+          --timeout ${{ inputs.timeout }}
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'

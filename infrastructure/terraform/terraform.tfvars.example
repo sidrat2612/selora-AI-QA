@@ -13,13 +13,13 @@ artifact_signing_secret = "your-artifact-signing-secret-here"
 
 # aws_region    = "us-east-1"
 # environment   = "dev"
-# domain_name   = "seloratech.com"
+# domain_name   = "seloraqa.com"
 
 # smtp_host     = "email-smtp.us-east-1.amazonaws.com"
 # smtp_port     = "587"
 # smtp_user     = "AKIA..."
 # smtp_password = "..."
-# smtp_from     = "noreply@seloratech.com"
+# smtp_from     = "noreply@seloraqa.com"
 
 # api_cpu       = "1024"   # 1 vCPU
 # api_memory    = "2048"   # 2 GB

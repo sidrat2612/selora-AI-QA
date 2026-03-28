@@ -11,9 +11,12 @@ export class MailerService {
 
   constructor(private readonly configService: ConfigService) {
     this.fromAddress = this.configService.get<string>('SMTP_FROM') ?? 'noreply@selora.local';
-    this.webOrigin =
-      this.configService.get<string>('WEB_ORIGIN') ??
-      `http://localhost:${this.configService.get<string>('WEB_PORT') ?? '3000'}`;
+
+    const configuredOrigin = this.configService.get<string>('WEB_ORIGIN');
+    if (!configuredOrigin && this.configService.get<string>('NODE_ENV') === 'production') {
+      throw new Error('WEB_ORIGIN must be set in production for email links.');
+    }
+    this.webOrigin = configuredOrigin?.split(',')[0]?.trim() ?? `http://localhost:3000`;
 
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('SMTP_HOST') ?? 'mailpit',

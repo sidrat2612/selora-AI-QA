@@ -9,6 +9,7 @@ import {
   getQueueMode,
   getRedisConnection,
   sqsSendMessage,
+  createWorkerLogger,
   type AIRepairJobData,
   type Job,
   type TestExecutionJobData,
@@ -275,10 +276,11 @@ function serializeError(error: unknown) {
 }
 
 async function bootstrap() {
+  const logger = createWorkerLogger('worker-execution');
   const mode = getQueueMode();
 
   if (mode === 'inline') {
-    console.log('Worker-execution not starting consumer because QUEUE_MODE=inline.');
+    logger.info('Not starting consumer because QUEUE_MODE=inline.');
     return;
   }
 
@@ -301,10 +303,10 @@ async function bootstrap() {
 
     validationConsumer.start();
     executionConsumer.start();
-    console.log('Worker-execution started (SQS), waiting for validation and execution jobs...');
+    logger.info('Started (SQS), waiting for validation and execution jobs...');
 
     const shutdown = () => {
-      console.log('Shutting down SQS consumers...');
+      logger.info('Shutting down SQS consumers...');
       validationConsumer.stop();
       executionConsumer.stop();
       process.exit(0);
@@ -337,22 +339,22 @@ async function bootstrap() {
   );
 
   validationWorker.on('completed', (job: Job<TestValidationJobData>) => {
-    console.log(`Validation job ${job.id} completed`);
+    logger.info('Validation job completed', { jobId: job.id });
   });
 
   validationWorker.on('failed', (job: Job<TestValidationJobData> | undefined, err: Error) => {
-    console.error(`Validation job ${job?.id} failed:`, err.message);
+    logger.error('Validation job failed', { jobId: job?.id, error: err.message });
   });
 
   executionWorker.on('completed', (job: Job<TestExecutionJobData>) => {
-    console.log(`Execution job ${job.id} completed`);
+    logger.info('Execution job completed', { jobId: job.id });
   });
 
   executionWorker.on('failed', (job: Job<TestExecutionJobData> | undefined, err: Error) => {
-    console.error(`Execution job ${job?.id} failed:`, err.message);
+    logger.error('Execution job failed', { jobId: job?.id, error: err.message });
   });
 
-  console.log('Worker-execution started (BullMQ), waiting for validation and execution jobs...');
+  logger.info('Started (BullMQ), waiting for validation and execution jobs...');
 }
 
 void bootstrap();

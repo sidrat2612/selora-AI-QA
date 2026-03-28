@@ -204,6 +204,8 @@ enum GeneratedTestStatus {
 
 enum RunType {
   MANUAL
+  SCHEDULED
+  CI_TRIGGERED
 }
 
 enum RunStatus {
@@ -225,6 +227,7 @@ enum ArtifactType {
   VIDEO
   GENERATED_TEST
   REPAIR_DIFF
+  VISUAL_DIFF
 }
 
 enum RepairMode {
@@ -373,6 +376,11 @@ model Workspace {
   activeSessions         UserSession[]
   betaFeedback           BetaFeedback[]
   githubRepositoryAllowlist GitHubRepositoryAllowlistEntry[]
+  visualBaselines        VisualBaseline[]
+  testFileMappings       TestFileMapping[]
+  smartSelectionRuns     SmartSelectionRun[]
+  apiTestDefinitions     ApiTestDefinition[]
+  apiTestExecutions      ApiTestExecution[]
 
   @@unique([tenantId, slug])
   @@map("workspaces")
@@ -396,11 +404,18 @@ model AutomationSuite {
   testRailSyncEnabled          Boolean             @default(true)
   screenshotPolicy             ScreenshotPolicy    @default(ALWAYS)
 
+  // ── Schedule Fields ──
+  scheduleEnabled        Boolean  @default(false)
+  scheduleCron           String?
+  scheduleEnvironmentId  String?
+  scheduleTimezone       String   @default("UTC")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  scheduleEnvironment Environment? @relation("ScheduleEnvironment", fields: [scheduleEnvironmentId], references: [id], onDelete: SetNull)
   canonicalTests CanonicalTest[]
   businessTestCases BusinessTestCase[]
   githubIntegration GitHubSuiteIntegration?
@@ -410,6 +425,7 @@ model AutomationSuite {
   generatedArtifactPublications GeneratedArtifactPublication[]
   gitHubWebhookDeliveries GitHubWebhookDelivery[]
   testRuns TestRun[]
+  apiTestDefinitions ApiTestDefinition[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status])
@@ -493,6 +509,8 @@ model User {
   rotatedGitHubIntegrationSecrets GitHubSuiteIntegration[] @relation("GitHubIntegrationSecretRotatedBy")
   notifications AppNotification[]
   approvedRepoAllowlistEntries GitHubRepositoryAllowlistEntry[] @relation("RepoAllowlistApprovedBy")
+  approvedVisualBaselines VisualBaseline[] @relation("BaselineApprover")
+  createdApiTests ApiTestDefinition[] @relation("ApiTestCreatedBy")
 
   @@map("users")
 }
@@ -591,6 +609,8 @@ model Environment {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   testRuns  TestRun[]
+  scheduledSuites AutomationSuite[] @relation("ScheduleEnvironment")
+  apiTestExecutions ApiTestExecution[]
 
   @@map("environments")
 }
@@ -643,6 +663,8 @@ model CanonicalTest {
   publications GeneratedArtifactPublication[]
   externalCaseLink ExternalTestCaseLink?
   scriptMappings TestCaseScriptMapping[]
+  visualBaselines VisualBaseline[]
+  fileMappings    TestFileMapping[]
 
   @@index([suiteId, updatedAt])
   @@index([workspaceId, status, updatedAt])
@@ -897,6 +919,8 @@ model TestRun {
   testCaseResults TestCaseResult[]
   artifacts   Artifact[]
   aiRepairAttempts AIRepairAttempt[]
+  smartSelection SmartSelectionRun?
+  apiTestExecutions ApiTestExecution[]
 
   @@index([workspaceId, createdAt, status])
   @@index([suiteId, createdAt])
@@ -931,6 +955,7 @@ model TestRunItem {
   testCaseResult         TestCaseResult?       @relation(fields: [testCaseResultId], references: [id], onDelete: SetNull)
   artifacts              Artifact[]
   aiRepairAttempts       AIRepairAttempt[]
+  browserResults         TestRunBrowserResult[]
 
   @@index([testRunId, status])
   @@index([testRunId, resolvedSourceMode])
@@ -962,6 +987,210 @@ model Artifact {
   @@index([workspaceId, testRunId, artifactType])
   @@index([workspaceId, generatedTestArtifactId, artifactType])
   @@map("artifacts")
+}
+
+// ──────────────── Visual Baselines ────────────────
+
+model VisualBaseline {
+  id               String   @id @default(uuid())
+  workspaceId      String
+  canonicalTestId  String
+  stepIndex        Int
+  stepLabel        String?
+  storageKey       String
+  contentType      String   @default("image/png")
+  width            Int      @default(0)
+  height           Int      @default(0)
+  perceptualHash   String?
+  sizeBytes        BigInt   @default(0)
+  approvedByUserId String?
+  approvedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
+  approvedBy    User?         @relation("BaselineApprover", fields: [approvedByUserId], references: [id])
+
+  @@unique([canonicalTestId, stepIndex])
+  @@index([workspaceId, canonicalTestId])
+  @@map("visual_baselines")
+}
+
+enum VisualDiffStatus {
+  NO_BASELINE
+  MATCH
+  MISMATCH
+  APPROVED
+}
+
+// ──────────────── Smart Test Selection (P3.1) ────────────────
+
+model TestFileMapping {
+  id              String   @id @default(uuid())
+  workspaceId     String
+  canonicalTestId String
+  filePattern     String
+  routePattern    String?
+  confidence      Float    @default(1.0)
+  learnedFrom     String   @default("manual")  // manual | execution_trace | git_history
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  canonicalTest CanonicalTest @relation(fields: [canonicalTestId], references: [id], onDelete: Cascade)
+
+  @@unique([canonicalTestId, filePattern])
+  @@index([workspaceId])
+  @@map("test_file_mappings")
+}
+
+model SmartSelectionRun {
+  id                 String   @id @default(uuid())
+  workspaceId        String
+  testRunId          String   @unique
+  repoOwner          String
+  repoName           String
+  baseSha            String
+  headSha            String
+  pullRequestNumber  Int?
+  changedFilesJson   Json
+  totalTests         Int      @default(0)
+  selectedTests      Int      @default(0)
+  randomSampleTests  Int      @default(0)
+  coverageConfidence Float    @default(0)
+
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  testRun   TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@map("smart_selection_runs")
+}
+
+// ──────────────── Multi-Browser Matrix (P3.2) ────────────────
+
+enum BrowserType {
+  CHROMIUM
+  FIREFOX
+  WEBKIT
+}
+
+enum DeviceProfile {
+  DESKTOP
+  TABLET
+  MOBILE
+}
+
+model TestRunBrowserResult {
+  id            String        @id @default(uuid())
+  testRunItemId String
+  browserType   BrowserType
+  device        DeviceProfile @default(DESKTOP)
+  viewportWidth Int           @default(1920)
+  viewportHeight Int          @default(1080)
+  status        RunStatus     @default(QUEUED)
+  failureSummary String?
+  durationMs    Int?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  testRunItem TestRunItem @relation(fields: [testRunItemId], references: [id], onDelete: Cascade)
+
+  @@unique([testRunItemId, browserType, device])
+  @@index([testRunItemId, status])
+  @@map("test_run_browser_results")
+}
+
+// ──────────────── API Testing Extension (P3.3) ────────────────
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+  HEAD
+  OPTIONS
+}
+
+enum ApiTestProtocol {
+  REST
+  GRAPHQL
+}
+
+enum ApiTestStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+model ApiTestDefinition {
+  id            String          @id @default(uuid())
+  workspaceId   String
+  suiteId       String?
+  name          String
+  description   String?
+  protocol      ApiTestProtocol @default(REST)
+  method        HttpMethod      @default(GET)
+  urlTemplate   String
+  headersJson   Json            @default("{}")
+  bodyTemplate  String?
+  graphqlQuery  String?
+  graphqlVariablesJson Json?
+  assertionsJson Json           @default("[]")
+  status         ApiTestStatus  @default(DRAFT)
+  tagsJson       Json           @default("[]")
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  suite     AutomationSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  createdBy User?            @relation("ApiTestCreatedBy", fields: [createdByUserId], references: [id])
+  executions ApiTestExecution[]
+
+  @@index([workspaceId, status])
+  @@index([suiteId])
+  @@map("api_test_definitions")
+}
+
+model ApiTestExecution {
+  id                String    @id @default(uuid())
+  workspaceId       String
+  apiTestDefinitionId String
+  testRunId         String?
+  environmentId     String
+  status            RunStatus @default(QUEUED)
+  requestUrl        String?
+  requestMethod     String?
+  requestHeadersJson Json?
+  requestBody       String?
+  responseStatus    Int?
+  responseHeadersJson Json?
+  responseBody      String?
+  responseTimeMs    Int?
+  assertionResultsJson Json?
+  failureSummary    String?
+  startedAt         DateTime?
+  finishedAt        DateTime?
+
+  createdAt DateTime @default(now())
+
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiTestDefinition ApiTestDefinition @relation(fields: [apiTestDefinitionId], references: [id], onDelete: Cascade)
+  testRun         TestRun?          @relation(fields: [testRunId], references: [id], onDelete: SetNull)
+  environment     Environment       @relation(fields: [environmentId], references: [id])
+
+  @@index([apiTestDefinitionId, createdAt])
+  @@index([testRunId])
+  @@map("api_test_executions")
 }
 
 // ──────────────── Audit ────────────────

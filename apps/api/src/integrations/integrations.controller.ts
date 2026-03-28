@@ -1,14 +1,18 @@
-import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
 import { success } from '../common/response';
 import type { AppRequest } from '../common/types';
 import { PrismaService } from '../database/prisma.service';
+import { CITemplateService } from './ci-template.service';
 
 @Controller('workspaces/:workspaceId/integrations')
 @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
 export class IntegrationsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ciTemplateService: CITemplateService,
+  ) {}
 
   @Get()
   async listIntegrations(
@@ -106,5 +110,15 @@ export class IntegrationsController {
     }));
 
     return success(items, { requestId: request.requestId });
+  }
+
+  @Post('ci-template/generate')
+  async generateCITemplate(
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: Record<string, unknown>,
+    @Req() request: AppRequest,
+  ) {
+    const result = this.ciTemplateService.generate(body, workspaceId);
+    return success(result, { requestId: request.requestId });
   }
 }

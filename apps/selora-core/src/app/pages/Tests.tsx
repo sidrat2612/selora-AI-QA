@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock,
   GitBranch,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -42,6 +43,7 @@ import { usePermissions } from "../../lib/auth-context";
 import { type Test, tests as testsApi } from "../../lib/api-client";
 import { UploadRecordingDialog } from "../components/UploadRecordingDialog";
 import { CreateRunDialog } from "../components/CreateRunDialog";
+import { NLTestDialog } from "../components/NLTestDialog";
 import {
   Dialog,
   DialogContent,
@@ -98,6 +100,7 @@ export function Tests() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
+  const [nlDialogOpen, setNlDialogOpen] = useState(false);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string | undefined>();
   const [editOpen, setEditOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
@@ -244,6 +247,12 @@ export function Tests() {
         </div>
         <div className="flex gap-3">
           {permissions.canAuthorAutomation && (
+            <Button variant="outline" onClick={() => setNlDialogOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Create from Description
+            </Button>
+          )}
+          {permissions.canAuthorAutomation && (
             <Button variant="outline" onClick={() => setUploadOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Upload Recording
@@ -260,6 +269,7 @@ export function Tests() {
 
       <UploadRecordingDialog open={uploadOpen} onOpenChange={setUploadOpen} />
       <CreateRunDialog open={runDialogOpen} onOpenChange={setRunDialogOpen} defaultSuiteId={selectedSuiteId} />
+      <NLTestDialog open={nlDialogOpen} onOpenChange={setNlDialogOpen} />
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -414,7 +424,7 @@ export function Tests() {
                         <DropdownMenuItem onClick={() => openRunDialogForSuite(test.suiteId)}>Run Test</DropdownMenuItem>
                       )}
                       <DropdownMenuItem asChild>
-                        <Link to={`/tests/${test.id}`}>View History</Link>
+                        <Link to={`/tests/${test.id}?tab=history`}>View History</Link>
                       </DropdownMenuItem>
                       {permissions.canAuthorAutomation && (
                         <DropdownMenuItem onClick={() => openEditMetadata(test)}>Edit Metadata</DropdownMenuItem>

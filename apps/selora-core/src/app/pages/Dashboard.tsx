@@ -112,16 +112,19 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Alerts */}
-      <Alert className="border-amber-200 bg-amber-50">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <AlertDescription className="text-amber-800">
-          <strong>Quota Warning:</strong> You've used 85% of your monthly test execution minutes.
-          <Link to="/settings/quotas" className="ml-2 font-medium underline">
-            Review quotas
-          </Link>
-        </AlertDescription>
-      </Alert>
+      {/* Alerts — show when usage data indicates > 80% consumption */}
+      {usageQuery.data && typeof (usageQuery.data as Record<string, unknown>).usagePercent === "number" &&
+        ((usageQuery.data as Record<string, unknown>).usagePercent as number) > 80 && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <strong>Quota Warning:</strong> You've used {Math.round((usageQuery.data as Record<string, unknown>).usagePercent as number)}% of your monthly test execution minutes.
+            <Link to="/settings/quotas" className="ml-2 font-medium underline">
+              Review quotas
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">

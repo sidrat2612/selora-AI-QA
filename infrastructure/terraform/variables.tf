@@ -23,7 +23,7 @@ variable "environment" {
 variable "domain_name" {
   description = "Root domain name"
   type        = string
-  default     = "seloratech.com"
+  default     = "seloraqa.com"
 }
 
 variable "web_subdomain" {
@@ -100,7 +100,7 @@ variable "smtp_port" {
 variable "smtp_from" {
   description = "From address for outgoing emails"
   type        = string
-  default     = "noreply@seloratech.com"
+  default     = "noreply@seloraqa.com"
 }
 
 variable "smtp_user" {

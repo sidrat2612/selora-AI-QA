@@ -91,7 +91,7 @@ export function MapScriptDialog({
               <SelectContent>
                 {availableScripts.map((script) => (
                   <SelectItem key={script.id} value={script.id}>
-                    {script.title}
+                    {script.name}
                   </SelectItem>
                 ))}
                 {availableScripts.length === 0 && (

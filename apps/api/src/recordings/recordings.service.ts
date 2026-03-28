@@ -888,6 +888,70 @@ export class RecordingsService {
     };
   }
 
+  /**
+   * Flakiness report: analyse recent test run items to identify flaky tests.
+   * A test is flaky if it has both PASSED and FAILED outcomes in the last N runs.
+   */
+  async getFlakinessReport(workspaceId: string, query: Record<string, string | undefined>) {
+    const days = Math.min(Math.max(parseInt(query['days'] ?? '14', 10) || 14, 1), 90);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const items = await this.prisma.testRunItem.findMany({
+      where: {
+        testRun: { workspaceId, createdAt: { gte: since } },
+        status: { in: ['PASSED', 'FAILED'] },
+      },
+      select: {
+        canonicalTestId: true,
+        status: true,
+        canonicalTest: { select: { id: true, name: true, status: true, suiteId: true } },
+      },
+    });
+
+    // Group by canonicalTestId
+    const grouped = new Map<string, { name: string; suiteId: string | null; status: string; passed: number; failed: number; total: number }>();
+    for (const item of items) {
+      const existing = grouped.get(item.canonicalTestId) ?? {
+        name: item.canonicalTest?.name ?? 'Unknown',
+        suiteId: item.canonicalTest?.suiteId ?? null,
+        status: item.canonicalTest?.status ?? 'UNKNOWN',
+        passed: 0,
+        failed: 0,
+        total: 0,
+      };
+      if (item.status === 'PASSED') existing.passed++;
+      else existing.failed++;
+      existing.total++;
+      grouped.set(item.canonicalTestId, existing);
+    }
+
+    // A test is "flaky" if it has BOTH pass and fail outcomes
+    const flakyTests = Array.from(grouped.entries())
+      .filter(([, stats]) => stats.passed > 0 && stats.failed > 0)
+      .map(([testId, stats]) => ({
+        testId,
+        testName: stats.name,
+        testStatus: stats.status,
+        suiteId: stats.suiteId,
+        passedCount: stats.passed,
+        failedCount: stats.failed,
+        totalRuns: stats.total,
+        flakinessRate: Math.round((stats.failed / stats.total) * 100),
+      }))
+      .sort((a, b) => b.flakinessRate - a.flakinessRate);
+
+    const totalTests = grouped.size;
+    const stableTests = totalTests - flakyTests.length;
+
+    return {
+      days,
+      totalTests,
+      flakyCount: flakyTests.length,
+      stableCount: stableTests,
+      flakyTests,
+    };
+  }
+
   async createRun(
     workspaceId: string,
     body: Record<string, unknown>,
@@ -1247,6 +1311,164 @@ export class RecordingsService {
         requestId,
         requestedSourceMode: resolvedSource?.requestedSourceMode ?? requestedSourceMode,
         requestedGitRef: resolvedSource?.requestedGitRef ?? requestedGitRef,
+        resolvedSourceMode: resolvedSource?.resolvedSourceMode ?? 'STORAGE_ARTIFACT',
+        resolvedGitRef: resolvedSource?.resolvedGitRef ?? null,
+        resolvedCommitSha: resolvedSource?.resolvedCommitSha ?? null,
+        sourceFallbackReason: resolvedSource?.sourceFallbackReason ?? null,
+        publicationId: resolvedSource?.publicationId ?? null,
+      } satisfies TestExecutionJobData);
+    }
+
+    return this.getRun(workspaceId, createdRun.id);
+  }
+
+  /**
+   * Create a run from the scheduler (no user auth context).
+   * Simplified: triggers a suite-based run with SCHEDULED runType.
+   */
+  async createScheduledRun(
+    workspaceId: string,
+    suiteId: string,
+    environmentId: string,
+    tenantId: string,
+    triggeredByUserId: string,
+  ) {
+    // Resolve all canonical tests in the suite
+    const suiteTests = await this.prisma.canonicalTest.findMany({
+      where: {
+        suiteId,
+        workspaceId,
+        status: { in: ['VALIDATED', 'AUTO_REPAIRED'] },
+      },
+      include: {
+        suite: {
+          select: {
+            id: true,
+            name: true,
+            executionSourcePolicy: true,
+            allowBranchHeadExecution: true,
+            allowStorageExecutionFallback: true,
+            gitExecutionEnabled: true,
+          },
+        },
+        generatedArtifacts: {
+          where: { status: 'READY' },
+          select: {
+            id: true,
+            version: true,
+            fileName: true,
+            createdAt: true,
+            publication: {
+              select: {
+                id: true,
+                targetPath: true,
+                branchName: true,
+                defaultBranch: true,
+                headCommitSha: true,
+                mergeCommitSha: true,
+              },
+            },
+          },
+          orderBy: [{ version: 'desc' }, { createdAt: 'desc' }],
+          take: 1,
+        },
+      },
+    });
+
+    const executableTests = suiteTests.filter((t) => t.generatedArtifacts[0]);
+    if (executableTests.length === 0) return null;
+
+    const environment = await this.prisma.environment.findFirst({
+      where: { id: environmentId, workspaceId, status: 'ACTIVE' },
+      select: { id: true, name: true, baseUrl: true, secretRef: true },
+    });
+    if (!environment) return null;
+
+    const resolvedSources = await this.executionSourceResolver.resolveSources({
+      requestedSourceMode: 'SUITE_DEFAULT',
+      requestedGitRef: null,
+      tests: executableTests,
+    });
+    const resolvedSourcesByTestId = new Map(
+      resolvedSources.map((source) => [source.canonicalTestId, source]),
+    );
+
+    const createdRun = await this.prisma.$transaction(async (transaction) => {
+      const run = await transaction.testRun.create({
+        data: {
+          tenantId,
+          workspaceId,
+          suiteId,
+          environmentId: environment.id,
+          triggeredByUserId,
+          runType: 'SCHEDULED',
+          requestedSourceMode: 'SUITE_DEFAULT',
+          status: 'QUEUED',
+          totalCount: executableTests.length,
+          queuedCount: executableTests.length,
+        },
+      });
+
+      await transaction.testRunItem.createMany({
+        data: executableTests.map((test, index) => {
+          const resolvedSource = resolvedSourcesByTestId.get(test.id);
+          return {
+            testRunId: run.id,
+            canonicalTestId: test.id,
+            generatedTestArtifactId: test.generatedArtifacts[0]!.id,
+            publicationId: resolvedSource?.publicationId ?? null,
+            sequence: index + 1,
+            requestedSourceMode: resolvedSource?.requestedSourceMode ?? 'SUITE_DEFAULT',
+            resolvedSourceMode: resolvedSource?.resolvedSourceMode ?? 'STORAGE_ARTIFACT',
+            resolvedGitRef: resolvedSource?.resolvedGitRef ?? null,
+            resolvedCommitSha: resolvedSource?.resolvedCommitSha ?? null,
+            sourceFallbackReason: resolvedSource?.sourceFallbackReason ?? null,
+            status: 'QUEUED',
+          };
+        }),
+      });
+
+      await transaction.auditEvent.create({
+        data: {
+          tenantId,
+          workspaceId,
+          actorUserId: triggeredByUserId,
+          eventType: 'test_run.scheduled',
+          entityType: 'test_run',
+          entityId: run.id,
+          requestId: `scheduled-${run.id}`,
+          metadataJson: {
+            suiteId,
+            environmentId: environment.id,
+            totalCount: executableTests.length,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      return run;
+    });
+
+    const runItems = await this.prisma.testRunItem.findMany({
+      where: { testRunId: createdRun.id },
+      orderBy: { sequence: 'asc' },
+      select: { id: true, canonicalTestId: true, generatedTestArtifactId: true },
+    });
+
+    for (const item of runItems) {
+      const resolvedSource = resolvedSourcesByTestId.get(item.canonicalTestId);
+      await this.testExecutionQueue.enqueue({
+        testRunId: createdRun.id,
+        testRunItemId: item.id,
+        generatedTestArtifactId: item.generatedTestArtifactId,
+        canonicalTestId: item.canonicalTestId,
+        suiteId,
+        environmentId: environment.id,
+        workspaceId,
+        tenantId,
+        actorUserId: triggeredByUserId,
+        requestId: `scheduled-${createdRun.id}`,
+        requestedSourceMode: resolvedSource?.requestedSourceMode ?? 'SUITE_DEFAULT',
+        requestedGitRef: resolvedSource?.requestedGitRef ?? null,
         resolvedSourceMode: resolvedSource?.resolvedSourceMode ?? 'STORAGE_ARTIFACT',
         resolvedGitRef: resolvedSource?.resolvedGitRef ?? null,
         resolvedCommitSha: resolvedSource?.resolvedCommitSha ?? null,
@@ -2259,7 +2481,14 @@ export class RecordingsService {
   }
 
   private getArtifactSigningSecret() {
-    return process.env['ARTIFACT_SIGNING_SECRET'] ?? process.env['API_SESSION_SECRET'] ?? 'dev-session-secret-change-in-prod';
+    const secret = process.env['ARTIFACT_SIGNING_SECRET'] ?? process.env['API_SESSION_SECRET'];
+    if (!secret) {
+      if (process.env['NODE_ENV'] === 'production') {
+        throw new Error('ARTIFACT_SIGNING_SECRET or API_SESSION_SECRET must be set in production.');
+      }
+      return 'dev-session-secret-change-in-prod';
+    }
+    return secret;
   }
 }
 

@@ -14,6 +14,15 @@ import { TenantsService } from './tenants.service';
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
+  @Get('platform/stats')
+  @UseGuards(SessionAuthGuard, RolesGuard)
+  @RequireRoles(MembershipRole.PLATFORM_ADMIN)
+  async getPlatformStats(@Req() request: AppRequest) {
+    return success(await this.tenantsService.getPlatformStats(), {
+      requestId: request.requestId,
+    });
+  }
+
   @Post('tenants')
   @UseGuards(SessionAuthGuard, RolesGuard)
   @RequireRoles(MembershipRole.PLATFORM_ADMIN)

@@ -18,13 +18,16 @@ try {
   // .env.local not found — use defaults from .env / environment
 }
 
+import { Logger } from '@nestjs/common';
+import { validateEnvironment } from './common/env-validation';
 import { createApp } from './bootstrap';
 
 async function bootstrap() {
+  validateEnvironment();
   const app = await createApp();
   const port = process.env['API_PORT'] ?? 4000;
   await app.listen(port);
-  console.log(`API running on port ${port}`);
+  new Logger('Bootstrap').log(`API running on port ${port}`);
 }
 
 bootstrap();

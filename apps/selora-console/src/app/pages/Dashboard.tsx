@@ -14,7 +14,7 @@ import { Link } from "react-router";
 import { Alert, AlertDescription } from "../components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../../lib/auth-context";
-import { license as licenseApi, tenants as tenantsApi, workspaces as workspacesApi, audit as auditApi, type Tenant, type Workspace } from "../../lib/api-client";
+import { license as licenseApi, tenants as tenantsApi, workspaces as workspacesApi, audit as auditApi, platform as platformApi, type Tenant, type Workspace } from "../../lib/api-client";
 import { ErrorState } from "../components/ErrorState";
 import { useMemo } from "react";
 
@@ -54,6 +54,11 @@ export function Dashboard() {
     queryFn: () => licenseApi.getStatus(),
   });
 
+  const { data: platformStats } = useQuery({
+    queryKey: ["platform-stats"],
+    queryFn: () => platformApi.getStats(),
+  });
+
   const totalWorkspaces = Object.values(workspacesByTenant).reduce((sum, ws) => sum + ws.length, 0);
   const activeTenants = tenantList.filter((t) => t.status === "active" || t.status === "ACTIVE").length;
 
@@ -88,7 +93,7 @@ export function Dashboard() {
         />
         <KPICard
           title="Platform Users"
-          value="—"
+          value={String(platformStats?.userCount ?? 0)}
           icon={Users}
         />
       </div>

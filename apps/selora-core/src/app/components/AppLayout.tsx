@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router";
-import { 
+import {
   LayoutDashboard, 
   FolderKanban, 
   FileCheck2, 
@@ -13,7 +13,14 @@ import {
   Building2,
   Shield,
   Menu,
-  Plug
+  Plug,
+  AlertTriangle,
+  Terminal,
+  HeartPulse,
+  Eye,
+  Zap,
+  Monitor,
+  Globe
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -37,6 +44,12 @@ const navigation = [
   { name: "Suites", href: "/suites", icon: FolderKanban },
   { name: "Tests", href: "/tests", icon: FileCheck2 },
   { name: "Runs", href: "/runs", icon: PlayCircle },
+  { name: "Flakiness", href: "/flakiness", icon: AlertTriangle },
+  { name: "CI Wizard", href: "/ci-wizard", icon: Terminal },
+  { name: "Test Health", href: "/test-health", icon: HeartPulse },
+  { name: "API Tests", href: "/api-tests", icon: Globe },
+  { name: "Smart Selection", href: "/smart-selection", icon: Zap },
+  { name: "Browser Matrix", href: "/browser-matrix", icon: Monitor },
 ];
 
 const bottomNav = [
@@ -144,7 +157,7 @@ export function AppLayout() {
                     onClick={() => m.workspaceId && setActiveWorkspaceId(m.workspaceId)}
                   >
                       <Building2 className="h-4 w-4 shrink-0" />
-                      <span className="truncate" title={m.workspaceName ?? m.workspaceId}>
+                      <span className="truncate" title={m.workspaceName ?? m.workspaceId ?? undefined}>
                         {m.workspaceName ?? m.workspaceId}
                       </span>
                   </DropdownMenuItem>

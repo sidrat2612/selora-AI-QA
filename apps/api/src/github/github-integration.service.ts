@@ -589,8 +589,14 @@ export class GitHubIntegrationService {
   }
 
   private buildWebhookEndpoint(suiteId: string) {
-    const baseUrl = (process.env['API_PUBLIC_ORIGIN'] ?? process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000').replace(/\/$/, '');
-    return `${baseUrl}/api/v1/github/webhooks/${suiteId}`;
+    const baseUrl = process.env['API_PUBLIC_ORIGIN'] ?? process.env['NEXT_PUBLIC_API_URL'];
+    if (!baseUrl) {
+      if (process.env['NODE_ENV'] === 'production') {
+        throw new Error('API_PUBLIC_ORIGIN must be set in production for GitHub webhook URLs.');
+      }
+      return `http://localhost:4000/api/v1/github/webhooks/${suiteId}`;
+    }
+    return `${baseUrl.replace(/\/$/, '')}/api/v1/github/webhooks/${suiteId}`;
   }
 
   private asRecord(value: unknown) {

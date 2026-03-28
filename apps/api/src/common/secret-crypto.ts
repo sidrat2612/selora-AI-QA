@@ -3,8 +3,15 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 function resolveSecretKey() {
   const configuredKey =
     process.env['SECRET_ENCRYPTION_KEY'] ??
-    process.env['API_SESSION_SECRET'] ??
-    'selora-dev-secret-encryption-key';
+    process.env['API_SESSION_SECRET'];
+
+  if (!configuredKey) {
+    if (process.env['NODE_ENV'] === 'production') {
+      throw new Error('SECRET_ENCRYPTION_KEY or API_SESSION_SECRET must be set in production.');
+    }
+    // Development-only fallback — will not run in production
+    return createHash('sha256').update('selora-dev-secret-encryption-key', 'utf8').digest();
+  }
 
   return createHash('sha256').update(configuredKey, 'utf8').digest();
 }

@@ -65,6 +65,16 @@ export type TestExecutionJobData = {
   resolvedCommitSha: string | null;
   sourceFallbackReason: string | null;
   publicationId: string | null;
+  /** Browser configuration for multi-browser matrix execution */
+  browserType?: 'CHROMIUM' | 'FIREFOX' | 'WEBKIT';
+  /** Device profile affecting viewport */
+  deviceProfile?: 'DESKTOP' | 'TABLET' | 'MOBILE';
+  /** Viewport width override */
+  viewportWidth?: number;
+  /** Viewport height override */
+  viewportHeight?: number;
+  /** Browser result record ID to update on completion */
+  browserResultId?: string;
 };
 
 export type QueueMode = 'inline' | 'bullmq' | 'sqs';
@@ -251,4 +261,32 @@ export async function publishRunLog(runItemId: string, event: RunLogEvent) {
 
 export function createRedisSubscriber() {
   return new Redis(getRedisUrl());
+}
+
+/* ── Structured Worker Logger ─────────────────────────────────────────────── */
+
+type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+
+export function createWorkerLogger(workerName: string) {
+  const write = (level: LogLevel, message: string, meta?: Record<string, unknown>) => {
+    const entry = JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level,
+      worker: workerName,
+      message,
+      ...meta,
+    });
+    if (level === 'error') {
+      process.stderr.write(entry + '\n');
+    } else {
+      process.stdout.write(entry + '\n');
+    }
+  };
+
+  return {
+    info: (message: string, meta?: Record<string, unknown>) => write('info', message, meta),
+    warn: (message: string, meta?: Record<string, unknown>) => write('warn', message, meta),
+    error: (message: string, meta?: Record<string, unknown>) => write('error', message, meta),
+    debug: (message: string, meta?: Record<string, unknown>) => write('debug', message, meta),
+  };
 }

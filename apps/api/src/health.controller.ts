@@ -24,19 +24,23 @@ export class HealthController {
     }
 
     try {
-      const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
-      const parsed = new URL(redisUrl);
-      const client = new IORedis({
-        host: parsed.hostname,
-        port: Number(parsed.port || '6379'),
-        password: parsed.password || undefined,
-        maxRetriesPerRequest: 1,
-        lazyConnect: true,
-      });
-      await client.connect();
-      await client.ping();
-      await client.disconnect();
-      checks['redis'] = 'ok';
+      const redisUrl = process.env['REDIS_URL'];
+      if (!redisUrl) {
+        checks['redis'] = process.env['NODE_ENV'] === 'production' ? 'error' : 'ok';
+      } else {
+        const parsed = new URL(redisUrl);
+        const client = new IORedis({
+          host: parsed.hostname,
+          port: Number(parsed.port || '6379'),
+          password: parsed.password || undefined,
+          maxRetriesPerRequest: 1,
+          lazyConnect: true,
+        });
+        await client.connect();
+        await client.ping();
+        await client.disconnect();
+        checks['redis'] = 'ok';
+      }
     } catch {
       checks['redis'] = 'error';
     }

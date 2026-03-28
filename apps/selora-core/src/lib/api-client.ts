@@ -305,6 +305,53 @@ export type Suite = {
   lastRunAt?: string;
   lastRunStatus?: string;
   createdAt: string;
+  schedule?: {
+    enabled: boolean;
+    cron: string | null;
+    environmentId: string | null;
+    timezone: string;
+  };
+  executionPolicy?: {
+    defaultMode: string;
+    allowBranchHeadExecution: boolean;
+    allowStorageExecutionFallback: boolean;
+  } | null;
+  linkedSystems?: {
+    github?: {
+      id: string;
+      status: string;
+      credentialMode: string;
+      repoOwner?: string;
+      repoName?: string;
+      defaultBranch?: string;
+      allowedWriteScope?: string;
+      secretRotatedAt?: string | null;
+    } | null;
+    testrail?: {
+      id: string;
+      status: string;
+      baseUrl?: string;
+      projectId?: string;
+      suiteIdExternal?: string;
+      syncPolicy?: string;
+      lastValidatedAt?: string | null;
+      lastSyncedAt?: string | null;
+      latestSync?: {
+        status: string;
+        totalCount: number;
+        syncedCount: number;
+        failedCount: number;
+        startedAt?: string;
+        finishedAt?: string;
+      } | null;
+    } | null;
+  } | null;
+  rollout?: {
+    stage: string;
+    githubPublishingEnabled: boolean;
+    gitExecutionEnabled: boolean;
+    testRailSyncEnabled: boolean;
+  } | null;
   [key: string]: unknown;
 };
 
@@ -379,6 +426,67 @@ export type Recording = {
   [key: string]: unknown;
 };
 
+export type FlakyTest = {
+  testId: string;
+  testName: string;
+  testStatus: string;
+  suiteId: string | null;
+  passedCount: number;
+  failedCount: number;
+  totalRuns: number;
+  flakinessRate: number;
+};
+
+export type FlakinessReport = {
+  days: number;
+  totalTests: number;
+  flakyCount: number;
+  stableCount: number;
+  flakyTests: FlakyTest[];
+};
+
+export type TestHealthEntry = {
+  testId: string;
+  testName: string;
+  testStatus: string;
+  suiteId: string | null;
+  suiteName: string | null;
+  passed: number;
+  failed: number;
+  timedOut: number;
+  runCount: number;
+  passRate: number;
+  avgDurationMs: number;
+  repairAttempts: number;
+  repairSuccesses: number;
+  healthScore: number;
+  recommendation: string;
+  lastFailureSummary: string | null;
+  lastRunAt: string | null;
+};
+
+export type TestHealthReport = {
+  days: number;
+  totalTests: number;
+  healthyCount: number;
+  criticalCount: number;
+  avgPassRate: number;
+  totalRepairs: number;
+  repairSuccessRate: number | null;
+  tests: TestHealthEntry[];
+};
+
+export type TestHealthTrendPoint = {
+  date: string;
+  passRate: number;
+  runCount: number;
+};
+
+export type TestHealthTrend = {
+  days: number;
+  trends: { testId: string; points: TestHealthTrendPoint[] }[];
+};
+
 export const tests = {
   list: (workspaceId: string, params?: Record<string, string | undefined>) =>
     requestList<Test>(`/workspaces/${workspaceId}/tests`, { params }),
@@ -392,6 +500,15 @@ export const tests = {
   getRepairAnalytics: (workspaceId: string, params?: Record<string, string | undefined>) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/repair-analytics`, { params }),
 
+  getFlakinessReport: (workspaceId: string, params?: Record<string, string | undefined>) =>
+    request<FlakinessReport>(`/workspaces/${workspaceId}/flakiness-report`, { params }),
+
+  getTestHealth: (workspaceId: string, params?: { days?: number }) =>
+    request<TestHealthReport>(`/workspaces/${workspaceId}/test-health`, { params }),
+
+  getTestHealthTrend: (workspaceId: string, params?: { days?: number }) =>
+    request<TestHealthTrend>(`/workspaces/${workspaceId}/test-health/trend`, { params }),
+
   generate: (workspaceId: string, testId: string) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/tests/${testId}/generate`, { method: "POST" }),
 
@@ -403,6 +520,17 @@ export const tests = {
 
   publishArtifact: (workspaceId: string, testId: string, artifactId: string) =>
     request<Record<string, unknown>>(`/workspaces/${workspaceId}/tests/${testId}/generated-artifacts/${artifactId}/publish`, { method: "POST" }),
+
+  generateFromPrompt: (workspaceId: string, body: { prompt: string; name?: string; suiteId?: string }) =>
+    request<{
+      testId: string;
+      testName: string;
+      artifactId: string;
+      version: number;
+      fileName: string;
+      status: string;
+      message: string;
+    }>(`/workspaces/${workspaceId}/tests/generate-from-prompt`, { method: "POST", body }),
 };
 
 // ─── Business Test Cases ────────────────────────────────────────────────────
@@ -433,7 +561,9 @@ export type BusinessTestCase = {
     externalCaseId: string;
     status: string;
     title?: string | null;
+    ownerEmail?: string | null;
     lastSyncedAt?: string | null;
+    lastError?: string | null;
   }[];
   createdAt: string;
   updatedAt?: string;
@@ -764,6 +894,27 @@ export type SuiteIntegrationSummary = {
 export const integrations = {
   list: (workspaceId: string) =>
     requestList<SuiteIntegrationSummary>(`/workspaces/${workspaceId}/integrations`),
+  generateCITemplate: (
+    workspaceId: string,
+    body: {
+      platform: string;
+      suiteName: string;
+      suiteSlug: string;
+      environmentName: string;
+      trigger: string;
+      branch?: string;
+      scheduleCron?: string;
+    },
+  ) =>
+    request<{
+      platform: string;
+      fileName: string;
+      content: string;
+      instructions: string;
+    }>(`/workspaces/${workspaceId}/integrations/ci-template/generate`, {
+      method: "POST",
+      body,
+    }),
 };
 
 // ─── GitHub Integration ──────────────────────────────────────────────────────
@@ -1047,4 +1198,315 @@ export const llmConfig = {
 
   getProviderPresets: () =>
     request<LlmProviderPresets>("/llm-config/providers"),
+};
+
+// ─── Visual Regression ───────────────────────────────────────────────────────
+
+export type VisualBaseline = {
+  id: string;
+  stepIndex: number;
+  stepLabel: string | null;
+  storageKey: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+  approvedAt: string | null;
+  approvedBy: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VisualDiffResult = {
+  testId: string;
+  stepIndex: number;
+  status: "NO_BASELINE" | "MATCH" | "MISMATCH";
+  baselineStorageKey: string | null;
+  currentStorageKey: string | null;
+  mismatchPixels: number;
+  totalPixels: number;
+  diffPercentage: number;
+  classification?: "real_regression" | "noise" | "layout_shift" | "dynamic_content" | null;
+  classificationConfidence?: number;
+};
+
+export const visualRegression = {
+  listBaselines: (workspaceId: string, testId: string) =>
+    request<VisualBaseline[]>(`/workspaces/${workspaceId}/visual/tests/${testId}/baselines`),
+
+  upsertBaseline: (
+    workspaceId: string,
+    testId: string,
+    body: { stepIndex: number; imageBase64: string; stepLabel?: string; width?: number; height?: number },
+  ) =>
+    request<VisualBaseline>(`/workspaces/${workspaceId}/visual/tests/${testId}/baselines`, {
+      method: "POST",
+      body,
+    }),
+
+  deleteBaseline: (workspaceId: string, baselineId: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}/visual/baselines/${baselineId}`, {
+      method: "DELETE",
+    }),
+
+  compare: (workspaceId: string, testId: string, runItemId: string) =>
+    request<VisualDiffResult[]>(`/workspaces/${workspaceId}/visual/tests/${testId}/compare`, {
+      params: { runItemId },
+    }),
+
+  approveAsBaseline: (
+    workspaceId: string,
+    testId: string,
+    body: { runItemId: string; stepIndex: number },
+  ) =>
+    request<{ id: string; stepIndex: number; status: string; storageKey: string }>(
+      `/workspaces/${workspaceId}/visual/tests/${testId}/approve-baseline`,
+      { method: "POST", body },
+    ),
+};
+
+// ─── Smart Test Selection (P3.1) ─────────────────────────────────────────────
+
+export type TestFileMapping = {
+  id: string;
+  workspaceId: string;
+  canonicalTestId: string;
+  filePattern: string;
+  routePattern: string | null;
+  confidence: number;
+  learnedFrom: string;
+  createdAt: string;
+};
+
+export type SmartSelectionResult = {
+  selectedTestIds: string[];
+  randomSampleIds: string[];
+  totalTests: number;
+  selectedCount: number;
+  randomSampleCount: number;
+  coverageConfidence: number;
+  mappedFiles: { file: string; testIds: string[] }[];
+};
+
+export type SmartSelectionRunMeta = {
+  id: string;
+  repoOwner: string;
+  repoName: string;
+  baseSha: string;
+  headSha: string;
+  pullRequestNumber: number | null;
+  totalTests: number;
+  selectedTests: number;
+  randomSampleTests: number;
+  coverageConfidence: number;
+  createdAt: string;
+};
+
+export const smartSelection = {
+  analyse: (
+    workspaceId: string,
+    body: {
+      repoOwner: string;
+      repoName: string;
+      baseSha: string;
+      headSha: string;
+      changedFiles: string[];
+      suiteId?: string;
+    },
+  ) =>
+    request<SmartSelectionResult>(`/workspaces/${workspaceId}/smart-selection/analyse`, {
+      method: "POST",
+      body,
+    }),
+
+  createSmartRun: (
+    workspaceId: string,
+    body: {
+      repoOwner: string;
+      repoName: string;
+      baseSha: string;
+      headSha: string;
+      changedFiles: string[];
+      suiteId?: string;
+      environmentId: string;
+    },
+  ) =>
+    request<{ run: unknown; selection: SmartSelectionResult }>(
+      `/workspaces/${workspaceId}/smart-selection/runs`,
+      { method: "POST", body },
+    ),
+
+  getRunSelection: (workspaceId: string, runId: string) =>
+    request<SmartSelectionRunMeta | null>(`/workspaces/${workspaceId}/smart-selection/runs/${runId}`),
+
+  listMappings: (workspaceId: string, testId?: string) =>
+    request<TestFileMapping[]>(`/workspaces/${workspaceId}/smart-selection/mappings`, {
+      params: testId ? { testId } : {},
+    }),
+
+  upsertMapping: (
+    workspaceId: string,
+    body: { testId: string; filePattern: string; routePattern?: string; confidence?: number },
+  ) =>
+    request<TestFileMapping>(`/workspaces/${workspaceId}/smart-selection/mappings`, {
+      method: "POST",
+      body,
+    }),
+
+  deleteMapping: (workspaceId: string, mappingId: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}/smart-selection/mappings/${mappingId}`, {
+      method: "DELETE",
+    }),
+};
+
+// ─── Browser Matrix (P3.2) ───────────────────────────────────────────────────
+
+export type BrowserType = "CHROMIUM" | "FIREFOX" | "WEBKIT";
+export type DeviceProfile = "DESKTOP" | "TABLET" | "MOBILE";
+
+export type BrowserVariant = {
+  browserType: BrowserType;
+  device: DeviceProfile;
+  viewportWidth: number;
+  viewportHeight: number;
+};
+
+export type BrowserResultRow = {
+  testRunItemId: string;
+  sequence: number;
+  testId: string;
+  testName: string;
+  results: {
+    id: string;
+    browserType: BrowserType;
+    device: DeviceProfile;
+    viewportWidth: number;
+    viewportHeight: number;
+    status: string;
+    failureSummary: string | null;
+    durationMs: number | null;
+  }[];
+};
+
+export type BrowserMatrixResponse = {
+  columns: { browserType: BrowserType; device: DeviceProfile }[];
+  rows: BrowserResultRow[];
+};
+
+export const browserMatrix = {
+  expand: (workspaceId: string, browsers: BrowserType[], devices: DeviceProfile[]) =>
+    request<BrowserVariant[]>(`/workspaces/${workspaceId}/browser-matrix/expand`, {
+      method: "POST",
+      body: { browsers, devices },
+    }),
+
+  getRunMatrix: (workspaceId: string, runId: string) =>
+    request<BrowserMatrixResponse>(`/workspaces/${workspaceId}/browser-matrix/runs/${runId}`),
+
+  getItemResults: (workspaceId: string, itemId: string) =>
+    request<BrowserVariant[]>(`/workspaces/${workspaceId}/browser-matrix/items/${itemId}`),
+};
+
+// ─── API Tests (P3.3) ───────────────────────────────────────────────────────
+
+export type ApiAssertion = {
+  type: "status_code" | "response_time" | "body_contains" | "body_json_path" | "header_present" | "schema";
+  expected: string | number;
+  jsonPath?: string;
+};
+
+export type ApiTestDefinition = {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  protocol: "REST" | "GRAPHQL";
+  method: string;
+  urlTemplate: string;
+  headersJson: Record<string, string>;
+  bodyTemplate: string | null;
+  graphqlQuery: string | null;
+  graphqlVariablesJson: Record<string, unknown> | null;
+  assertionsJson: ApiAssertion[];
+  status: "DRAFT" | "READY" | "ARCHIVED";
+  tagsJson: string[];
+  suite: { id: string; name: string } | null;
+  createdBy: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { executions: number };
+  executions?: ApiTestExecution[];
+};
+
+export type ApiTestExecution = {
+  id: string;
+  status: string;
+  requestUrl: string | null;
+  requestMethod: string | null;
+  responseStatus: number | null;
+  responseTimeMs: number | null;
+  responseBody: string | null;
+  assertionResultsJson: { assertion: ApiAssertion; passed: boolean; actual: unknown; message: string }[] | null;
+  failureSummary: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
+export const apiTests = {
+  list: (workspaceId: string, params?: { suiteId?: string; status?: string; page?: number; pageSize?: number }) =>
+    request<{ items: ApiTestDefinition[]; page: number; pageSize: number; totalCount: number; hasMore: boolean }>(
+      `/workspaces/${workspaceId}/api-tests`,
+      { params: params as Record<string, string | number> },
+    ),
+
+  get: (workspaceId: string, id: string) =>
+    request<ApiTestDefinition>(`/workspaces/${workspaceId}/api-tests/${id}`),
+
+  create: (
+    workspaceId: string,
+    body: {
+      name: string;
+      description?: string;
+      protocol?: "REST" | "GRAPHQL";
+      method?: string;
+      urlTemplate: string;
+      headers?: Record<string, string>;
+      bodyTemplate?: string;
+      graphqlQuery?: string;
+      graphqlVariables?: Record<string, unknown>;
+      assertions?: ApiAssertion[];
+      suiteId?: string;
+      tags?: string[];
+    },
+  ) =>
+    request<ApiTestDefinition>(`/workspaces/${workspaceId}/api-tests`, {
+      method: "POST",
+      body,
+    }),
+
+  update: (workspaceId: string, id: string, body: Record<string, unknown>) =>
+    request<ApiTestDefinition>(`/workspaces/${workspaceId}/api-tests/${id}`, {
+      method: "PATCH",
+      body,
+    }),
+
+  delete: (workspaceId: string, id: string) =>
+    request<{ deleted: true }>(`/workspaces/${workspaceId}/api-tests/${id}`, {
+      method: "DELETE",
+    }),
+
+  execute: (workspaceId: string, id: string, environmentId: string) =>
+    request<ApiTestExecution>(`/workspaces/${workspaceId}/api-tests/${id}/execute`, {
+      method: "POST",
+      body: { environmentId },
+    }),
+
+  listExecutions: (workspaceId: string, id: string, params?: { page?: number; pageSize?: number }) =>
+    request<{ items: ApiTestExecution[]; totalCount: number }>(
+      `/workspaces/${workspaceId}/api-tests/${id}/executions`,
+      { params: params as Record<string, string | number> },
+    ),
+
+  getExecution: (workspaceId: string, executionId: string) =>
+    request<ApiTestExecution>(`/workspaces/${workspaceId}/api-tests/executions/${executionId}`),
 };

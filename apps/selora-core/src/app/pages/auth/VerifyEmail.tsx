@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { CheckCircle2, XCircle, Loader2, Mail } from "lucide-react";
 import { auth as authApi } from "../../../lib/api-client";
+import { toast } from "sonner";
 
 export function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -21,7 +22,7 @@ export function VerifyEmail() {
   }, [token]);
 
   const handleResend = () => {
-    // Resend would require the user's email - not available from token alone
+    toast.info("Please sign in and request a new verification email from your account settings.");
   };
 
   if (status === "loading") {

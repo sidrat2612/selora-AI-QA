@@ -16,6 +16,7 @@ import { RepositoryAllowlistService } from './github/repository-allowlist.servic
 import { SuitesController } from './suites/suites.controller';
 import { SuitesService } from './suites/suites.service';
 import { RolloutAutomationService } from './suites/rollout-automation.service';
+import { ScheduledRunService } from './suites/scheduled-run.service';
 import { TenantAccessGuard } from './auth/tenant-access.guard';
 import { WorkspaceAccessGuard } from './auth/workspace-access.guard';
 import { AuditService } from './audit/audit.service';
@@ -32,6 +33,10 @@ import { RecordingsController } from './recordings/recordings.controller';
 import { RecordingIngestionProcessor } from './recordings/recording-ingestion.processor';
 import { RecordingIngestionQueueService } from './recordings/recording-ingestion.queue';
 import { RecordingsService } from './recordings/recordings.service';
+import { NLTestAuthoringService } from './recordings/nl-test-authoring.service';
+import { TestHealthService } from './recordings/test-health.service';
+import { VisualDiffService } from './recordings/visual-diff.service';
+import { VisualRegressionController } from './recordings/visual-regression.controller';
 import { RequestRateLimitService } from './rate-limits/request-rate-limit.service';
 import { RetentionCleanupController } from './retention/retention-cleanup.controller';
 import { RetentionCleanupService } from './retention/retention-cleanup.service';
@@ -60,8 +65,15 @@ import { AccountController } from './account/account.controller';
 import { AccountService } from './account/account.service';
 import { RunConsoleController } from './recordings/run-console.controller';
 import { IntegrationsController } from './integrations/integrations.controller';
+import { CITemplateService } from './integrations/ci-template.service';
 import { LlmConfigController } from './llm-config/llm-config.controller';
 import { LlmConfigService } from './llm-config/llm-config.service';
+import { SmartSelectionController } from './recordings/smart-selection.controller';
+import { SmartSelectionService } from './recordings/smart-selection.service';
+import { BrowserMatrixController } from './recordings/browser-matrix.controller';
+import { BrowserMatrixService } from './recordings/browser-matrix.service';
+import { ApiTestsController } from './api-tests/api-tests.controller';
+import { ApiTestService } from './api-tests/api-test.service';
 
 @Module({
   imports: [
@@ -72,6 +84,11 @@ import { LlmConfigService } from './llm-config/llm-config.service';
         name: 'auth',
         ttl: 60_000,
         limit: 20,
+      },
+      {
+        name: 'webhook',
+        ttl: 60_000,
+        limit: 60,
       },
     ]),
   ],
@@ -96,7 +113,11 @@ import { LlmConfigService } from './llm-config/llm-config.service';
     AccountController,
     RunConsoleController,
     IntegrationsController,
+    VisualRegressionController,
     LlmConfigController,
+    SmartSelectionController,
+    BrowserMatrixController,
+    ApiTestsController,
   ],
   providers: [
     PrismaService,
@@ -107,6 +128,7 @@ import { LlmConfigService } from './llm-config/llm-config.service';
     WorkspacesService,
     SuitesService,
     RolloutAutomationService,
+    ScheduledRunService,
     GitHubIntegrationService,
     GitHubPublicationService,
     RepositoryAllowlistService,
@@ -122,6 +144,9 @@ import { LlmConfigService } from './llm-config/llm-config.service';
     TestValidationProcessor,
     TestValidationQueueService,
     RecordingsService,
+    NLTestAuthoringService,
+    TestHealthService,
+    VisualDiffService,
     RetentionCleanupService,
     NotificationService,
     AccountService,
@@ -131,7 +156,11 @@ import { LlmConfigService } from './llm-config/llm-config.service';
     LicenseService,
     LicenseGuard,
     RequestRateLimitService,
+    CITemplateService,
     LlmConfigService,
+    SmartSelectionService,
+    BrowserMatrixService,
+    ApiTestService,
     SessionAuthGuard,
     RolesGuard,
     TenantAccessGuard,

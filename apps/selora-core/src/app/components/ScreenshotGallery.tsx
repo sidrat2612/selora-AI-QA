@@ -40,8 +40,14 @@ export function ScreenshotGallery({ screenshots }: ScreenshotGalleryProps) {
   };
 
   const handleDownload = (screenshot: Screenshot) => {
-    // In production, this would trigger actual download
-    console.log("Downloading screenshot:", screenshot.id);
+    if (!screenshot.url) return;
+    const link = document.createElement("a");
+    link.href = screenshot.url;
+    link.download = `screenshot-${screenshot.id}.png`;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -54,13 +60,16 @@ export function ScreenshotGallery({ screenshots }: ScreenshotGalleryProps) {
             onClick={() => openLightbox(index)}
           >
             <div className="aspect-video bg-muted relative">
+              {screenshot.url ? (
+                <img src={screenshot.url} alt={screenshot.step} className="w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                  <span className="text-xs">No image available</span>
+                </div>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <ZoomIn className="h-8 w-8 text-white" />
-              </div>
-              {/* Placeholder for screenshot - in production this would be an actual image */}
-              <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                <span className="text-xs">Screenshot {index + 1}</span>
               </div>
             </div>
             <div className="p-3">
@@ -138,13 +147,17 @@ export function ScreenshotGallery({ screenshots }: ScreenshotGalleryProps) {
             className="max-w-6xl max-h-[90vh] bg-muted rounded-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Placeholder for large screenshot */}
-            <div className="aspect-video flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <p className="text-xl mb-2">Screenshot {selectedIndex !== null ? selectedIndex + 1 : ''}</p>
-                <p className="text-sm">{selectedIndex !== null ? screenshots[selectedIndex]?.step : ''}</p>
+            {selectedIndex !== null && screenshots[selectedIndex]?.url ? (
+              <img
+                src={screenshots[selectedIndex]!.url}
+                alt={screenshots[selectedIndex]!.step}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="aspect-video flex items-center justify-center text-muted-foreground">
+                <p className="text-sm">No image available</p>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white text-sm">

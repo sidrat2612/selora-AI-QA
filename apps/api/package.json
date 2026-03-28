@@ -34,6 +34,8 @@
     "cookie-parser": "^1.4.7",
     "ioredis": "^5.4.2",
     "nodemailer": "^8.0.3",
+    "pixelmatch": "^7.1.0",
+    "pngjs": "^7.0.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.0"
   },
@@ -43,6 +45,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
     "@types/nodemailer": "^7.0.11",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^5.7.0"
   }
 }

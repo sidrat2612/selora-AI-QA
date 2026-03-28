@@ -200,6 +200,12 @@ export class SuitesService {
         gitExecutionEnabled: suite.gitExecutionEnabled,
         testRailSyncEnabled: suite.testRailSyncEnabled,
       },
+      schedule: {
+        enabled: suite.scheduleEnabled,
+        cron: suite.scheduleCron,
+        environmentId: suite.scheduleEnvironmentId,
+        timezone: suite.scheduleTimezone,
+      },
       linkedSystems: {
         github: suite.githubIntegration
           ? this.githubIntegrationService.toIntegrationSummary(suite.githubIntegration)
@@ -325,6 +331,27 @@ export class SuitesService {
       ? undefined
       : this.readBoolean(body['testRailSyncEnabled'], 'testRailSyncEnabled');
 
+    // ── Schedule fields ──
+    const scheduleEnabled = body['scheduleEnabled'] === undefined
+      ? undefined
+      : this.readBoolean(body['scheduleEnabled'], 'scheduleEnabled');
+    const scheduleCron = body['scheduleCron'] === undefined
+      ? undefined
+      : this.readOptionalString(body['scheduleCron']);
+    const scheduleEnvironmentId = body['scheduleEnvironmentId'] === undefined
+      ? undefined
+      : this.readOptionalString(body['scheduleEnvironmentId']);
+    const scheduleTimezone = body['scheduleTimezone'] === undefined
+      ? undefined
+      : this.readOptionalString(body['scheduleTimezone']);
+
+    if (scheduleEnabled && scheduleCron !== undefined) {
+      const parts = (scheduleCron ?? '').trim().split(/\s+/);
+      if (parts.length !== 5) {
+        throw badRequest('SCHEDULE_CRON_INVALID', 'scheduleCron must be a valid 5-field cron expression.');
+      }
+    }
+
     if (existing.isDefault && status === 'ARCHIVED') {
       throw badRequest('SUITE_DEFAULT_ARCHIVE_FORBIDDEN', 'Default suite cannot be archived.');
     }
@@ -353,6 +380,10 @@ export class SuitesService {
         ...(githubPublishingEnabled !== undefined ? { githubPublishingEnabled } : {}),
         ...(gitExecutionEnabled !== undefined ? { gitExecutionEnabled } : {}),
         ...(testRailSyncEnabled !== undefined ? { testRailSyncEnabled } : {}),
+        ...(scheduleEnabled !== undefined ? { scheduleEnabled } : {}),
+        ...(scheduleCron !== undefined ? { scheduleCron: scheduleCron || null } : {}),
+        ...(scheduleEnvironmentId !== undefined ? { scheduleEnvironmentId: scheduleEnvironmentId || null } : {}),
+        ...(scheduleTimezone !== undefined ? { scheduleTimezone: scheduleTimezone || 'UTC' } : {}),
       },
       select: suiteSummarySelect,
     });

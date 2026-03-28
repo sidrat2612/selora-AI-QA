@@ -23,10 +23,15 @@ import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { WorkspaceAccessGuard } from '../auth/workspace-access.guard';
 import { GitHubPublicationService } from '../github/github-publication.service';
 import { success } from '../common/response';
+import { badRequest } from '../common/http-errors';
 import type { AppRequest } from '../common/types';
 import { LicenseGuard } from '../licensing/license.guard';
 import { RequireLicense } from '../licensing/require-license.decorator';
 import { RecordingsService } from './recordings.service';
+import { NLTestAuthoringService } from './nl-test-authoring.service';
+import { TestHealthService } from './test-health.service';
+import { AIRepairQueueService } from './ai-repair.queue';
+import { PrismaService } from '../database/prisma.service';
 
 type UploadedSourceFile = {
   originalname: string;
@@ -35,11 +40,24 @@ type UploadedSourceFile = {
   buffer: Buffer;
 };
 
+const ALLOWED_UPLOAD_MIMETYPES = new Set([
+  'text/plain',
+  'application/json',
+  'text/javascript',
+  'application/javascript',
+  'text/typescript',
+  'application/octet-stream',
+]);
+
 @Controller('workspaces/:workspaceId')
 export class RecordingsController {
   constructor(
     private readonly recordingsService: RecordingsService,
     private readonly githubPublicationService: GitHubPublicationService,
+    private readonly nlTestAuthoringService: NLTestAuthoringService,
+    private readonly testHealthService: TestHealthService,
+    private readonly aiRepairQueue: AIRepairQueueService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Get('recordings')
@@ -85,6 +103,9 @@ export class RecordingsController {
     @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
     @Req() request: AppRequest,
   ) {
+    if (file && !ALLOWED_UPLOAD_MIMETYPES.has(file.mimetype)) {
+      throw badRequest('INVALID_FILE_TYPE', `File type "${file.mimetype}" is not allowed.`);
+    }
     return success(
       await this.recordingsService.uploadRecording(
         workspaceId,
@@ -173,6 +194,44 @@ export class RecordingsController {
     });
   }
 
+  @Get('flakiness-report')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
+  async getFlakinessReport(
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: Record<string, string | undefined>,
+    @Req() request: AppRequest,
+  ) {
+    return success(await this.recordingsService.getFlakinessReport(workspaceId, query), {
+      requestId: request.requestId,
+    });
+  }
+
+  @Get('test-health')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
+  async getTestHealth(
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: Record<string, string | undefined>,
+    @Req() request: AppRequest,
+  ) {
+    const days = query['days'] ? parseInt(query['days'], 10) : undefined;
+    return success(await this.testHealthService.getHealthReport(workspaceId, days), {
+      requestId: request.requestId,
+    });
+  }
+
+  @Get('test-health/trend')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard)
+  async getTestHealthTrend(
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: Record<string, string | undefined>,
+    @Req() request: AppRequest,
+  ) {
+    const days = query['days'] ? parseInt(query['days'], 10) : undefined;
+    return success(await this.testHealthService.getHealthTrend(workspaceId, days), {
+      requestId: request.requestId,
+    });
+  }
+
   @Post('tests/:testId/generate')
   @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
   @RequireRoles(
@@ -190,6 +249,31 @@ export class RecordingsController {
       await this.recordingsService.generateTest(
         workspaceId,
         testId,
+        auth,
+        request.resourceTenantId as string,
+        request.requestId,
+      ),
+      { requestId: request.requestId },
+    );
+  }
+
+  @Post('tests/generate-from-prompt')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async generateTestFromPrompt(
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    return success(
+      await this.nlTestAuthoringService.generateFromPrompt(
+        workspaceId,
+        body,
         auth,
         request.resourceTenantId as string,
         request.requestId,
@@ -429,5 +513,72 @@ export class RecordingsController {
     response.setHeader('Content-Type', file.contentType);
     response.setHeader('Content-Disposition', `${file.disposition}; filename="${file.fileName}"`);
     return new StreamableFile(file.buffer);
+  }
+
+  @Post('tests/:testId/generated-artifacts/:artifactId/repair')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async triggerRepair(
+    @Param('workspaceId') workspaceId: string,
+    @Param('testId') testId: string,
+    @Param('artifactId') artifactId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    await this.aiRepairQueue.enqueue({
+      generatedTestArtifactId: artifactId,
+      canonicalTestId: testId,
+      workspaceId,
+      tenantId: request.resourceTenantId as string,
+      actorUserId: auth.user.id,
+      requestId: request.requestId,
+    });
+    return success({ queued: true }, { requestId: request.requestId });
+  }
+
+  /**
+   * POST /workspaces/:id/runs/:runId/repair-failures
+   * Webhook-friendly endpoint: auto-trigger repair on all failed tests in a run.
+   */
+  @Post('runs/:runId/repair-failures')
+  @UseGuards(SessionAuthGuard, WorkspaceAccessGuard, RolesGuard)
+  @RequireRoles(
+    MembershipRole.PLATFORM_ADMIN,
+    MembershipRole.TENANT_ADMIN,
+    MembershipRole.TENANT_OPERATOR,
+  )
+  async repairRunFailures(
+    @Param('workspaceId') workspaceId: string,
+    @Param('runId') runId: string,
+    @CurrentAuth() auth: NonNullable<AppRequest['auth']>,
+    @Req() request: AppRequest,
+  ) {
+    const items = await this.prisma.testRunItem.findMany({
+      where: { testRunId: runId, testRun: { workspaceId }, status: 'FAILED' },
+      select: {
+        canonicalTestId: true,
+        generatedTestArtifactId: true,
+      },
+    });
+
+    let queued = 0;
+    for (const item of items) {
+      if (!item.canonicalTestId || !item.generatedTestArtifactId) continue;
+      await this.aiRepairQueue.enqueue({
+        generatedTestArtifactId: item.generatedTestArtifactId,
+        canonicalTestId: item.canonicalTestId,
+        workspaceId,
+        tenantId: request.resourceTenantId as string,
+        actorUserId: auth.user.id,
+        requestId: request.requestId,
+      });
+      queued++;
+    }
+
+    return success({ queued, totalFailed: items.length }, { requestId: request.requestId });
   }
 }

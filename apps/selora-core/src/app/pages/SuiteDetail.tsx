@@ -18,6 +18,7 @@ import { ExecutionPolicy } from "../components/suite-settings/ExecutionPolicy";
 import { GitHubIntegration } from "../components/suite-settings/GitHubIntegration";
 import { TestRailIntegration } from "../components/suite-settings/TestRailIntegration";
 import { RolloutControls } from "../components/suite-settings/RolloutControls";
+import { ScheduleConfig } from "../components/suite-settings/ScheduleConfig";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
@@ -419,6 +420,7 @@ export function SuiteDetail() {
               <GitHubIntegration licenseStatus={licenseQuery.data} integration={suite.linkedSystems?.github ?? null} />
               <TestRailIntegration licenseStatus={licenseQuery.data} integration={suite.linkedSystems?.testrail ?? null} />
               <RolloutControls rollout={suite.rollout ?? null} />
+              <ScheduleConfig suiteId={suite.id} schedule={suite.schedule ?? null} />
             </div>
           </Card>
         </TabsContent>

@@ -64,6 +64,12 @@ export async function processExecutionJob(input: {
 	prisma: PrismaClient;
 	job: TestExecutionJobData;
 	workerJobId?: string;
+	/** Browser options for multi-browser matrix execution */
+	browserOptions?: {
+		browserType?: string;
+		viewportWidth?: number;
+		viewportHeight?: number;
+	};
 }) {
 	const runItem = await input.prisma.testRunItem.findFirst({
 		where: {
@@ -203,6 +209,17 @@ export async function processExecutionJob(input: {
 		};
 		if (runtimeSecret?.value) {
 			env['SELORA_SECRET_VALUE'] = runtimeSecret.value;
+		}
+
+		// Pass browser matrix options as env vars for Playwright config
+		if (input.browserOptions?.browserType) {
+			env['SELORA_BROWSER_TYPE'] = input.browserOptions.browserType.toLowerCase();
+		}
+		if (input.browserOptions?.viewportWidth) {
+			env['SELORA_VIEWPORT_WIDTH'] = String(input.browserOptions.viewportWidth);
+		}
+		if (input.browserOptions?.viewportHeight) {
+			env['SELORA_VIEWPORT_HEIGHT'] = String(input.browserOptions.viewportHeight);
 		}
 
 		const onLogLine: LogLineCallback = (stream, line) => {

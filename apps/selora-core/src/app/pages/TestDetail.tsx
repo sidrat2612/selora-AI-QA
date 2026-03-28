@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, PlayCircle, Archive, RefreshCw, Code, History, Info } from "lucide-react";
+import { ArrowLeft, PlayCircle, Archive, RefreshCw, Code, History, Info, GitBranch, Eye } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card } from "../components/ui/card";
@@ -153,6 +153,14 @@ export function TestDetail() {
             <History className="mr-2 h-4 w-4" />
             Repair Attempts
           </TabsTrigger>
+          <TabsTrigger value="versions">
+            <GitBranch className="mr-2 h-4 w-4" />
+            Version History
+          </TabsTrigger>
+          <TabsTrigger value="visual">
+            <Eye className="mr-2 h-4 w-4" />
+            <Link to={`/tests/${id}/visual`}>Visual Regression</Link>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="repairs">
@@ -164,6 +172,62 @@ export function TestDetail() {
             resolution: "",
             status: r.status === "success" ? "success" as const : "failed" as const,
           }))} />
+        </TabsContent>
+
+        <TabsContent value="versions">
+          <Card>
+            <div className="p-4 border-b">
+              <h3 className="text-sm font-medium text-slate-700">Generated Test Artifacts</h3>
+              <p className="mt-1 text-xs text-slate-500">History of all generated test versions for this recording</p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>File</TableHead>
+                  <TableHead>Published</TableHead>
+                  <TableHead>Created</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(testData.generatedArtifacts ?? []).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                      No generated artifacts yet. Upload a recording and generate a test script.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  (testData.generatedArtifacts ?? []).map((artifact) => (
+                    <TableRow key={artifact.id}>
+                      <TableCell className="font-mono text-sm font-medium">v{artifact.version ?? 1}</TableCell>
+                      <TableCell><StatusBadge status={artifact.status ?? "UNKNOWN"} /></TableCell>
+                      <TableCell className="text-sm text-slate-600">{artifact.id.slice(0, 8)}...</TableCell>
+                      <TableCell>
+                        {artifact.publication?.pullRequestUrl ? (
+                          <a
+                            href={artifact.publication.pullRequestUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-emerald-600 hover:underline"
+                          >
+                            PR #{artifact.publication.pullRequestUrl.split("/").pop()}
+                          </a>
+                        ) : artifact.publication?.status ? (
+                          <Badge variant="outline">{artifact.publication.status}</Badge>
+                        ) : (
+                          <span className="text-sm text-slate-400">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {artifact.createdAt ? new Date(artifact.createdAt).toLocaleString() : "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

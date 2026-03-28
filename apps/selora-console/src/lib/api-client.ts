@@ -348,6 +348,16 @@ export const license = {
   getStatus: () => request<LicenseStatus>("/license/status"),
 };
 
+export type PlatformStats = {
+  userCount: number;
+  tenantCount: number;
+  workspaceCount: number;
+};
+
+export const platform = {
+  getStats: () => request<PlatformStats>("/platform/stats"),
+};
+
 // ─── Usage & Quotas ──────────────────────────────────────────────────────────
 
 export type QuotaData = {

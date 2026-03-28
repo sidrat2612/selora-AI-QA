@@ -6,14 +6,16 @@ import {
   SqsConsumer,
   getQueueMode,
   getRedisConnection,
+  createWorkerLogger,
   type AIRepairJobData,
   type Job,
 } from '@selora/queue';
 
 const prisma = new PrismaClient();
+const logger = createWorkerLogger('worker-ai-repair');
 
 async function handleRepairJob(data: AIRepairJobData) {
-  console.log(`Processing AI repair job`, data);
+  logger.info('Processing AI repair job', { canonicalTestId: data.canonicalTestId });
   await processRepairJob({ prisma, job: data });
 }
 
@@ -21,7 +23,7 @@ async function bootstrap() {
   const mode = getQueueMode();
 
   if (mode === 'inline') {
-    console.log('Worker-ai-repair not starting consumer because QUEUE_MODE=inline.');
+    logger.info('Not starting consumer because QUEUE_MODE=inline.');
     return;
   }
 
@@ -33,10 +35,10 @@ async function bootstrap() {
       visibilityTimeout: 300,
     });
     consumer.start();
-    console.log('Worker-ai-repair started (SQS), waiting for jobs...');
+    logger.info('Started (SQS), waiting for jobs...');
 
     const shutdown = () => {
-      console.log('Shutting down SQS consumer...');
+      logger.info('Shutting down SQS consumer...');
       consumer.stop();
       process.exit(0);
     };
@@ -56,14 +58,14 @@ async function bootstrap() {
   );
 
   worker.on('completed', (job: Job<AIRepairJobData>) => {
-    console.log(`Repair job ${job.id} completed`);
+    logger.info('Repair job completed', { jobId: job.id });
   });
 
   worker.on('failed', (job: Job<AIRepairJobData> | undefined, err: Error) => {
-    console.error(`Repair job ${job?.id} failed:`, err.message);
+    logger.error('Repair job failed', { jobId: job?.id, error: err.message });
   });
 
-  console.log('Worker-ai-repair started (BullMQ), waiting for jobs...');
+  logger.info('Started (BullMQ), waiting for jobs...');
 }
 
 void bootstrap();
