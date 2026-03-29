@@ -5,27 +5,27 @@
 Selora is a multi-tenant SaaS platform for AI-powered QA automation. It ingests Playwright browser recordings, converts them into canonical test definitions using AI, generates executable Playwright tests, runs them, and automatically repairs failures — all within a governed, auditable pipeline.
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                          seloraqa.com                                    │
-│                                                                          │
-│   app.seloraqa.com         api.seloraqa.com        console.seloraqa.com  │
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          seloraqa.com                                   │
+│                                                                         │
+│   app.seloraqa.com         api.seloraqa.com        console.seloraqa.com │
 │   ┌──────────────┐         ┌──────────────┐        ┌──────────────┐     │
 │   │  selora-core │ ◄─────► │   NestJS API │ ◄────► │selora-console│     │
 │   │  (React SPA) │         │   (REST)     │        │  (React SPA) │     │
 │   └──────────────┘         └──────┬───────┘        └──────────────┘     │
-│                                   │                                      │
-│                    ┌──────────────┼──────────────┐                       │
-│                    ▼              ▼              ▼                        │
+│                                   │                                     │
+│                    ┌──────────────┼──────────────┐                      │
+│                    ▼              ▼              ▼                      │
 │             ┌───────────┐  ┌───────────┐  ┌───────────┐                 │
 │             │ Worker:   │  │ Worker:   │  │ Worker:   │                 │
 │             │ Ingestion │  │ Execution │  │ AI Repair │                 │
-│             └─────┬─────┘  └─────┬─────┘  └─────┬─────┘                │
-│                   │              │              │                        │
+│             └─────┬─────┘  └─────┬─────┘  └─────┬─────┘                 │
+│                   │              │              │                       │
 │              ┌────▼──────────────▼──────────────▼────┐                  │
-│              │          Shared Infrastructure         │                  │
+│              │          Shared Infrastructure        │                  │
 │              │  PostgreSQL · Redis · S3 · BullMQ/SQS │                  │
 │              └───────────────────────────────────────┘                  │
-└──────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---

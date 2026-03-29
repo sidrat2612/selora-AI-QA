@@ -148,6 +148,7 @@ See `.env.production.example` for the full production configuration.
 ## Documentation
 
 - [Architecture & Tech Stack](docs/ARCHITECTURE.md) — System design, data flows, infrastructure details
+- [Deployment Guide](docs/DEPLOYMENT.md) — Terraform setup, AWS deployment, CI/CD process
 
 ## License
 
