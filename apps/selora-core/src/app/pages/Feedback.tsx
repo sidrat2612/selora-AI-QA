@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router";
-import { Search, Filter, MessageSquare, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { Search, MessageSquare, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
@@ -29,6 +29,14 @@ export function Feedback() {
   });
 
   const feedbackItems = feedbackQuery.data ?? [];
+
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const item of feedbackItems) {
+      if (item.category) cats.add(item.category);
+    }
+    return Array.from(cats).sort();
+  }, [feedbackItems]);
 
   const filteredFeedback = feedbackItems.filter(item => {
     const matchesSearch = (item.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,16 +110,11 @@ export function Feedback() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="AI Quality">AI Quality</SelectItem>
-              <SelectItem value="Test Failure">Test Failure</SelectItem>
-              <SelectItem value="Environment Issue">Environment</SelectItem>
-              <SelectItem value="Validation">Validation</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            More Filters
-          </Button>
         </div>
       </div>
 

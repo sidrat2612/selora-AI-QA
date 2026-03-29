@@ -1,4 +1,4 @@
-import { Outlet } from "react-router";
+import { Outlet, Navigate } from "react-router";
 import { AuthProvider } from "../../lib/auth-context";
 import { WorkspaceProvider } from "../../lib/workspace-context";
 import { useAuth, usePermissions } from "../../lib/auth-context";
@@ -16,8 +16,12 @@ function AuthGate() {
     );
   }
 
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
   // Console is restricted to Selora Admins (PLATFORM_ADMIN)
-  if (user && !permissions.isSeloraAdmin) {
+  if (!permissions.isSeloraAdmin) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center space-y-4">

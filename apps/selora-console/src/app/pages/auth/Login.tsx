@@ -14,12 +14,18 @@ export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await authApi.login(email, password);
+      if (rememberMe) {
+        localStorage.setItem("selora_remember", "1");
+      } else {
+        localStorage.removeItem("selora_remember");
+      }
       navigate("/");
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Login failed";
@@ -72,7 +78,7 @@ export function Login() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Checkbox id="remember" />
+            <Checkbox id="remember" checked={rememberMe} onCheckedChange={(v) => setRememberMe(v === true)} />
             <Label 
               htmlFor="remember" 
               className="text-sm font-normal cursor-pointer"
@@ -88,7 +94,7 @@ export function Login() {
 
         <div className="mt-6 text-center text-sm text-muted-foreground">
           Don't have an account?{" "}
-          <a href="#" className="text-primary hover:underline">
+          <a href="mailto:sales@seloraqa.com" className="text-primary hover:underline">
             Contact sales
           </a>
         </div>

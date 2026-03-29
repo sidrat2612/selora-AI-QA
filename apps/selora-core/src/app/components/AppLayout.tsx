@@ -88,7 +88,7 @@ export function AppLayout() {
   }, [fetchNotifications]);
 
   const activeWs = workspaceMemberships.find(m => m.workspaceId === activeWorkspaceId);
-  const userInitials = user ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
+  const userInitials = user?.name?.trim() ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
   const userRole = activeWs?.role?.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) ?? "Member";
 
   // Build settings sub-nav based on permissions

@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { Progress } from "../components/ui/progress";
-import { Badge } from "../components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { tenants as tenantsApi, workspaces as workspacesApi, quotas as quotasApi } from "../../lib/api-client";
 
@@ -187,14 +186,12 @@ export function TenantDetail() {
                 <h4 className="font-medium text-slate-900">Lifecycle Status</h4>
                 <p className="mt-1 text-sm text-slate-600">Current tenant provisioning state</p>
                 <div className="mt-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    Active
-                  </Badge>
+                  <StatusBadge status={tenant.status ?? "active"} />
                 </div>
               </div>
               <div className="rounded-lg border border-slate-200 p-4">
                 <h4 className="font-medium text-slate-900">Billing Plan</h4>
-                <p className="mt-1 text-sm text-slate-600">Enterprise Plan - Annual</p>
+                <p className="mt-1 text-sm text-slate-600">{tenant.plan ?? "—"}</p>
               </div>
             </div>
           </Card>

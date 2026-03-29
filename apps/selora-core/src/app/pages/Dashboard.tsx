@@ -63,10 +63,10 @@ export function Dashboard() {
 
   const healthMetrics = useMemo(() => {
     const allRuns = runsQuery.data ?? [];
-    const passed = allRuns.filter((r) => r.status === "PASSED" || r.status === "passed").length;
-    const failed = allRuns.filter((r) => r.status === "FAILED" || r.status === "failed").length;
+    const passed = allRuns.filter((r) => r.status.toLowerCase() === "passed").length;
+    const failed = allRuns.filter((r) => r.status.toLowerCase() === "failed").length;
     const running = allRuns.filter((r) =>
-      ["RUNNING", "QUEUED", "running", "queued"].includes(r.status),
+      ["running", "queued"].includes(r.status.toLowerCase()),
     ).length;
     const completed = passed + failed;
     const passRate = completed > 0 ? Math.round((passed / completed) * 100) : 0;

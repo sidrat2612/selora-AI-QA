@@ -64,7 +64,7 @@ export function AppLayout() {
     licenseStatus?.enforcementEnabled && !licenseStatus.commercialUseAllowed,
   );
 
-  const userInitials = user ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
+  const userInitials = user?.name?.trim() ? user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() : "??";
   
   const isActive = (href: string) => {
     if (href === "/") {
@@ -221,9 +221,8 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon">
               <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
             </Button>
           </div>
         </header>

@@ -1,4 +1,4 @@
-import { PlayCircle, Search, Filter, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { PlayCircle, Search, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CreateRunDialog } from "../components/CreateRunDialog";
 import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "../../lib/workspace-context";
@@ -43,16 +43,24 @@ export function Runs() {
 
   const runs = runsQuery.data ?? [];
 
+  const environmentNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const run of runs) {
+      if (run.environment?.name) names.add(run.environment.name);
+    }
+    return Array.from(names).sort();
+  }, [runs]);
+
   const filteredRuns = runs.filter(run => {
     const matchesSearch = (run.suite?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                          run.id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || run.status === statusFilter;
-    const matchesEnvironment = environmentFilter === "all" || run.environment?.name === environmentFilter;
+    const matchesStatus = statusFilter === "all" || run.status.toLowerCase() === statusFilter;
+    const matchesEnvironment = environmentFilter === "all" || run.environment?.name?.toLowerCase() === environmentFilter;
     return matchesSearch && matchesStatus && matchesEnvironment;
   });
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "passed":
         return <CheckCircle2 className="h-5 w-5 text-green-600" />;
       case "failed":
@@ -98,7 +106,7 @@ export function Runs() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">Passed</p>
-              <p className="mt-1 text-2xl font-semibold text-green-600">{runs.filter(r => r.status === "passed").length}</p>
+              <p className="mt-1 text-2xl font-semibold text-green-600">{runs.filter(r => r.status.toLowerCase() === "passed").length}</p>
             </div>
             <CheckCircle2 className="h-8 w-8 text-green-100" />
           </div>
@@ -107,7 +115,7 @@ export function Runs() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">Running Now</p>
-              <p className="mt-1 text-2xl font-semibold text-blue-600">{runs.filter(r => r.status === "running").length}</p>
+              <p className="mt-1 text-2xl font-semibold text-blue-600">{runs.filter(r => r.status.toLowerCase() === "running").length}</p>
             </div>
             <Clock className="h-8 w-8 text-blue-100" />
           </div>
@@ -116,7 +124,7 @@ export function Runs() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-600">Failed</p>
-              <p className="mt-1 text-2xl font-semibold text-red-600">{runs.filter(r => r.status === "failed").length}</p>
+              <p className="mt-1 text-2xl font-semibold text-red-600">{runs.filter(r => r.status.toLowerCase() === "failed").length}</p>
             </div>
             <XCircle className="h-8 w-8 text-red-100" />
           </div>
@@ -154,15 +162,11 @@ export function Runs() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Environments</SelectItem>
-              <SelectItem value="production">Production</SelectItem>
-              <SelectItem value="staging">Staging</SelectItem>
-              <SelectItem value="development">Development</SelectItem>
+              {environmentNames.map((name) => (
+                <SelectItem key={name} value={name.toLowerCase()}>{name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            More Filters
-          </Button>
         </div>
       </div>
 
@@ -212,7 +216,7 @@ export function Runs() {
                     <span className="text-slate-400">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-slate-600">—</TableCell>
+                <TableCell className="text-slate-600">{run.triggeredBy?.name ?? run.triggeredBy?.email ?? "—"}</TableCell>
                 <TableCell className="text-slate-600 text-sm">{run.createdAt}</TableCell>
                 <TableCell>
                   <Link to={`/runs/${run.id}`}>
@@ -225,20 +229,10 @@ export function Runs() {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
-          Showing {filteredRuns.length} of {runs.length} runs
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm">
-            Next
-          </Button>
-        </div>
-      </div>
+      {/* Summary */}
+      <p className="text-sm text-slate-600">
+        Showing {filteredRuns.length} of {runs.length} runs
+      </p>
 
       {/* Create Run Dialog */}
       <CreateRunDialog open={isCreateRunDialogOpen} onOpenChange={setCreateRunDialogOpen} />

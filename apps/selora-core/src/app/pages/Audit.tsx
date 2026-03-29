@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, Filter, Download, FileText, User, Settings, Shield } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, Download, FileText, User, Settings, Shield } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -37,6 +37,14 @@ export function Audit() {
   });
 
   const auditEvents = auditQuery.data ?? [];
+
+  const eventTypes = useMemo(() => {
+    const types = new Set<string>();
+    for (const event of auditEvents) {
+      if (event.eventType) types.add(event.eventType);
+    }
+    return Array.from(types).sort();
+  }, [auditEvents]);
 
   const filteredEvents = auditEvents.filter(event => {
     const actorLabel = event.actor?.name ?? event.actor?.email ?? "";
@@ -103,17 +111,11 @@ export function Audit() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Event Types</SelectItem>
-              <SelectItem value="Test Created">Test Created</SelectItem>
-              <SelectItem value="Run Executed">Run Executed</SelectItem>
-              <SelectItem value="Member Invited">Member Invited</SelectItem>
-              <SelectItem value="Environment Updated">Environment Updated</SelectItem>
-              <SelectItem value="Suite Modified">Suite Modified</SelectItem>
+              {eventTypes.map((type) => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            More Filters
-          </Button>
         </div>
       </div>
 
@@ -170,20 +172,10 @@ export function Audit() {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
-          Showing {filteredEvents.length} of {auditEvents.length} events
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm">
-            Next
-          </Button>
-        </div>
-      </div>
+      {/* Summary */}
+      <p className="text-sm text-slate-600">
+        Showing {filteredEvents.length} of {auditEvents.length} events
+      </p>
     </div>
   );
 }
