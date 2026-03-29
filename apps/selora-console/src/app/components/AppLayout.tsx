@@ -24,12 +24,12 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { cn } from "./ui/utils";
 import { CommandPalette } from "./CommandPalette";
 import { useAuth } from "../../lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
-import { license as licenseApi } from "../../lib/api-client";
+import { license as licenseApi, notifications as notificationsApi, type AppNotification as NotifType } from "../../lib/api-client";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -53,6 +53,25 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const [commandOpen, setCommandOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState<NotifType[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const data = await notificationsApi.list();
+      setNotifItems(data.items);
+      setUnreadCount(data.unreadCount);
+    } catch {
+      // silent
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const licenseQuery = useQuery({
     queryKey: ["license-status"],
@@ -221,9 +240,54 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
+            <DropdownMenu open={notifOpen} onOpenChange={(open) => { setNotifOpen(open); if (open) fetchNotifications(); }}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <DropdownMenuLabel className="flex items-center justify-between">
+                  Notifications
+                  {unreadCount > 0 && (
+                    <button
+                      className="text-xs text-primary hover:underline"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await notificationsApi.markAllRead();
+                        fetchNotifications();
+                      }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifItems.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-muted-foreground text-center">No notifications</div>
+                ) : (
+                  notifItems.map((n) => (
+                    <DropdownMenuItem
+                      key={n.id}
+                      className={cn("flex flex-col items-start gap-0.5 cursor-pointer", !n.read && "bg-primary/5")}
+                      onClick={async () => {
+                        if (!n.read) {
+                          await notificationsApi.markRead(n.id);
+                          fetchNotifications();
+                        }
+                      }}
+                    >
+                      <span className="text-sm font-medium">{n.title}</span>
+                      {n.message && <span className="text-xs text-muted-foreground line-clamp-2">{n.message}</span>}
+                      <span className="text-[10px] text-muted-foreground">{new Date(n.createdAt).toLocaleString()}</span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

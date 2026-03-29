@@ -504,3 +504,27 @@ export const llmConfig = {
     request<LlmProviderPresets>("/llm-config/providers"),
 };
 
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export const notifications = {
+  list: () =>
+    request<{ items: AppNotification[]; unreadCount: number }>("/notifications"),
+
+  markRead: (notificationId: string) =>
+    request<void>(`/notifications/${notificationId}/read`, { method: "PATCH" }),
+
+  markAllRead: () =>
+    request<void>("/notifications/read-all", { method: "PATCH" }),
+};
+
