@@ -22,7 +22,6 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:clean": "docker compose down -v",
-    "ollama:check": "node scripts/ollama-e2e.cjs",
     "regression:web": "pnpm --filter @selora/test-validator regression:web",
     "regression:smoke": "pnpm regression:web",
     "regression": "pnpm regression:web",
