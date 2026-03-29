@@ -30,13 +30,13 @@ function StatusDot({ status }: { status: string }) {
   }
   if (status === "DISCONNECTED") {
     return (
-      <Badge variant="secondary" className="bg-slate-100 text-slate-600 text-xs">
+      <Badge variant="secondary" className="bg-muted text-muted-foreground text-xs">
         <XCircle className="mr-1 h-3 w-3" /> Disconnected
       </Badge>
     );
   }
   return (
-    <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200 text-xs">
+    <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20 text-xs">
       <XCircle className="mr-1 h-3 w-3" /> {status}
     </Badge>
   );
@@ -120,8 +120,8 @@ export function Integrations() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Integrations</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">Integrations</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Overview of GitHub and TestRail integrations across all tenants and workspaces
         </p>
       </div>
@@ -130,12 +130,12 @@ export function Integrations() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center">
-              <Github className="h-4 w-4 text-white" />
+            <div className="w-9 h-9 bg-foreground rounded-lg flex items-center justify-center">
+              <Github className="h-4 w-4 text-background" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-slate-900">{githubCount}</p>
-              <p className="text-xs text-slate-500">GitHub Integrations</p>
+              <p className="text-2xl font-semibold text-foreground">{githubCount}</p>
+              <p className="text-xs text-muted-foreground">GitHub Integrations</p>
             </div>
           </div>
         </Card>
@@ -145,19 +145,19 @@ export function Integrations() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-slate-900">{connectedGithub}</p>
-              <p className="text-xs text-slate-500">GitHub Connected</p>
+              <p className="text-2xl font-semibold text-foreground">{connectedGithub}</p>
+              <p className="text-xs text-muted-foreground">GitHub Connected</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-              <TestTube2 className="h-4 w-4 text-white" />
+            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+              <TestTube2 className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-slate-900">{testrailCount}</p>
-              <p className="text-xs text-slate-500">TestRail Integrations</p>
+              <p className="text-2xl font-semibold text-foreground">{testrailCount}</p>
+              <p className="text-xs text-muted-foreground">TestRail Integrations</p>
             </div>
           </div>
         </Card>
@@ -167,8 +167,8 @@ export function Integrations() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-semibold text-slate-900">{connectedTestrail}</p>
-              <p className="text-xs text-slate-500">TestRail Connected</p>
+              <p className="text-2xl font-semibold text-foreground">{connectedTestrail}</p>
+              <p className="text-xs text-muted-foreground">TestRail Connected</p>
             </div>
           </div>
         </Card>
@@ -176,15 +176,15 @@ export function Integrations() {
 
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <RefreshCw className="h-5 w-5 animate-spin text-slate-400" />
+          <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
       {!isLoading && allItems.length === 0 && (
         <Card className="p-12 text-center">
-          <Plug className="mx-auto h-12 w-12 text-slate-300" />
-          <h3 className="mt-4 text-lg font-medium text-slate-900">No integrations configured</h3>
-          <p className="mt-2 text-sm text-slate-500">
+          <Plug className="mx-auto h-12 w-12 text-muted-foreground/30" />
+          <h3 className="mt-4 text-lg font-medium text-foreground">No integrations configured</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
             No GitHub or TestRail integrations have been set up across any workspace.
           </p>
         </Card>
@@ -194,8 +194,8 @@ export function Integrations() {
       {githubCount > 0 && (
         <Card>
           <div className="p-4 border-b flex items-center gap-2">
-            <Github className="h-5 w-5 text-slate-700" />
-            <h2 className="text-base font-semibold text-slate-900">GitHub Integrations</h2>
+            <Github className="h-5 w-5 text-foreground" />
+            <h2 className="text-base font-semibold text-foreground">GitHub Integrations</h2>
             <Badge variant="secondary" className="ml-1">{githubCount}</Badge>
           </div>
           <Table>
@@ -223,7 +223,7 @@ export function Integrations() {
                     </TableCell>
                     <TableCell className="text-sm">{item.github!.defaultBranch}</TableCell>
                     <TableCell><StatusDot status={item.github!.status} /></TableCell>
-                    <TableCell className="text-sm text-slate-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {item.github!.lastValidatedAt
                         ? new Date(item.github!.lastValidatedAt).toLocaleDateString()
                         : "Never"}
@@ -239,8 +239,8 @@ export function Integrations() {
       {testrailCount > 0 && (
         <Card>
           <div className="p-4 border-b flex items-center gap-2">
-            <TestTube2 className="h-5 w-5 text-blue-600" />
-            <h2 className="text-base font-semibold text-slate-900">TestRail Integrations</h2>
+            <TestTube2 className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">TestRail Integrations</h2>
             <Badge variant="secondary" className="ml-1">{testrailCount}</Badge>
           </div>
           <Table>
@@ -268,7 +268,7 @@ export function Integrations() {
                     </TableCell>
                     <TableCell className="text-sm">{item.testrail!.projectId}</TableCell>
                     <TableCell><StatusDot status={item.testrail!.status} /></TableCell>
-                    <TableCell className="text-sm text-slate-500">
+                    <TableCell className="text-sm text-muted-foreground">
                       {item.testrail!.lastSyncedAt
                         ? new Date(item.testrail!.lastSyncedAt).toLocaleDateString()
                         : "Never"}

@@ -72,8 +72,8 @@ export function SettingsRetention() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Retention Policy</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Retention Policy</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Configure data retention windows for compliance and storage management
           </p>
         </div>
@@ -95,8 +95,8 @@ export function SettingsRetention() {
 
       {/* Test Artifacts */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Test Artifacts</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Test Artifacts</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Configure retention for screenshots, videos, and trace files
         </p>
         <div className="mt-6 space-y-4">
@@ -148,8 +148,8 @@ export function SettingsRetention() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Audit Retention</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Audit Retention</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Configure retention for audit trail and compliance logs
         </p>
         <div className="mt-6 space-y-2">
@@ -161,15 +161,15 @@ export function SettingsRetention() {
             onChange={(event) => updateField("auditDays", event.target.value)}
             disabled={!canEdit || saveMutation.isPending}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Recommended: 2 years (730 days) for compliance requirements.
           </p>
         </div>
       </Card>
 
-      {retentionQuery.isLoading && <p className="text-sm text-slate-500">Loading retention settings...</p>}
+      {retentionQuery.isLoading && <p className="text-sm text-muted-foreground">Loading retention settings...</p>}
       {retentionQuery.error instanceof Error && (
-        <p className="text-sm text-red-600">{retentionQuery.error.message}</p>
+        <p className="text-sm text-destructive">{retentionQuery.error.message}</p>
       )}
     </div>
   );

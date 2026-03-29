@@ -49,7 +49,7 @@ function StatusBadge({ status }: { status: string }) {
     );
   }
   return (
-    <Badge variant="secondary" className="bg-slate-100 text-slate-600">
+    <Badge variant="secondary" className="bg-muted text-muted-foreground">
       <XCircle className="mr-1 h-3 w-3" /> {status === "DISCONNECTED" ? "Not Connected" : status}
     </Badge>
   );
@@ -184,23 +184,23 @@ function NewConnectorWizard({
           <div className="grid grid-cols-2 gap-4 py-4">
             <button
               onClick={() => { setConnectorType("github"); setStep("select-suite"); }}
-              className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-slate-200 hover:border-slate-900 hover:bg-slate-50 transition-colors"
+              className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-foreground hover:bg-muted/50 transition-colors"
             >
-              <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center">
-                <Github className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-foreground rounded-xl flex items-center justify-center">
+                <Github className="h-6 w-6 text-background" />
               </div>
               <span className="text-sm font-medium">GitHub</span>
-              <span className="text-xs text-slate-500 text-center">Repository, webhooks & artifact publication</span>
+              <span className="text-xs text-muted-foreground text-center">Repository, webhooks & artifact publication</span>
             </button>
             <button
               onClick={() => { setConnectorType("testrail"); setStep("select-suite"); }}
-              className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-slate-200 hover:border-blue-600 hover:bg-blue-50 transition-colors"
+              className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors"
             >
-              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                <TestTube2 className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
+                <TestTube2 className="h-6 w-6 text-primary-foreground" />
               </div>
               <span className="text-sm font-medium">TestRail</span>
-              <span className="text-xs text-slate-500 text-center">Sync test cases & results</span>
+              <span className="text-xs text-muted-foreground text-center">Sync test cases & results</span>
             </button>
           </div>
         )}
@@ -218,7 +218,7 @@ function NewConnectorWizard({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">The connector will be linked to this suite.</p>
+              <p className="text-xs text-muted-foreground">The connector will be linked to this suite.</p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setStep("select-type"); setConnectorType(null); }}>Back</Button>
@@ -252,7 +252,7 @@ function NewConnectorWizard({
             <div className="space-y-2">
               <Label htmlFor="wiz-gh-token">Personal Access Token</Label>
               <Input id="wiz-gh-token" type="password" placeholder="ghp_xxxxxxxxxxxx" value={ghToken} onChange={(e) => setGhToken(e.target.value)} />
-              <p className="text-xs text-slate-500">Token needs repo, user, and admin:repo_hook scopes.</p>
+              <p className="text-xs text-muted-foreground">Token needs repo, user, and admin:repo_hook scopes.</p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep("select-suite")}>Back</Button>
@@ -295,14 +295,14 @@ function NewConnectorWizard({
           <div className="py-4 space-y-4">
             <Card className="p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${connectorType === "github" ? "bg-slate-900" : "bg-blue-600"}`}>
-                  {connectorType === "github" ? <Github className="h-5 w-5 text-white" /> : <TestTube2 className="h-5 w-5 text-white" />}
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${connectorType === "github" ? "bg-foreground" : "bg-primary"}`}>
+                  {connectorType === "github" ? <Github className="h-5 w-5 text-background" /> : <TestTube2 className="h-5 w-5 text-primary-foreground" />}
                 </div>
                 <div>
                   <p className="text-sm font-medium">
                     {connectorType === "github" ? ghRepo : trBaseUrl}
                   </p>
-                  <p className="text-xs text-slate-500">Suite: {selectedSuiteName}</p>
+                  <p className="text-xs text-muted-foreground">Suite: {selectedSuiteName}</p>
                 </div>
               </div>
               {testPassed && (
@@ -382,60 +382,60 @@ function ConnectorRow({
       {/* Summary row */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center gap-4 p-4 text-left hover:bg-muted/50 transition-colors"
       >
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${type === "github" ? "bg-slate-900" : "bg-blue-600"}`}>
-          {type === "github" ? <Github className="h-4 w-4 text-white" /> : <TestTube2 className="h-4 w-4 text-white" />}
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${type === "github" ? "bg-foreground" : "bg-primary"}`}>
+          {type === "github" ? <Github className="h-4 w-4 text-background" /> : <TestTube2 className="h-4 w-4 text-primary-foreground" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate">
+          <p className="text-sm font-medium text-foreground truncate">
             {type === "github" ? `${gh!.repoOwner}/${gh!.repoName}` : tr!.baseUrl}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Suite: {item.suiteName}
             {type === "github" && gh!.defaultBranch && <span className="ml-2">· Branch: {gh!.defaultBranch}</span>}
             {type === "testrail" && tr!.projectId && <span className="ml-2">· Project: {tr!.projectId}</span>}
           </p>
         </div>
         <StatusBadge status={status} />
-        <ChevronRight className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} />
+        <ChevronRight className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`} />
       </button>
 
       {/* Expanded detail panel */}
       {expanded && (
-        <div className="border-t bg-slate-50 p-4 space-y-4">
+        <div className="border-t bg-muted/50 p-4 space-y-4">
           {type === "github" && gh && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-xs text-slate-400">Repository</span>
+                <span className="text-xs text-muted-foreground">Repository</span>
                 <p className="font-medium">{gh.repoOwner}/{gh.repoName}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Branch</span>
+                <span className="text-xs text-muted-foreground">Branch</span>
                 <p className="font-medium">{gh.defaultBranch}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Write Scope</span>
+                <span className="text-xs text-muted-foreground">Write Scope</span>
                 <p className="font-medium">{gh.allowedWriteScope.replace(/_/g, " ")}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Credential Mode</span>
+                <span className="text-xs text-muted-foreground">Credential Mode</span>
                 <p className="font-medium">{gh.credentialMode.replace(/_/g, " ")}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Last Validated</span>
+                <span className="text-xs text-muted-foreground">Last Validated</span>
                 <p className="font-medium">{gh.lastValidatedAt ? new Date(gh.lastValidatedAt).toLocaleString() : "Never"}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Secret Rotated</span>
+                <span className="text-xs text-muted-foreground">Secret Rotated</span>
                 <p className="font-medium">{gh.secretRotatedAt ? new Date(gh.secretRotatedAt).toLocaleString() : "Never"}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Created</span>
+                <span className="text-xs text-muted-foreground">Created</span>
                 <p className="font-medium">{new Date(gh.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Updated</span>
+                <span className="text-xs text-muted-foreground">Updated</span>
                 <p className="font-medium">{new Date(gh.updatedAt).toLocaleDateString()}</p>
               </div>
             </div>
@@ -444,47 +444,47 @@ function ConnectorRow({
           {type === "testrail" && tr && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-xs text-slate-400">TestRail URL</span>
+                <span className="text-xs text-muted-foreground">TestRail URL</span>
                 <p className="font-medium truncate" title={tr.baseUrl}>{tr.baseUrl}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Project ID</span>
+                <span className="text-xs text-muted-foreground">Project ID</span>
                 <p className="font-medium">{tr.projectId}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">External Suite ID</span>
+                <span className="text-xs text-muted-foreground">External Suite ID</span>
                 <p className="font-medium">{tr.suiteIdExternal ?? "—"}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Sync Policy</span>
+                <span className="text-xs text-muted-foreground">Sync Policy</span>
                 <p className="font-medium">{tr.syncPolicy}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Last Validated</span>
+                <span className="text-xs text-muted-foreground">Last Validated</span>
                 <p className="font-medium">{tr.lastValidatedAt ? new Date(tr.lastValidatedAt).toLocaleString() : "Never"}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Last Synced</span>
+                <span className="text-xs text-muted-foreground">Last Synced</span>
                 <p className="font-medium">{tr.lastSyncedAt ? new Date(tr.lastSyncedAt).toLocaleString() : "Never"}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Created</span>
+                <span className="text-xs text-muted-foreground">Created</span>
                 <p className="font-medium">{new Date(tr.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <span className="text-xs text-slate-400">Updated</span>
+                <span className="text-xs text-muted-foreground">Updated</span>
                 <p className="font-medium">{new Date(tr.updatedAt).toLocaleDateString()}</p>
               </div>
               {tr.latestSync && (
                 <div className="col-span-2 sm:col-span-4">
-                  <span className="text-xs text-slate-400">Latest Sync</span>
+                  <span className="text-xs text-muted-foreground">Latest Sync</span>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge className={
                       tr.latestSync.status === "SUCCESS" ? "bg-emerald-50 text-emerald-700" :
-                      tr.latestSync.status === "FAILED" ? "bg-red-50 text-red-700" :
-                      "bg-blue-50 text-blue-700"
+                      tr.latestSync.status === "FAILED" ? "bg-destructive/10 text-destructive" :
+                      "bg-primary/10 text-primary"
                     }>{tr.latestSync.status}</Badge>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-muted-foreground">
                       {tr.latestSync.syncedCount}/{tr.latestSync.totalCount} synced
                       {tr.latestSync.failedCount > 0 && `, ${tr.latestSync.failedCount} failed`}
                     </span>
@@ -514,7 +514,7 @@ function ConnectorRow({
             <Button
               variant="ghost"
               size="sm"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-auto"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
               onClick={() => { if (confirm("Delete this connector?")) deleteMutation.mutate(); }}
               disabled={deleteMutation.isPending}
             >
@@ -583,8 +583,8 @@ export function Integrations() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Connectors</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Connectors</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage GitHub and TestRail connections for your workspace
           </p>
         </div>
@@ -597,21 +597,21 @@ export function Integrations() {
       {/* Summary cards */}
       <div className="grid gap-4 grid-cols-3">
         <Card className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-slate-900 rounded-lg flex items-center justify-center">
-            <Github className="h-4 w-4 text-white" />
+          <div className="w-9 h-9 bg-foreground rounded-lg flex items-center justify-center">
+            <Github className="h-4 w-4 text-background" />
           </div>
           <div>
-            <p className="text-xl font-semibold text-slate-900">{githubCount}</p>
-            <p className="text-xs text-slate-500">GitHub</p>
+            <p className="text-xl font-semibold text-foreground">{githubCount}</p>
+            <p className="text-xs text-muted-foreground">GitHub</p>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
-            <TestTube2 className="h-4 w-4 text-white" />
+          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+            <TestTube2 className="h-4 w-4 text-primary-foreground" />
           </div>
           <div>
-            <p className="text-xl font-semibold text-slate-900">{testrailCount}</p>
-            <p className="text-xs text-slate-500">TestRail</p>
+            <p className="text-xl font-semibold text-foreground">{testrailCount}</p>
+            <p className="text-xs text-muted-foreground">TestRail</p>
           </div>
         </Card>
         <Card className="p-4 flex items-center gap-3">
@@ -619,8 +619,8 @@ export function Integrations() {
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
           <div>
-            <p className="text-xl font-semibold text-slate-900">{connectedCount}</p>
-            <p className="text-xs text-slate-500">Connected</p>
+            <p className="text-xl font-semibold text-foreground">{connectedCount}</p>
+            <p className="text-xs text-muted-foreground">Connected</p>
           </div>
         </Card>
       </div>
@@ -638,7 +638,7 @@ export function Integrations() {
             </TabsTrigger>
           </TabsList>
           <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search connectors…"
               value={search}
@@ -651,17 +651,17 @@ export function Integrations() {
         <TabsContent value={activeTab} className="mt-4">
           {integrationsQuery.isLoading && (
             <div className="flex items-center justify-center py-16">
-              <RefreshCw className="h-5 w-5 animate-spin text-slate-400" />
+              <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
 
           {!integrationsQuery.isLoading && filtered.length === 0 && (
             <Card className="p-12 text-center">
-              <Plug className="mx-auto h-12 w-12 text-slate-300" />
-              <h3 className="mt-4 text-lg font-medium text-slate-900">
+              <Plug className="mx-auto h-12 w-12 text-muted-foreground/30" />
+              <h3 className="mt-4 text-lg font-medium text-foreground">
                 {connectors.length === 0 ? "No connectors yet" : "No matching connectors"}
               </h3>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 {connectors.length === 0
                   ? "Create a connector to link your workspace with GitHub or TestRail."
                   : "Try adjusting your search or filter."}

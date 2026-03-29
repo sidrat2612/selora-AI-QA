@@ -27,14 +27,14 @@ export function FlakinessReport() {
   const report = reportQuery.data;
 
   if (reportQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-500">Analyzing test stability...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Analyzing test stability...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Flakiness Report</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">Flakiness Report</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Tests that have both passed and failed in the last {report?.days ?? 14} days
         </p>
       </div>
@@ -42,33 +42,33 @@ export function FlakinessReport() {
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <span>Flaky Tests</span>
           </div>
           <p className="mt-2 text-2xl font-semibold text-amber-600">{report?.flakyCount ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle className="h-4 w-4 text-emerald-500" />
             <span>Stable Tests</span>
           </div>
           <p className="mt-2 text-2xl font-semibold text-emerald-600">{report?.stableCount ?? 0}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <TrendingDown className="h-4 w-4 text-slate-500" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
             <span>Total Tests Analysed</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{report?.totalTests ?? 0}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{report?.totalTests ?? 0}</p>
         </Card>
       </div>
 
       {/* Flaky Tests Table */}
       <Card>
         <div className="p-4 border-b">
-          <h3 className="text-sm font-medium text-slate-700">Flaky Tests</h3>
-          <p className="mt-1 text-xs text-slate-500">
+          <h3 className="text-sm font-medium text-foreground">Flaky Tests</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
             Sorted by flakiness rate (highest first). These tests produce inconsistent results.
           </p>
         </div>
@@ -87,7 +87,7 @@ export function FlakinessReport() {
           <TableBody>
             {(report?.flakyTests ?? []).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-slate-500">
+                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
                   No flaky tests detected. All tests are stable.
                 </TableCell>
               </TableRow>
@@ -97,14 +97,14 @@ export function FlakinessReport() {
                   <TableCell>
                     <Link
                       to={`/tests/${test.testId}`}
-                      className="font-medium text-slate-900 hover:text-emerald-600"
+                      className="font-medium text-foreground hover:text-emerald-600"
                     >
                       {test.testName}
                     </Link>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-16 rounded-full bg-slate-200 overflow-hidden">
+                      <div className="h-2 w-16 rounded-full bg-muted overflow-hidden">
                         <div
                           className={`h-full rounded-full ${test.flakinessRate >= 50 ? "bg-red-500" : test.flakinessRate >= 25 ? "bg-amber-500" : "bg-yellow-400"}`}
                           style={{ width: `${test.flakinessRate}%` }}
@@ -115,11 +115,11 @@ export function FlakinessReport() {
                   </TableCell>
                   <TableCell className="text-emerald-600 font-medium">{test.passedCount}</TableCell>
                   <TableCell className="text-red-600 font-medium">{test.failedCount}</TableCell>
-                  <TableCell className="text-slate-600">{test.totalRuns}</TableCell>
+                  <TableCell className="text-muted-foreground">{test.totalRuns}</TableCell>
                   <TableCell><StatusBadge status={test.testStatus} /></TableCell>
                   <TableCell>
                     <Link to={`/tests/${test.testId}`}>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-slate-50">View</Badge>
+                      <Badge variant="outline" className="cursor-pointer hover:bg-muted/50">View</Badge>
                     </Link>
                   </TableCell>
                 </TableRow>

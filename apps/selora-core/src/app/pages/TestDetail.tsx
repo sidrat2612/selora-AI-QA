@@ -61,11 +61,11 @@ export function TestDetail() {
   });
 
   if (!testData && testQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
   }
 
   if (!testData) {
-    return <div className="p-8 text-center text-slate-500">Test not found</div>;
+    return <div className="p-8 text-center text-muted-foreground">Test not found</div>;
   }
 
   const handleRunTest = () => {
@@ -99,10 +99,10 @@ export function TestDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">{testData.name}</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{testData.name}</h1>
             <StatusBadge status={testData.status} />
           </div>
-          <div className="mt-3 flex items-center gap-4 text-sm text-slate-600">
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
             {testData.suite?.name && (
               <span>Suite: <span className="font-medium text-emerald-600">{testData.suite.name}</span></span>
             )}
@@ -129,18 +129,18 @@ export function TestDetail() {
       {/* Metadata Cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Info className="h-4 w-4" />
             <span>Status</span>
           </div>
           <div className="mt-2"><StatusBadge status={testData.status} /></div>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <History className="h-4 w-4" />
             <span>Last Run</span>
           </div>
-          <p className="mt-2 text-sm font-medium text-slate-900">
+          <p className="mt-2 text-sm font-medium text-foreground">
             {testData.updatedAt ? new Date(testData.updatedAt).toLocaleString() : "Never"}
           </p>
         </Card>
@@ -177,8 +177,8 @@ export function TestDetail() {
         <TabsContent value="versions">
           <Card>
             <div className="p-4 border-b">
-              <h3 className="text-sm font-medium text-slate-700">Generated Test Artifacts</h3>
-              <p className="mt-1 text-xs text-slate-500">History of all generated test versions for this recording</p>
+              <h3 className="text-sm font-medium text-foreground">Generated Test Artifacts</h3>
+              <p className="mt-1 text-xs text-muted-foreground">History of all generated test versions for this recording</p>
             </div>
             <Table>
               <TableHeader>
@@ -193,7 +193,7 @@ export function TestDetail() {
               <TableBody>
                 {(testData.generatedArtifacts ?? []).length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       No generated artifacts yet. Upload a recording and generate a test script.
                     </TableCell>
                   </TableRow>
@@ -202,7 +202,7 @@ export function TestDetail() {
                     <TableRow key={artifact.id}>
                       <TableCell className="font-mono text-sm font-medium">v{artifact.version ?? 1}</TableCell>
                       <TableCell><StatusBadge status={artifact.status ?? "UNKNOWN"} /></TableCell>
-                      <TableCell className="text-sm text-slate-600">{artifact.id.slice(0, 8)}...</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{artifact.id.slice(0, 8)}...</TableCell>
                       <TableCell>
                         {artifact.publication?.pullRequestUrl ? (
                           <a
@@ -216,10 +216,10 @@ export function TestDetail() {
                         ) : artifact.publication?.status ? (
                           <Badge variant="outline">{artifact.publication.status}</Badge>
                         ) : (
-                          <span className="text-sm text-slate-400">—</span>
+                          <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {artifact.createdAt ? new Date(artifact.createdAt).toLocaleString() : "—"}
                       </TableCell>
                     </TableRow>

@@ -18,23 +18,23 @@ export function KPICard({ title, value, change, icon: Icon, className }: KPICard
     <Card className={cn("p-6", className)}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm text-slate-600">{title}</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">{value}</p>
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="mt-2 text-3xl font-semibold text-foreground">{value}</p>
           {change && (
             <p className={cn(
               "mt-2 text-sm flex items-center gap-1",
-              change.trend === "up" ? "text-green-600" : 
-              change.trend === "down" ? "text-red-600" : 
-              "text-slate-600"
+              change.trend === "up" ? "text-success" : 
+              change.trend === "down" ? "text-destructive" : 
+              "text-muted-foreground"
             )}>
               <span>{change.value}</span>
-              <span className="text-slate-500">vs last period</span>
+              <span className="text-muted-foreground">vs last period</span>
             </p>
           )}
         </div>
         {Icon && (
-          <div className="rounded-lg bg-slate-50 p-3">
-            <Icon className="h-5 w-5 text-slate-600" />
+          <div className="rounded-lg bg-surface-container-low p-3">
+            <Icon className="h-5 w-5 text-muted-foreground" />
           </div>
         )}
       </div>

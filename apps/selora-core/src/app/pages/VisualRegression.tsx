@@ -90,7 +90,7 @@ export function VisualRegressionPage() {
         <h1 className="text-2xl font-bold tracking-tight">
           Visual Regression
         </h1>
-        <p className="text-slate-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           Manage visual baselines and compare screenshots against them.
         </p>
       </div>
@@ -106,7 +106,7 @@ export function VisualRegressionPage() {
         </div>
 
         {baselines.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
+          <div className="text-center py-8 text-muted-foreground">
             <ImagePlus className="w-10 h-10 mx-auto mb-2" />
             <p>No baselines yet. Run a test and approve screenshots to create baselines.</p>
           </div>
@@ -145,7 +145,7 @@ export function VisualRegressionPage() {
           </h2>
 
           {/* Comparison Mode Toggle */}
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
             <Button
               variant={comparisonMode === "side-by-side" ? "default" : "ghost"}
               size="sm"
@@ -184,7 +184,7 @@ export function VisualRegressionPage() {
             className="max-w-md"
           />
           {compareQuery.isLoading && (
-            <span className="text-sm text-slate-400">Comparing...</span>
+            <span className="text-sm text-muted-foreground">Comparing...</span>
           )}
         </div>
 
@@ -260,12 +260,12 @@ function BaselineRow({
       </TableCell>
       <TableCell>
         {baseline.approvedAt ? (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {baseline.approvedBy?.name ?? "System"} ·{" "}
             {new Date(baseline.approvedAt).toLocaleDateString()}
           </span>
         ) : (
-          <span className="text-xs text-slate-400">Not approved</span>
+          <span className="text-xs text-muted-foreground">Not approved</span>
         )}
       </TableCell>
       <TableCell>
@@ -334,7 +334,7 @@ function DiffRow({
       <TableCell>
         {diff.status === "MISMATCH" ? (
           <div className="flex items-center gap-2">
-            <div className="w-16 h-2 rounded-full bg-slate-200 overflow-hidden">
+            <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full bg-red-500"
                 style={{ width: `${Math.min(diff.diffPercentage, 100)}%` }}
@@ -343,7 +343,7 @@ function DiffRow({
             <span className="text-xs font-mono">{diff.diffPercentage.toFixed(1)}%</span>
           </div>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </TableCell>
       <TableCell>
@@ -353,16 +353,16 @@ function DiffRow({
               {classificationLabels[diff.classification]?.label ?? diff.classification}
             </Badge>
             {diff.classificationConfidence != null && (
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-muted-foreground">
                 {Math.round(diff.classificationConfidence * 100)}%
               </span>
             )}
           </div>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="text-xs font-mono text-slate-500 truncate max-w-[120px]">
+      <TableCell className="text-xs font-mono text-muted-foreground truncate max-w-[120px]">
         {diff.baselineStorageKey ? (
           mode === "side-by-side" ? (
             <span title={diff.baselineStorageKey}>Baseline</span>
@@ -373,7 +373,7 @@ function DiffRow({
           )
         ) : "—"}
       </TableCell>
-      <TableCell className="text-xs font-mono text-slate-500 truncate max-w-[120px]">
+      <TableCell className="text-xs font-mono text-muted-foreground truncate max-w-[120px]">
         {diff.currentStorageKey ? (
           mode === "slider" ? (
             <div className="flex items-center gap-1">

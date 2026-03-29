@@ -62,15 +62,15 @@ export function Runs() {
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case "passed":
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+        return <CheckCircle2 className="h-5 w-5 text-success" />;
       case "failed":
-        return <XCircle className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-destructive" />;
       case "running":
-        return <Clock className="h-5 w-5 text-blue-600 animate-pulse" />;
+        return <Clock className="h-5 w-5 text-primary animate-pulse" />;
       case "queued":
-        return <Clock className="h-5 w-5 text-slate-400" />;
+        return <Clock className="h-5 w-5 text-muted-foreground" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-amber-600" />;
+        return <AlertCircle className="h-5 w-5 text-warning" />;
     }
   };
 
@@ -79,8 +79,8 @@ export function Runs() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Test Runs</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Test Runs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Monitor and review test execution history
           </p>
         </div>
@@ -96,37 +96,37 @@ export function Runs() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Total Runs</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{runs.length}</p>
+              <p className="text-sm text-muted-foreground">Total Runs</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{runs.length}</p>
             </div>
-            <PlayCircle className="h-8 w-8 text-slate-300" />
+            <PlayCircle className="h-8 w-8 text-muted-foreground/20" />
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Passed</p>
-              <p className="mt-1 text-2xl font-semibold text-green-600">{runs.filter(r => r.status.toLowerCase() === "passed").length}</p>
+              <p className="text-sm text-muted-foreground">Passed</p>
+              <p className="mt-1 text-2xl font-semibold text-success">{runs.filter(r => r.status.toLowerCase() === "passed").length}</p>
             </div>
-            <CheckCircle2 className="h-8 w-8 text-green-100" />
+            <CheckCircle2 className="h-8 w-8 text-success/20" />
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Running Now</p>
-              <p className="mt-1 text-2xl font-semibold text-blue-600">{runs.filter(r => r.status.toLowerCase() === "running").length}</p>
+              <p className="text-sm text-muted-foreground">Running Now</p>
+              <p className="mt-1 text-2xl font-semibold text-primary">{runs.filter(r => r.status.toLowerCase() === "running").length}</p>
             </div>
-            <Clock className="h-8 w-8 text-blue-100" />
+            <Clock className="h-8 w-8 text-primary/20" />
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Failed</p>
-              <p className="mt-1 text-2xl font-semibold text-red-600">{runs.filter(r => r.status.toLowerCase() === "failed").length}</p>
+              <p className="text-sm text-muted-foreground">Failed</p>
+              <p className="mt-1 text-2xl font-semibold text-destructive">{runs.filter(r => r.status.toLowerCase() === "failed").length}</p>
             </div>
-            <XCircle className="h-8 w-8 text-red-100" />
+            <XCircle className="h-8 w-8 text-destructive/20" />
           </div>
         </Card>
       </div>
@@ -134,7 +134,7 @@ export function Runs() {
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search runs or suites..."
             value={searchQuery}
@@ -171,7 +171,7 @@ export function Runs() {
       </div>
 
       {/* Runs Table */}
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-card max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -190,12 +190,12 @@ export function Runs() {
             {filteredRuns.map((run) => (
               <TableRow key={run.id}>
                 <TableCell>
-                  <Link to={`/runs/${run.id}`} className="font-medium text-emerald-600 hover:underline">
+                  <Link to={`/runs/${run.id}`} className="font-medium text-primary hover:underline">
                     {run.id}
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <span className="font-medium text-slate-900">{run.suite?.name ?? "—"}</span>
+                  <span className="font-medium text-foreground">{run.suite?.name ?? "—"}</span>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">{run.environment?.name ?? "—"}</Badge>
@@ -206,18 +206,18 @@ export function Runs() {
                     <StatusBadge status={run.status} />
                   </div>
                 </TableCell>
-                <TableCell className="text-slate-600">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
                 <TableCell>
                   {run.totalCount != null && run.passedCount != null && run.totalCount > 0 ? (
-                    <span className={`font-medium ${run.passedCount === run.totalCount ? 'text-green-600' : 'text-amber-600'}`}>
+                    <span className={`font-medium ${run.passedCount === run.totalCount ? 'text-success' : 'text-warning'}`}>
                       {((run.passedCount / run.totalCount) * 100).toFixed(1)}%
                     </span>
                   ) : (
-                    <span className="text-slate-400">-</span>
+                    <span className="text-muted-foreground">-</span>
                   )}
                 </TableCell>
-                <TableCell className="text-slate-600">{run.triggeredBy?.name ?? run.triggeredBy?.email ?? "—"}</TableCell>
-                <TableCell className="text-slate-600 text-sm">{run.createdAt}</TableCell>
+                <TableCell className="text-muted-foreground">{run.triggeredBy?.name ?? run.triggeredBy?.email ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground text-sm">{run.createdAt}</TableCell>
                 <TableCell>
                   <Link to={`/runs/${run.id}`}>
                     <Button variant="ghost" size="sm">View</Button>
@@ -230,7 +230,7 @@ export function Runs() {
       </div>
 
       {/* Summary */}
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Showing {filteredRuns.length} of {runs.length} runs
       </p>
 

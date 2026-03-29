@@ -1,8 +1,8 @@
-FROM node:20-alpine AS base
+FROM node:20-slim AS base
 
 # Trust corporate Zscaler root CA for TLS inspection
 COPY infrastructure/certs/zscaler.crt /usr/local/share/ca-certificates/zscaler.crt
-RUN apk add --no-cache ca-certificates && update-ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && update-ca-certificates && rm -rf /var/lib/apt/lists/*
 ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/zscaler.crt
 
 RUN corepack enable && corepack prepare pnpm@10.7.0 --activate

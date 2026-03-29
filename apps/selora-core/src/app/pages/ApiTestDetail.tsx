@@ -58,8 +58,8 @@ export function ApiTestDetail() {
     onError: () => toast.error("Failed to delete."),
   });
 
-  if (isLoading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
-  if (!testData) return <div className="p-8 text-center text-slate-500">Not found</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
+  if (!testData) return <div className="p-8 text-center text-muted-foreground">Not found</div>;
 
   const executions = executionsData?.items ?? [];
 
@@ -81,13 +81,13 @@ export function ApiTestDetail() {
             ) : (
               <Globe className="h-5 w-5 text-blue-500" />
             )}
-            <h1 className="text-2xl font-semibold text-slate-900">{testData.name}</h1>
+            <h1 className="text-2xl font-semibold text-foreground">{testData.name}</h1>
             <Badge className={testData.status === "READY" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
               {testData.status}
             </Badge>
           </div>
           {testData.description && (
-            <p className="mt-2 text-sm text-slate-600">{testData.description}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{testData.description}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -108,22 +108,22 @@ export function ApiTestDetail() {
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <Badge variant="secondary" className="font-mono text-sm">{testData.method}</Badge>
-          <code className="text-sm text-slate-700">{testData.urlTemplate}</code>
+          <code className="text-sm text-foreground">{testData.urlTemplate}</code>
           <Badge variant="outline" className="ml-auto text-xs">{testData.protocol}</Badge>
         </div>
         {testData.suite && (
-          <p className="mt-2 text-xs text-slate-500">Suite: {testData.suite.name}</p>
+          <p className="mt-2 text-xs text-muted-foreground">Suite: {testData.suite.name}</p>
         )}
       </Card>
 
       {/* Quick Execute */}
       <Card className="p-4">
-        <h3 className="text-sm font-medium text-slate-700 mb-3">Quick Execute</h3>
+        <h3 className="text-sm font-medium text-foreground mb-3">Quick Execute</h3>
         <div className="flex gap-3 items-end">
           <div className="flex-1">
-            <label className="text-xs text-slate-500 mb-1 block">Environment ID</label>
+            <label className="text-xs text-muted-foreground mb-1 block">Environment ID</label>
             <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-border px-3 py-2 text-sm"
               placeholder="Enter environment ID..."
               value={selectedEnvId}
               onChange={(e) => setSelectedEnvId(e.target.value)}
@@ -161,7 +161,7 @@ export function ApiTestDetail() {
               <TableBody>
                 {(testData.assertionsJson ?? []).length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-slate-500">
+                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
                       No assertions defined.
                     </TableCell>
                   </TableRow>
@@ -172,7 +172,7 @@ export function ApiTestDetail() {
                         <Badge variant="outline" className="text-xs">{a.type}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-sm">{String(a.expected)}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{a.jsonPath ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{a.jsonPath ?? "—"}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -196,7 +196,7 @@ export function ApiTestDetail() {
               <TableBody>
                 {executions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-slate-500">
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                       No executions yet. Run the test above.
                     </TableCell>
                   </TableRow>
@@ -213,7 +213,7 @@ export function ApiTestDetail() {
         {testData.protocol === "GRAPHQL" && (
           <TabsContent value="query">
             <Card className="p-4">
-              <pre className="text-sm font-mono whitespace-pre-wrap text-slate-700">
+              <pre className="text-sm font-mono whitespace-pre-wrap text-foreground">
                 {testData.graphqlQuery ?? "No query defined"}
               </pre>
             </Card>
@@ -223,7 +223,7 @@ export function ApiTestDetail() {
         {testData.bodyTemplate && (
           <TabsContent value="body">
             <Card className="p-4">
-              <pre className="text-sm font-mono whitespace-pre-wrap text-slate-700">
+              <pre className="text-sm font-mono whitespace-pre-wrap text-foreground">
                 {testData.bodyTemplate}
               </pre>
             </Card>
@@ -264,7 +264,7 @@ function ExecutionRow({ execution }: { execution: ApiTestExecution }) {
           {execution.responseStatus ?? "—"}
         </Badge>
       </TableCell>
-      <TableCell className="text-sm text-slate-600">
+      <TableCell className="text-sm text-muted-foreground">
         {execution.responseTimeMs != null ? `${execution.responseTimeMs}ms` : "—"}
       </TableCell>
       <TableCell>
@@ -273,10 +273,10 @@ function ExecutionRow({ execution }: { execution: ApiTestExecution }) {
             {passed}/{total} passed
           </span>
         ) : (
-          <span className="text-sm text-slate-400">—</span>
+          <span className="text-sm text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell className="text-sm text-slate-500">
+      <TableCell className="text-sm text-muted-foreground">
         {new Date(execution.createdAt).toLocaleString()}
       </TableCell>
     </TableRow>

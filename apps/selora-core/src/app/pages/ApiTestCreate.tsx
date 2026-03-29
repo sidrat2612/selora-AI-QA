@@ -72,7 +72,7 @@ export function ApiTestCreate() {
         Back to API Tests
       </Button>
 
-      <h1 className="text-2xl font-semibold text-slate-900">Create API Test</h1>
+      <h1 className="text-2xl font-semibold text-foreground">Create API Test</h1>
 
       {/* Basic Info */}
       <Card className="p-6 space-y-4">
@@ -88,12 +88,12 @@ export function ApiTestCreate() {
 
       {/* Protocol & Method */}
       <Card className="p-6 space-y-4">
-        <h3 className="text-sm font-medium text-slate-700">Request Configuration</h3>
+        <h3 className="text-sm font-medium text-foreground">Request Configuration</h3>
         <div className="flex gap-4">
           <div className="w-40">
             <Label>Protocol</Label>
             <select
-              className="w-full mt-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+              className="w-full mt-1 rounded-md border border-border bg-white px-3 py-2 text-sm"
               value={protocol}
               onChange={(e) => setProtocol(e.target.value as "REST" | "GRAPHQL")}
             >
@@ -105,7 +105,7 @@ export function ApiTestCreate() {
             <div className="w-32">
               <Label>Method</Label>
               <select
-                className="w-full mt-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="w-full mt-1 rounded-md border border-border bg-white px-3 py-2 text-sm"
                 value={method}
                 onChange={(e) => setMethod(e.target.value)}
               >
@@ -153,7 +153,7 @@ export function ApiTestCreate() {
       {/* Assertions */}
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-slate-700">Assertions</h3>
+          <h3 className="text-sm font-medium text-foreground">Assertions</h3>
           <Button variant="outline" size="sm" onClick={addAssertion}>
             <Plus className="mr-1 h-3 w-3" />
             Add
@@ -161,11 +161,11 @@ export function ApiTestCreate() {
         </div>
 
         {assertions.map((a, idx) => (
-          <div key={idx} className="flex items-end gap-3 rounded-lg border border-slate-200 p-3">
+          <div key={idx} className="flex items-end gap-3 rounded-lg border border-border p-3">
             <div className="w-44">
               <Label className="text-xs">Type</Label>
               <select
-                className="w-full mt-1 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                className="w-full mt-1 rounded-md border border-border bg-white px-2 py-1.5 text-sm"
                 value={a.type}
                 onChange={(e) => updateAssertion(idx, "type", e.target.value)}
               >

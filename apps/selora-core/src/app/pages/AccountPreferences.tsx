@@ -62,8 +62,8 @@ export function AccountPreferences() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Preferences</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Preferences</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Control how Selora behaves for this browser session and workstation.
           </p>
         </div>
@@ -83,10 +83,10 @@ export function AccountPreferences() {
             <CardDescription>Adjust navigation and failure triage defaults.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-1">
                 <Label htmlFor="compact-navigation">Compact sidebar navigation</Label>
-                <p className="text-sm text-slate-600">Keep the navigation tighter when switching between suites and runs.</p>
+                <p className="text-sm text-muted-foreground">Keep the navigation tighter when switching between suites and runs.</p>
               </div>
               <Switch
                 id="compact-navigation"
@@ -94,10 +94,10 @@ export function AccountPreferences() {
                 onCheckedChange={(checked) => updatePreference("compactNavigation", checked)}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-1">
                 <Label htmlFor="auto-open-failures">Auto-open failed artifacts</Label>
-                <p className="text-sm text-slate-600">Jump directly into screenshots and logs when a run fails.</p>
+                <p className="text-sm text-muted-foreground">Jump directly into screenshots and logs when a run fails.</p>
               </div>
               <Switch
                 id="auto-open-failures"
@@ -117,10 +117,10 @@ export function AccountPreferences() {
             <CardDescription>Choose which updates matter on this device.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-1">
                 <Label htmlFor="email-notifications">Email notifications</Label>
-                <p className="text-sm text-slate-600">Receive account and execution updates by email.</p>
+                <p className="text-sm text-muted-foreground">Receive account and execution updates by email.</p>
               </div>
               <Switch
                 id="email-notifications"
@@ -128,10 +128,10 @@ export function AccountPreferences() {
                 onCheckedChange={(checked) => updatePreference("emailNotifications", checked)}
               />
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="space-y-1">
                 <Label htmlFor="run-digest">Daily run digest</Label>
-                <p className="text-sm text-slate-600">Get a compact summary of run health and quota changes.</p>
+                <p className="text-sm text-muted-foreground">Get a compact summary of run health and quota changes.</p>
               </div>
               <Switch
                 id="run-digest"

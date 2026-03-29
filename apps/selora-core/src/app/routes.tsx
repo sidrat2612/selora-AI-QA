@@ -29,6 +29,14 @@ export const router = createBrowserRouter([
     path: "/auth/verify-email",
     lazy: () => loadRoute(() => import("./pages/auth/VerifyEmail"), "VerifyEmail"),
   },
+  {
+    path: "/auth/verify-2fa",
+    lazy: () => loadRoute(() => import("./pages/auth/Verify2FA"), "Verify2FA"),
+  },
+  {
+    path: "/auth/select-workspace",
+    lazy: () => loadRoute(() => import("./pages/auth/WorkspaceSelector"), "WorkspaceSelector"),
+  },
   // Authenticated routes
   {
     Component: AuthenticatedLayout,

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useParams, Link } from "react-router";
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square, GitBranch, Terminal } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Download, Square, GitBranch, Terminal, Image, Sparkles } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Card } from "../components/ui/card";
@@ -75,11 +75,11 @@ export function RunDetail() {
   );
 
   if (!runData && runQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
   }
 
   if (!runData) {
-    return <div className="p-8 text-center text-slate-500">Run not found</div>;
+    return <div className="p-8 text-center text-muted-foreground">Run not found</div>;
   }
 
   const handleExportReport = () => {
@@ -112,11 +112,11 @@ export function RunDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">Run {runData.id}</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Run {runData.id}</h1>
             <StatusBadge status={runData.status} />
           </div>
-          <p className="mt-2 text-sm text-slate-600">
-            <span className="font-medium text-emerald-600">{runData.suite?.name ?? "Suite"}</span>
+          <p className="mt-2 text-sm text-muted-foreground">
+            <span className="font-medium text-primary">{runData.suite?.name ?? "Suite"}</span>
             {runData.environment?.name && (
               <>
                 {" • "}
@@ -124,7 +124,7 @@ export function RunDetail() {
               </>
             )}
           </p>
-          <div className="mt-3 flex items-center gap-4 text-sm text-slate-600">
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               {durationStr}
@@ -152,40 +152,40 @@ export function RunDetail() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Pass Rate</p>
-              <p className="mt-1 text-2xl font-semibold text-green-600">{passRate.toFixed(1)}%</p>
+              <p className="text-sm text-muted-foreground">Pass Rate</p>
+              <p className="mt-1 text-2xl font-semibold text-success">{passRate.toFixed(1)}%</p>
             </div>
-            <CheckCircle2 className="h-8 w-8 text-green-100" />
+            <CheckCircle2 className="h-8 w-8 text-success/20" />
           </div>
           <Progress value={passRate} className="mt-3 h-2" />
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Tests Passed</p>
-              <p className="mt-1 text-2xl font-semibold text-green-600">{runData.passedCount ?? 0}</p>
+              <p className="text-sm text-muted-foreground">Tests Passed</p>
+              <p className="mt-1 text-2xl font-semibold text-success">{runData.passedCount ?? 0}</p>
             </div>
-            <CheckCircle2 className="h-8 w-8 text-green-100" />
+            <CheckCircle2 className="h-8 w-8 text-success/20" />
           </div>
-          <p className="mt-2 text-xs text-slate-600">of {runData.totalCount ?? 0} total</p>
+          <p className="mt-2 text-xs text-muted-foreground">of {runData.totalCount ?? 0} total</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Tests Failed</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{runData.failedCount ?? 0}</p>
+              <p className="text-sm text-muted-foreground">Tests Failed</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{runData.failedCount ?? 0}</p>
             </div>
-            <XCircle className="h-8 w-8 text-slate-100" />
+            <XCircle className="h-8 w-8 text-muted-foreground/20" />
           </div>
-          <p className="mt-2 text-xs text-slate-600">of {runData.totalCount ?? 0} total</p>
+          <p className="mt-2 text-xs text-muted-foreground">of {runData.totalCount ?? 0} total</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Duration</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{durationStr}</p>
+              <p className="text-sm text-muted-foreground">Duration</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{durationStr}</p>
             </div>
-            <Clock className="h-8 w-8 text-slate-100" />
+            <Clock className="h-8 w-8 text-muted-foreground/20" />
           </div>
         </Card>
       </div>
@@ -197,6 +197,10 @@ export function RunDetail() {
           <TabsTrigger value="console">
             <Terminal className="mr-2 h-4 w-4" />
             Console
+          </TabsTrigger>
+          <TabsTrigger value="artifacts">
+            <Image className="mr-2 h-4 w-4" />
+            Artifacts
           </TabsTrigger>
           <TabsTrigger value="lineage">Source Lineage</TabsTrigger>
         </TabsList>
@@ -220,21 +224,21 @@ export function RunDetail() {
                   return (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-foreground hover:text-primary">
                         {item.canonicalTest?.name ?? item.canonicalTestId}
                       </Link>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {item.status === "PASSED" || item.status === "passed" ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-success" />
                         ) : (
-                          <XCircle className="h-4 w-4 text-red-600" />
+                          <XCircle className="h-4 w-4 text-destructive" />
                         )}
                         <StatusBadge status={item.status} />
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-600">{itemDurationMs != null ? `${Math.round(itemDurationMs / 1000)}s` : "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{itemDurationMs != null ? `${Math.round(itemDurationMs / 1000)}s` : "—"}</TableCell>
                     <TableCell>
                       <Link to={`/tests/${item.canonicalTestId}`}>
                         <Button variant="ghost" size="sm">View Details</Button>
@@ -245,7 +249,7 @@ export function RunDetail() {
                 })}
                 {runItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-slate-500">No test results</TableCell>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">No test results</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -257,14 +261,47 @@ export function RunDetail() {
           <RunConsole runId={runData.id} items={runItems} runStatus={runData.status} />
         </TabsContent>
 
+        <TabsContent value="artifacts">
+          <Card className="p-6">
+            <div className="text-center py-8">
+              <div className="mx-auto w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center mb-4">
+                <Image className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-2">Artifacts</h3>
+              <p className="text-sm text-muted-foreground mb-4">Screenshots, videos, and trace files from this run</p>
+              <p className="text-xs text-muted-foreground">Artifacts appear here after test execution completes</p>
+            </div>
+            {/* AI Repair Timeline */}
+            {runItems.some(item => item.status === "auto_repaired" || item.status === "AUTO_REPAIRED") && (
+              <div className="mt-6 border-t border-border pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-4 w-4 text-ai-accent" />
+                  <h4 className="text-sm font-semibold text-foreground">AI Repair Timeline</h4>
+                </div>
+                <div className="space-y-3">
+                  {runItems.filter(item => item.status === "auto_repaired" || item.status === "AUTO_REPAIRED").map(item => (
+                    <div key={item.id} className="flex items-start gap-3 p-3 rounded-lg bg-ai-accent-muted border border-ai-accent/20">
+                      <Sparkles className="h-4 w-4 text-ai-accent mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{item.canonicalTest?.name ?? item.canonicalTestId}</p>
+                        <p className="text-xs text-muted-foreground">Auto-repaired by AI during execution</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
         <TabsContent value="lineage">
           <Card className="max-h-[calc(100vh-320px)] overflow-y-auto">
             <div className="p-4 border-b">
               <div className="flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-slate-600" />
-                <h3 className="text-sm font-medium text-slate-700">Execution Source Lineage</h3>
+                <GitBranch className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-foreground">Execution Source Lineage</h3>
               </div>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Shows how each test was resolved for execution — storage artifact, git branch, or pinned commit.
               </p>
             </div>
@@ -282,7 +319,7 @@ export function RunDetail() {
                 {runItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>
-                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                      <Link to={`/tests/${item.canonicalTestId}`} className="font-medium text-foreground hover:text-primary">
                         {item.canonicalTest?.name ?? item.canonicalTestId}
                       </Link>
                     </TableCell>
@@ -291,24 +328,24 @@ export function RunDetail() {
                         {item.resolvedSourceMode?.replace(/_/g, " ") ?? "STORAGE"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-600">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {item.resolvedGitRef ?? "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-600">
+                    <TableCell className="font-mono text-xs text-muted-foreground">
                       {item.resolvedCommitSha ? item.resolvedCommitSha.slice(0, 8) : "—"}
                     </TableCell>
                     <TableCell>
                       {item.sourceFallbackReason ? (
                         <span className="text-xs text-amber-600">{item.sourceFallbackReason}</span>
                       ) : (
-                        <span className="text-xs text-slate-400">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
                 {runItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-slate-500">No test items</TableCell>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">No test items</TableCell>
                   </TableRow>
                 )}
               </TableBody>

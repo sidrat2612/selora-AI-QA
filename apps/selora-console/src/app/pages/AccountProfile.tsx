@@ -44,8 +44,8 @@ export function AccountProfile() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Profile Settings</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">Profile Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
             Review and update the active platform administrator identity and organization access.
         </p>
       </div>
@@ -84,33 +84,33 @@ export function AccountProfile() {
               </Button>
             </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <User2 className="h-4 w-4 text-emerald-600" />
                     Full Name
                   </div>
-                  <p className="text-base font-semibold text-slate-900">{profileQuery.data?.name ?? user?.name ?? "Unknown user"}</p>
+                  <p className="text-base font-semibold text-foreground">{profileQuery.data?.name ?? user?.name ?? "Unknown user"}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <Mail className="h-4 w-4 text-emerald-600" />
                     Email Address
                   </div>
-                  <p className="text-base font-semibold text-slate-900">{profileQuery.data?.email ?? user?.email ?? "No email available"}</p>
+                  <p className="text-base font-semibold text-foreground">{profileQuery.data?.email ?? user?.email ?? "No email available"}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <Building2 className="h-4 w-4 text-emerald-600" />
                     Tenant Access
                   </div>
-                  <p className="text-base font-semibold text-slate-900">{tenantCount}</p>
+                  <p className="text-base font-semibold text-foreground">{tenantCount}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <ShieldCheck className="h-4 w-4 text-emerald-600" />
                     Memberships
                   </div>
-                  <p className="text-base font-semibold text-slate-900">{memberships.length}</p>
+                  <p className="text-base font-semibold text-foreground">{memberships.length}</p>
                 </div>
             </div>
           </CardContent>
@@ -122,10 +122,10 @@ export function AccountProfile() {
             <CardDescription>Authentication state for the signed-in platform admin.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>
-                <p className="text-sm font-medium text-slate-900">Email Verification</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm font-medium text-foreground">Email Verification</p>
+                <p className="text-sm text-muted-foreground">
                   {profileQuery.data?.emailVerifiedAt ?? user?.emailVerifiedAt ? "Verified for admin notifications and recovery." : "Pending verification."}
                 </p>
               </div>
@@ -139,12 +139,12 @@ export function AccountProfile() {
                 {profileQuery.data?.emailVerifiedAt ?? user?.emailVerifiedAt ? "Verified" : "Pending"}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>
-                <p className="text-sm font-medium text-slate-900">Account Status</p>
-                <p className="text-sm text-slate-600">Lifecycle state returned by the console session.</p>
+                <p className="text-sm font-medium text-foreground">Account Status</p>
+                <p className="text-sm text-muted-foreground">Lifecycle state returned by the console session.</p>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
                 <BadgeCheck className="h-3.5 w-3.5" />
                 {profileQuery.data?.status ?? user?.status ?? "Unknown"}
               </span>

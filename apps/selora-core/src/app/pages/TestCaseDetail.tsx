@@ -149,11 +149,11 @@ export function TestCaseDetail() {
   });
 
   if (!testCase && testCaseQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
   }
 
   if (!testCase) {
-    return <div className="p-8 text-center text-slate-500">Test case not found</div>;
+    return <div className="p-8 text-center text-muted-foreground">Test case not found</div>;
   }
 
   const openEditDialog = () => {
@@ -183,7 +183,7 @@ export function TestCaseDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               {testCase.title}
             </h1>
             <Badge className={priorityColors[testCase.priority] ?? ""}>
@@ -198,9 +198,9 @@ export function TestCaseDetail() {
             )}
           </div>
           {testCase.description && (
-            <p className="mt-2 text-sm text-slate-600">{testCase.description}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{testCase.description}</p>
           )}
-          <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
             <span>Created: {testCase.createdAt}</span>
             <span>•</span>
             <span>{testCase.mappedScriptCount ?? 0} mapped scripts</span>
@@ -308,19 +308,19 @@ export function TestCaseDetail() {
       {/* Details Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Mapped Scripts</div>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
+          <div className="text-sm text-muted-foreground">Mapped Scripts</div>
+          <p className="mt-1 text-2xl font-semibold text-foreground">
             {testCase.mappedScriptCount ?? 0}
           </p>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Format</div>
-          <p className="mt-1 text-lg font-medium text-slate-900">
+          <div className="text-sm text-muted-foreground">Format</div>
+          <p className="mt-1 text-lg font-medium text-foreground">
             {testCase.format}
           </p>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-slate-600">Status</div>
+          <div className="text-sm text-muted-foreground">Status</div>
           <div className="mt-1">
             <StatusBadge status={testCase.status} />
           </div>
@@ -344,28 +344,28 @@ export function TestCaseDetail() {
           <Card className="p-6 space-y-4">
             {testCase.preconditions && (
               <div>
-                <h4 className="text-sm font-medium text-slate-700">
+                <h4 className="text-sm font-medium text-foreground">
                   Preconditions
                 </h4>
-                <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap">
+                <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
                   {testCase.preconditions}
                 </p>
               </div>
             )}
             {testCase.expectedResult && (
               <div>
-                <h4 className="text-sm font-medium text-slate-700">
+                <h4 className="text-sm font-medium text-foreground">
                   Expected Result
                 </h4>
-                <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap">
+                <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
                   {testCase.expectedResult}
                 </p>
               </div>
             )}
             {testCase.steps && Array.isArray(testCase.steps) && testCase.steps.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-slate-700">Steps</h4>
-                <ol className="mt-1 list-decimal list-inside space-y-1 text-sm text-slate-600">
+                <h4 className="text-sm font-medium text-foreground">Steps</h4>
+                <ol className="mt-1 list-decimal list-inside space-y-1 text-sm text-muted-foreground">
                   {testCase.steps.map((step, i) => (
                     <li key={i}>
                       {typeof step === "string"
@@ -381,7 +381,7 @@ export function TestCaseDetail() {
             {!testCase.preconditions &&
               !testCase.expectedResult &&
               (!testCase.steps || !Array.isArray(testCase.steps) || testCase.steps.length === 0) && (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-muted-foreground">
                   No detailed steps defined yet. Edit this test case to add details.
                 </p>
               )}
@@ -391,7 +391,7 @@ export function TestCaseDetail() {
         <TabsContent value="mappings">
           <Card>
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-sm font-medium text-slate-700">
+              <h3 className="text-sm font-medium text-foreground">
                 Automation Scripts
               </h3>
               {permissions.canAuthorAutomation && (
@@ -443,7 +443,7 @@ export function TestCaseDetail() {
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center text-slate-500 py-8"
+                      className="text-center text-muted-foreground py-8"
                     >
                       No scripts mapped yet. Map an automation script to link
                       execution results.
@@ -477,7 +477,7 @@ export function TestCaseDetail() {
                       <TableCell>
                         <StatusBadge status={link.status} />
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="text-muted-foreground">
                         {link.lastSyncedAt ?? "—"}
                       </TableCell>
                     </TableRow>
@@ -492,8 +492,8 @@ export function TestCaseDetail() {
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-medium text-slate-700">TestRail Case Link</h4>
-                <p className="mt-1 text-sm text-slate-500">
+                <h4 className="text-sm font-medium text-foreground">TestRail Case Link</h4>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Map this test case to a TestRail case for bi-directional sync.
                 </p>
               </div>
@@ -529,9 +529,9 @@ export function TestCaseDetail() {
                     <TableRow key={link.id}>
                       <TableCell className="font-mono text-sm">{link.externalCaseId}</TableCell>
                       <TableCell>{link.title ?? "—"}</TableCell>
-                      <TableCell className="text-slate-600">{link.ownerEmail ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{link.ownerEmail ?? "—"}</TableCell>
                       <TableCell><StatusBadge status={link.status} /></TableCell>
-                      <TableCell className="text-slate-600">{link.lastSyncedAt ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{link.lastSyncedAt ?? "—"}</TableCell>
                       <TableCell>
                         {link.lastError ? (
                           <span className="text-xs text-red-600">{link.lastError}</span>
@@ -544,7 +544,7 @@ export function TestCaseDetail() {
                 </TableBody>
               </Table>
             ) : (
-              <p className="text-sm text-slate-500 py-4">
+              <p className="text-sm text-muted-foreground py-4">
                 No TestRail mapping configured. Click "Add Mapping" to link a TestRail case.
               </p>
             )}

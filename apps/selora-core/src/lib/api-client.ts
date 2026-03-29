@@ -163,6 +163,9 @@ export const auth = {
 
   resetPassword: (token: string, newPassword: string) =>
     request<{ reset: boolean }>("/auth/reset-password", { method: "POST", body: { token, newPassword } }),
+
+  verify2FA: (code: string) =>
+    request<SessionData>("/auth/verify-2fa", { method: "POST", body: { code } }),
 };
 
 export const account = {

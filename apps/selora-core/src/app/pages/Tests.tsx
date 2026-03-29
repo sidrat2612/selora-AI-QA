@@ -54,6 +54,7 @@ import {
 } from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { Card } from "../components/ui/card";
 import { toast } from "sonner";
 
 function GitHubPublishBadge({ test }: { test: Test }) {
@@ -61,7 +62,7 @@ function GitHubPublishBadge({ test }: { test: Test }) {
     | Array<{ publication?: { status?: string; branchName?: string; pullRequestUrl?: string } | null }>
     | undefined;
   const pub = artifacts?.[0]?.publication;
-  if (!pub) return <span className="text-xs text-slate-400">—</span>;
+  if (!pub) return <span className="text-xs text-muted-foreground">—</span>;
 
   const color =
     pub.status === "PUBLISHED"
@@ -240,8 +241,8 @@ export function Tests() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Tests</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Tests</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage and monitor all generated tests across suites
           </p>
         </div>
@@ -270,6 +271,29 @@ export function Tests() {
       <UploadRecordingDialog open={uploadOpen} onOpenChange={setUploadOpen} />
       <CreateRunDialog open={runDialogOpen} onOpenChange={setRunDialogOpen} defaultSuiteId={selectedSuiteId} />
       <NLTestDialog open={nlDialogOpen} onOpenChange={setNlDialogOpen} />
+
+      {/* AI Intelligence Briefing */}
+      {(() => {
+        const autoRepaired = tests.filter(t => t.status === "auto_repaired").length;
+        const needsReview = tests.filter(t => t.status === "needs_human_review").length;
+        if (autoRepaired === 0 && needsReview === 0) return null;
+        return (
+          <Card className="p-4 bg-ai-accent-muted border-ai-accent/20">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-ai-accent flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">AI Intelligence Briefing</p>
+                <p className="text-xs text-muted-foreground">
+                  {autoRepaired > 0 && <span className="text-ai-accent font-medium">{autoRepaired} tests auto-repaired</span>}
+                  {autoRepaired > 0 && needsReview > 0 && " · "}
+                  {needsReview > 0 && <span className="text-warning font-medium">{needsReview} need human review</span>}
+                </p>
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -304,7 +328,7 @@ export function Tests() {
       {/* Filters and Search */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search tests..."
             value={searchQuery}
@@ -353,7 +377,7 @@ export function Tests() {
       )}
 
       {/* Tests Table */}
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-card max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -385,7 +409,7 @@ export function Tests() {
                 <TableCell>
                   <Link
                     to={`/tests/${test.id}`}
-                    className="font-medium text-slate-900 hover:text-emerald-600"
+                    className="font-medium text-foreground hover:text-primary"
                   >
                     {test.name}
                   </Link>
@@ -394,17 +418,17 @@ export function Tests() {
                   <StatusBadge status={test.status} />
                 </TableCell>
                 <TableCell>
-                  <span className="text-slate-600">
+                  <span className="text-muted-foreground">
                     {test.suite?.name ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">—</span>
+                    <span className="text-sm text-muted-foreground">—</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-xs text-slate-400">—</span>
+                  <span className="text-xs text-muted-foreground">—</span>
                 </TableCell>
                 <TableCell>
                   <GitHubPublishBadge test={test} />
@@ -430,7 +454,7 @@ export function Tests() {
                         <DropdownMenuItem onClick={() => openEditMetadata(test)}>Edit Metadata</DropdownMenuItem>
                       )}
                       {permissions.canAuthorAutomation && (
-                        <DropdownMenuItem onClick={() => handleArchiveTests([test.id])} className="text-red-600">Archive</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchiveTests([test.id])} className="text-destructive">Archive</DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -443,7 +467,7 @@ export function Tests() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-muted-foreground">
           Showing {filteredTests.length} of {tests.length} tests
         </p>
         <div className="flex gap-2">

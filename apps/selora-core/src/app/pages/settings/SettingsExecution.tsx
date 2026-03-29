@@ -65,8 +65,8 @@ export function SettingsExecution() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Execution Settings</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Execution Settings</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Configure default execution policies, retry rules, and AI validation behavior
           </p>
         </div>
@@ -79,8 +79,8 @@ export function SettingsExecution() {
       </div>
 
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Execution Capacity</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Execution Capacity</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Configure the execution limits enforced for the active workspace
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -108,8 +108,8 @@ export function SettingsExecution() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Run Creation Cooldown</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Run Creation Cooldown</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Control how quickly users can start another run after the previous one is created
         </p>
         <div className="mt-6 max-w-md space-y-2">
@@ -127,18 +127,18 @@ export function SettingsExecution() {
       </Card>
 
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Applied Backend Settings</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Applied Backend Settings</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           These values are enforced by the backend when creating and operating runs
         </p>
-        <ul className="mt-6 space-y-2 text-sm text-slate-600">
+        <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
           <li>Concurrent execution limit caps active runs across the workspace.</li>
           <li>Maximum tests per run prevents oversized run requests.</li>
           <li>Run cooldown delays consecutive run creation to protect infrastructure.</li>
         </ul>
-        {workspaceQuery.isLoading && <p className="mt-4 text-sm text-slate-500">Loading workspace settings...</p>}
+        {workspaceQuery.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading workspace settings...</p>}
         {workspaceQuery.error instanceof Error && (
-          <p className="mt-4 text-sm text-red-600">{workspaceQuery.error.message}</p>
+          <p className="mt-4 text-sm text-destructive">{workspaceQuery.error.message}</p>
         )}
       </Card>
     </div>

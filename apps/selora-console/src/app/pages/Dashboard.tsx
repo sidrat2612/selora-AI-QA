@@ -67,8 +67,8 @@ export function Dashboard() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Platform Overview</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Platform Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Monitor tenants, usage, and platform health across the Selora platform
           </p>
         </div>
@@ -103,29 +103,29 @@ export function Dashboard() {
         {/* Tenants */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Tenants</h3>
+            <h3 className="text-base font-semibold text-foreground">Tenants</h3>
             <Link to="/tenants">
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
           <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
             {tenantList.length === 0 && (
-              <p className="text-sm text-slate-500">No tenants yet</p>
+              <p className="text-sm text-muted-foreground">No tenants yet</p>
             )}
             {tenantList.slice(0, 5).map((tenant) => (
               <Link
                 key={tenant.id}
                 to={`/tenants/${tenant.id}`}
-                className="block rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+                className="block rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-slate-400" />
-                      <p className="font-medium text-slate-900">{tenant.name}</p>
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium text-foreground">{tenant.name}</p>
                       <StatusBadge status={tenant.status} />
                     </div>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-slate-600">
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       <span>{(workspacesByTenant[tenant.id] ?? []).length} workspaces</span>
                       <span>Created {new Date(tenant.createdAt).toLocaleDateString()}</span>
                     </div>
@@ -138,36 +138,36 @@ export function Dashboard() {
 
         {/* Quick Links */}
         <Card className="p-6">
-          <h3 className="text-base font-semibold text-slate-900">Platform Administration</h3>
+          <h3 className="text-base font-semibold text-foreground">Platform Administration</h3>
           <div className="mt-6 space-y-3">
             <Link
               to="/tenants"
-              className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
             >
-              <Building2 className="h-5 w-5 text-emerald-600" />
+              <Building2 className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium text-slate-900">Manage Tenants</p>
-                <p className="text-xs text-slate-500">Create, manage, and oversee tenant organizations</p>
+                <p className="font-medium text-foreground">Manage Tenants</p>
+                <p className="text-xs text-muted-foreground">Create, manage, and oversee tenant organizations</p>
               </div>
             </Link>
             <Link
               to="/audit"
-              className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
             >
-              <BarChart3 className="h-5 w-5 text-emerald-600" />
+              <BarChart3 className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium text-slate-900">Audit Trail</p>
-                <p className="text-xs text-slate-500">Review platform-wide audit events</p>
+                <p className="font-medium text-foreground">Audit Trail</p>
+                <p className="text-xs text-muted-foreground">Review platform-wide audit events</p>
               </div>
             </Link>
             <Link
               to="/usage"
-              className="flex items-center gap-3 rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+              className="flex items-center gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
             >
-              <Activity className="h-5 w-5 text-emerald-600" />
+              <Activity className="h-5 w-5 text-primary" />
               <div>
-                <p className="font-medium text-slate-900">Usage & Quotas</p>
-                <p className="text-xs text-slate-500">Monitor resource consumption and limits</p>
+                <p className="font-medium text-foreground">Usage & Quotas</p>
+                <p className="text-xs text-muted-foreground">Monitor resource consumption and limits</p>
               </div>
             </Link>
           </div>
@@ -177,29 +177,29 @@ export function Dashboard() {
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">License Status</h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <h3 className="text-base font-semibold text-foreground">License Status</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Current enforcement mode for premium platform capabilities
             </p>
           </div>
           <StatusBadge status={licenseStatus?.commercialUseAllowed ? "ACTIVE" : "PENDING"} />
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 p-4">
-            <p className="text-sm text-slate-600">Tier</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900 capitalize">
+          <div className="rounded-lg border border-border p-4">
+            <p className="text-sm text-muted-foreground">Tier</p>
+            <p className="mt-1 text-lg font-semibold text-foreground capitalize">
               {licenseStatus?.tier ?? "evaluation"}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 p-4">
-            <p className="text-sm text-slate-600">Licensed To</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
+          <div className="rounded-lg border border-border p-4">
+            <p className="text-sm text-muted-foreground">Licensed To</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
               {licenseStatus?.licensedTo ?? "Not configured"}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 p-4">
-            <p className="text-sm text-slate-600">Premium Features</p>
-            <p className="mt-1 text-lg font-semibold text-slate-900">
+          <div className="rounded-lg border border-border p-4">
+            <p className="text-sm text-muted-foreground">Premium Features</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
               {licenseStatus?.commercialUseAllowed ? "Unlocked" : "Blocked"}
             </p>
           </div>

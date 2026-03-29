@@ -109,8 +109,8 @@ export function PlatformAdmin() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Platform Administration</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Platform Administration</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage tenants, workspaces, and platform-level governance
           </p>
         </div>
@@ -160,35 +160,35 @@ export function PlatformAdmin() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Total Tenants</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{tenantList.length}</p>
+              <p className="text-sm text-muted-foreground">Total Tenants</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{tenantList.length}</p>
             </div>
-            <Building2 className="h-8 w-8 text-slate-200" />
+            <Building2 className="h-8 w-8 text-muted-foreground/20" />
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Total Workspaces</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">{totalWorkspaces}</p>
+              <p className="text-sm text-muted-foreground">Total Workspaces</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">{totalWorkspaces}</p>
             </div>
-            <Database className="h-8 w-8 text-slate-200" />
+            <Database className="h-8 w-8 text-muted-foreground/20" />
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-600">Tenant Users</p>
-              <p className="mt-1 text-2xl font-semibold text-slate-900">—</p>
+              <p className="text-sm text-muted-foreground">Tenant Users</p>
+              <p className="mt-1 text-2xl font-semibold text-foreground">—</p>
             </div>
-            <Users className="h-8 w-8 text-slate-200" />
+            <Users className="h-8 w-8 text-muted-foreground/20" />
           </div>
         </Card>
       </div>
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search tenants..."
           value={searchQuery}
@@ -198,7 +198,7 @@ export function PlatformAdmin() {
       </div>
 
       {/* Tenants Table */}
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-card max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -214,10 +214,10 @@ export function PlatformAdmin() {
               <TableRow key={tenant.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-slate-400" />
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
                     <Link
                       to={`/tenants/${tenant.id}`}
-                      className="font-medium text-slate-900 hover:text-emerald-600"
+                      className="font-medium text-foreground hover:text-primary"
                     >
                       {tenant.name}
                     </Link>
@@ -226,10 +226,10 @@ export function PlatformAdmin() {
                 <TableCell>
                   <StatusBadge status={tenant.status} />
                 </TableCell>
-                <TableCell className="text-slate-900">
+                <TableCell className="text-foreground">
                   {(workspacesByTenant[tenant.id] ?? []).length} workspaces
                 </TableCell>
-                <TableCell className="text-slate-600">
+                <TableCell className="text-muted-foreground">
                   {new Date(tenant.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>

@@ -219,8 +219,8 @@ export function SettingsAI() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">AI / LLM Configuration</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">AI / LLM Configuration</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Select a platform AI provider or bring your own model
           </p>
         </div>
@@ -260,21 +260,21 @@ export function SettingsAI() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               <div>
-                <p className="text-xs font-medium text-slate-500">Name</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-900">{currentSelection.config.displayName}</p>
+                <p className="text-xs font-medium text-muted-foreground">Name</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground">{currentSelection.config.displayName}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">Provider</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                <p className="text-xs font-medium text-muted-foreground">Provider</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground">
                   {PROVIDER_LABEL[currentSelection.config.provider]?.label ?? currentSelection.config.provider}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">Model</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-900 font-mono">{currentSelection.config.modelName}</p>
+                <p className="text-xs font-medium text-muted-foreground">Model</p>
+                <p className="mt-0.5 text-sm font-semibold text-foreground font-mono">{currentSelection.config.modelName}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">Status</p>
+                <p className="text-xs font-medium text-muted-foreground">Status</p>
                 <Badge variant={currentSelection.config.isActive ? "default" : "secondary"} className="mt-0.5">
                   {currentSelection.config.isActive ? "Active" : "Disabled"}
                 </Badge>
@@ -312,17 +312,17 @@ export function SettingsAI() {
                 <div
                   key={config.id}
                   className={`flex flex-col rounded-lg border p-4 ${
-                    isSelected ? "border-emerald-300 bg-emerald-50/50" : "border-slate-200"
+                    isSelected ? "border-emerald-300 bg-emerald-50/50" : "border-border"
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <Icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-emerald-600" : "text-slate-400"}`} />
+                    <Icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-emerald-600" : "text-muted-foreground"}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{config.displayName}</p>
-                      <p className="text-xs text-slate-500">{providerInfo.label}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{config.displayName}</p>
+                      <p className="text-xs text-muted-foreground">{providerInfo.label}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-600 font-mono mb-3">{config.modelName}</p>
+                  <p className="text-xs text-muted-foreground font-mono mb-3">{config.modelName}</p>
                   <div className="mt-auto">
                     {isSelected ? (
                       <Badge variant="default">Selected</Badge>
@@ -342,7 +342,7 @@ export function SettingsAI() {
             })}
           </div>
           {availableConfigs.length === 0 && (
-            <p className="py-6 text-center text-sm text-slate-500">
+            <p className="py-6 text-center text-sm text-muted-foreground">
               No AI providers have been configured by the platform administrator yet.
             </p>
           )}
@@ -387,17 +387,17 @@ export function SettingsAI() {
                       className={`flex flex-col items-start rounded-lg border-2 p-3 text-left transition-colors ${
                         isSelected
                           ? "border-indigo-600 bg-indigo-50/50"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          : "border-border hover:border-border hover:bg-muted/50"
                       } cursor-pointer`}
                       onClick={() => handleBYOProviderChange(provider)}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className={`h-4 w-4 ${isSelected ? "text-indigo-600" : "text-slate-500"}`} />
-                        <span className={`text-sm font-medium ${isSelected ? "text-indigo-900" : "text-slate-900"}`}>
+                        <Icon className={`h-4 w-4 ${isSelected ? "text-indigo-600" : "text-muted-foreground"}`} />
+                        <span className={`text-sm font-medium ${isSelected ? "text-indigo-900" : "text-foreground"}`}>
                           {info.label}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">{info.description}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{info.description}</p>
                     </button>
                   );
                 })}
@@ -461,7 +461,7 @@ export function SettingsAI() {
             <div className="space-y-2">
               <Label>
                 API Key
-                {!meta.requiresKey && <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>}
+                {!meta.requiresKey && <span className="ml-2 text-xs font-normal text-muted-foreground">(optional)</span>}
               </Label>
               <Input
                 type="password"
@@ -475,7 +475,7 @@ export function SettingsAI() {
                 autoComplete="off"
               />
               {currentSelection?.isCustom && currentSelection.config.maskedApiKey && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   Current key: {currentSelection.config.maskedApiKey}
                 </p>
               )}
@@ -504,10 +504,10 @@ export function SettingsAI() {
             </div>
 
             {/* Repair Model Override */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5">
                 <Label>Different model for AI Repair</Label>
-                <p className="text-xs text-slate-500">Use a cheaper / faster model for automatic test repair</p>
+                <p className="text-xs text-muted-foreground">Use a cheaper / faster model for automatic test repair</p>
               </div>
               <Switch
                 checked={byoForm.useRepairOverride}

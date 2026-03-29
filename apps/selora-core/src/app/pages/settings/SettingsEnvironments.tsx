@@ -240,7 +240,7 @@ export function SettingsEnvironments() {
           onChange={(event) => updateField("secretRef", event.target.value)}
           disabled={isPending}
         />
-        <p className="text-xs text-slate-500">Reference to stored credentials. Values are never returned to the UI.</p>
+        <p className="text-xs text-muted-foreground">Reference to stored credentials. Values are never returned to the UI.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor={isEditing ? "secret-value-edit" : "secret-value"}>Secret Value {isEditing ? "(optional)" : ""}</Label>
@@ -288,7 +288,7 @@ export function SettingsEnvironments() {
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <Label>Set as Default</Label>
-          <p className="text-xs text-slate-500">Use this environment by default for new runs.</p>
+          <p className="text-xs text-muted-foreground">Use this environment by default for new runs.</p>
         </div>
         <Switch checked={form.isDefault} onCheckedChange={(checked) => updateField("isDefault", checked)} disabled={isPending} />
       </div>
@@ -300,8 +300,8 @@ export function SettingsEnvironments() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Environments</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Environments</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Configure test execution environments with secure credential management
           </p>
         </div>
@@ -361,19 +361,19 @@ export function SettingsEnvironments() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Total Environments</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{environments.length}</p>
+          <p className="text-sm text-muted-foreground">Total Environments</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{environments.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Default Environment</p>
-          <p className="mt-1 text-base font-medium text-slate-900">
+          <p className="text-sm text-muted-foreground">Default Environment</p>
+          <p className="mt-1 text-base font-medium text-foreground">
             {defaultEnvironment?.name ?? "None"}
           </p>
         </Card>
       </div>
 
       {/* Environments Table */}
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-card max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -388,22 +388,22 @@ export function SettingsEnvironments() {
               <TableRow key={env.id}>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-slate-400" />
-                    <span className="font-medium text-slate-900">{env.name}</span>
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium text-foreground">{env.name}</span>
                     {env.isDefault && (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                         Default
                       </Badge>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <code className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                  <code className="rounded bg-muted px-2 py-1 text-xs text-foreground">
                     {env.baseUrl}
                   </code>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1 text-xs text-slate-600">
+                  <div className="space-y-1 text-xs text-muted-foreground">
                     <div>Test: {env.testTimeoutMs ?? 30000} ms</div>
                     <div>Run: {env.runTimeoutMs ?? 1800000} ms</div>
                     <div>Retries: {env.maxRetries ?? 0}</div>
@@ -434,22 +434,22 @@ export function SettingsEnvironments() {
         </Table>
       </div>
 
-      {envsQuery.isLoading && <p className="text-sm text-slate-500">Loading environments...</p>}
+      {envsQuery.isLoading && <p className="text-sm text-muted-foreground">Loading environments...</p>}
       {envsQuery.error instanceof Error && (
-        <p className="text-sm text-red-600">{envsQuery.error.message}</p>
+        <p className="text-sm text-destructive">{envsQuery.error.message}</p>
       )}
 
       {/* Info Card */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Secure Credential Management</h3>
-        <p className="mt-2 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Secure Credential Management</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
           Environment credentials are stored securely and never exposed in the UI. Secret references provide a safe way to manage API keys, tokens, and other sensitive configuration without directly handling the values.
         </p>
         <div className="mt-4 flex items-center gap-2">
-          <div className="rounded-lg bg-green-50 p-2">
-            <Key className="h-4 w-4 text-green-600" />
+          <div className="rounded-lg bg-primary/10 p-2">
+            <Key className="h-4 w-4 text-primary" />
           </div>
-          <p className="text-sm text-slate-900">
+          <p className="text-sm text-foreground">
             All secrets are encrypted at rest and in transit
           </p>
         </div>

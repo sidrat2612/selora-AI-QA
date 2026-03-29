@@ -9,6 +9,9 @@ import {
   Activity,
   BarChart3,
   XCircle,
+  Sparkles,
+  Wrench,
+  Gauge,
 } from "lucide-react";
 import { KPICard } from "../components/KPICard";
 import { Progress } from "../components/ui/progress";
@@ -16,8 +19,9 @@ import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { StatusBadge } from "../components/StatusBadge";
 import { Link } from "react-router";
-import { Alert, AlertDescription } from "../components/ui/alert";
 import { useState, useMemo } from "react";
+import { AlertBanners } from "../components/AlertBanners";
+import type { AlertBannerItem } from "../components/AlertBanners";
 import { CreateRunDialog } from "../components/CreateRunDialog";
 import { UploadRecordingDialog } from "../components/UploadRecordingDialog";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +29,9 @@ import { useWorkspace } from "../../lib/workspace-context";
 import { usePermissions } from "../../lib/auth-context";
 import { runs as runsApi, usage as usageApi, tests as testsApi, suites as suitesApi } from "../../lib/api-client";
 import { LoadingState } from "../components/LoadingState";
+import { DashboardSkeleton } from "../components/DashboardSkeleton";
 import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 
 export function Dashboard() {
   const [isCreateRunDialogOpen, setCreateRunDialogOpen] = useState(false);
@@ -86,13 +92,79 @@ export function Dashboard() {
     return <ErrorState message="No workspace selected" />;
   }
 
+  const isInitialLoad = runsQuery.isLoading && suitesQuery.isLoading && testsQuery.isLoading;
+  if (isInitialLoad) {
+    return <DashboardSkeleton />;
+  }
+
+  const isEmpty = totalTests === 0 && activeSuites === 0 && (runsQuery.data?.length ?? 0) === 0;
+  if (isEmpty && !runsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Monitor test health, runs, and AI validation activity
+          </p>
+        </div>
+        <Card className="p-12">
+          <div className="text-center max-w-lg mx-auto">
+            <div className="h-1 w-32 bg-gradient-to-r from-primary via-emerald-400 to-primary mx-auto mb-8 rounded-full" />
+            <h2 className="text-2xl font-semibold text-foreground mb-2">Welcome to Selora</h2>
+            <p className="text-muted-foreground mb-8">
+              Get started by creating your first test suite or uploading a browser recording for AI-powered test generation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
+              {permissions.canAuthorAutomation && (
+                <>
+                  <Button onClick={() => setUploadRecordingDialogOpen(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Recording
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link to="/suites">Create Suite</Link>
+                  </Button>
+                </>
+              )}
+            </div>
+            <div className="grid gap-4 md:grid-cols-3 mt-8 pt-8 border-t border-border">
+              <div className="text-center p-4">
+                <div className="mx-auto w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                  <Upload className="h-5 w-5 text-primary" />
+                </div>
+                <h4 className="text-sm font-semibold text-foreground">1. Upload</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Record your browser session and upload it</p>
+              </div>
+              <div className="text-center p-4">
+                <div className="mx-auto w-10 h-10 bg-ai-accent/10 rounded-full flex items-center justify-center mb-3">
+                  <Sparkles className="h-5 w-5 text-ai-accent" />
+                </div>
+                <h4 className="text-sm font-semibold text-foreground">2. AI Generates</h4>
+                <p className="mt-1 text-xs text-muted-foreground">AI creates validated test cases automatically</p>
+              </div>
+              <div className="text-center p-4">
+                <div className="mx-auto w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-3">
+                  <PlayCircle className="h-5 w-5 text-primary" />
+                </div>
+                <h4 className="text-sm font-semibold text-foreground">3. Execute</h4>
+                <p className="mt-1 text-xs text-muted-foreground">Run tests across environments with one click</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+        <CreateRunDialog open={isCreateRunDialogOpen} onOpenChange={setCreateRunDialogOpen} />
+        <UploadRecordingDialog open={isUploadRecordingDialogOpen} onOpenChange={setUploadRecordingDialogOpen} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Monitor test health, runs, and AI validation activity
           </p>
         </div>
@@ -112,19 +184,40 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Alerts — show when usage data indicates > 80% consumption */}
-      {usageQuery.data && typeof (usageQuery.data as Record<string, unknown>).usagePercent === "number" &&
-        ((usageQuery.data as Record<string, unknown>).usagePercent as number) > 80 && (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800">
-            <strong>Quota Warning:</strong> You've used {Math.round((usageQuery.data as Record<string, unknown>).usagePercent as number)}% of your monthly test execution minutes.
-            <Link to="/settings/quotas" className="ml-2 font-medium underline">
-              Review quotas
-            </Link>
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Alert Banners */}
+      <AlertBanners alerts={(() => {
+        const items: AlertBannerItem[] = [];
+        if (usageQuery.data && typeof (usageQuery.data as Record<string, unknown>).usagePercent === "number") {
+          const pct = (usageQuery.data as Record<string, unknown>).usagePercent as number;
+          if (pct > 95) {
+            items.push({
+              id: "quota-critical",
+              severity: "critical",
+              message: `You've used ${Math.round(pct)}% of your monthly test execution minutes. Runs may be paused soon.`,
+              linkText: "Upgrade quota",
+              linkTo: "/settings/quotas",
+            });
+          } else if (pct > 80) {
+            items.push({
+              id: "quota-warning",
+              severity: "warning",
+              message: `You've used ${Math.round(pct)}% of your monthly test execution minutes.`,
+              linkText: "Review quotas",
+              linkTo: "/settings/quotas",
+            });
+          }
+        }
+        if (healthMetrics.failed > 0 && healthMetrics.total > 0 && (healthMetrics.failed / healthMetrics.total) > 0.5) {
+          items.push({
+            id: "failure-rate",
+            severity: "critical",
+            message: `${healthMetrics.failed} of ${healthMetrics.total} recent runs failed. Check your test configurations.`,
+            linkText: "View failed runs",
+            linkTo: "/runs?status=failed",
+          });
+        }
+        return items;
+      })() } />
 
       {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -154,36 +247,36 @@ export function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="h-4 w-4 text-emerald-600" />
-            <h3 className="text-sm font-semibold text-slate-900">Overall Pass Rate</h3>
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Overall Pass Rate</h3>
           </div>
           <div className="flex items-end gap-3">
-            <span className="text-3xl font-bold text-emerald-600">{healthMetrics.passRate}%</span>
-            <span className="text-sm text-slate-500 mb-1">of {healthMetrics.completed} completed runs</span>
+            <span className="text-3xl font-bold text-primary">{healthMetrics.passRate}%</span>
+            <span className="text-sm text-muted-foreground mb-1">of {healthMetrics.completed} completed runs</span>
           </div>
           <Progress value={healthMetrics.passRate} className="mt-3 h-2" />
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="h-4 w-4 text-blue-600" />
-            <h3 className="text-sm font-semibold text-slate-900">Run Breakdown</h3>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Run Breakdown</h3>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-green-600">
+              <span className="flex items-center gap-2 text-success">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Passed
               </span>
               <span className="font-medium">{healthMetrics.passed}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-red-600">
+              <span className="flex items-center gap-2 text-destructive">
                 <XCircle className="h-3.5 w-3.5" /> Failed
               </span>
               <span className="font-medium">{healthMetrics.failed}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-blue-600">
+              <span className="flex items-center gap-2 text-warning">
                 <PlayCircle className="h-3.5 w-3.5" /> In Progress
               </span>
               <span className="font-medium">{healthMetrics.running}</span>
@@ -193,27 +286,129 @@ export function Dashboard() {
 
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-4 w-4 text-slate-600" />
-            <h3 className="text-sm font-semibold text-slate-900">Execution Metrics</h3>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Execution Metrics</h3>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">Total Runs</span>
+              <span className="text-muted-foreground">Total Runs</span>
               <span className="font-medium">{healthMetrics.total}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">Avg Duration</span>
+              <span className="text-muted-foreground">Avg Duration</span>
               <span className="font-medium">{healthMetrics.avgDuration > 0 ? `${healthMetrics.avgDuration}s` : "—"}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">Total Tests</span>
+              <span className="text-muted-foreground">Total Tests</span>
               <span className="font-medium">{totalTests}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-600">Active Suites</span>
+              <span className="text-muted-foreground">Active Suites</span>
               <span className="font-medium">{activeSuites}</span>
             </div>
           </div>
+        </Card>
+      </div>
+
+      {/* AI Intelligence & Quota Widgets */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* AI Validation Funnel */}
+        <Card className="p-6 bg-ai-accent-muted border-ai-accent/20">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-4 w-4 text-ai-accent" />
+            <h3 className="text-sm font-semibold text-foreground">AI Validation Funnel</h3>
+          </div>
+          <div className="space-y-3">
+            {(() => {
+              const tests = testsQuery.data ?? [];
+              const generated = tests.filter(t => t.status === "generated").length;
+              const validating = tests.filter(t => t.status === "validating").length;
+              const validated = tests.filter(t => t.status === "validated").length;
+              const repaired = tests.filter(t => t.status === "auto_repaired").length;
+              const needsReview = tests.filter(t => t.status === "needs_human_review").length;
+              return (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Generated</span>
+                    <span className="font-medium text-ai-accent">{generated}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Validating</span>
+                    <span className="font-medium text-warning">{validating}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Validated</span>
+                    <span className="font-medium text-success">{validated}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Auto-Repaired</span>
+                    <span className="font-medium text-ai-accent">{repaired}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Needs Review</span>
+                    <span className="font-medium text-destructive">{needsReview}</span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </Card>
+
+        {/* Self-Healing Ticker */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Wrench className="h-4 w-4 text-ai-accent" />
+            <h3 className="text-sm font-semibold text-foreground">AI Self-Healing</h3>
+          </div>
+          <div className="space-y-3">
+            {(() => {
+              const tests = testsQuery.data ?? [];
+              const repaired = tests.filter(t => t.status === "auto_repaired");
+              const repairedCount = repaired.length;
+              return (
+                <>
+                  <div className="text-3xl font-bold text-ai-accent">{repairedCount}</div>
+                  <p className="text-sm text-muted-foreground">tests auto-repaired by AI</p>
+                  <div className="mt-4 space-y-2">
+                    {repaired.slice(0, 3).map(t => (
+                      <div key={t.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Wrench className="h-3 w-3 text-ai-accent" />
+                        <span className="truncate">{t.name}</span>
+                      </div>
+                    ))}
+                    {repairedCount === 0 && (
+                      <p className="text-xs text-muted-foreground">No repairs yet</p>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </Card>
+
+        {/* Quota Widget */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Gauge className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Quota Utilization</h3>
+          </div>
+          {(() => {
+            const pct = typeof (usageQuery.data as Record<string, unknown>)?.usagePercent === "number"
+              ? (usageQuery.data as Record<string, unknown>).usagePercent as number
+              : 0;
+            const colorClass = pct > 90 ? "text-destructive" : pct > 75 ? "text-warning" : "text-primary";
+            return (
+              <>
+                <div className={`text-3xl font-bold ${colorClass}`}>{Math.round(pct)}%</div>
+                <p className="text-sm text-muted-foreground mb-3">of monthly execution minutes</p>
+                <Progress value={pct} className="h-2" />
+                <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Remaining: {Math.max(0, 100 - Math.round(pct))}%</span>
+                  <Link to="/settings/quotas" className="text-primary hover:underline">Manage</Link>
+                </div>
+              </>
+            );
+          })()}
         </Card>
       </div>
 
@@ -222,29 +417,29 @@ export function Dashboard() {
         {/* Recent Runs */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Recent Runs</h3>
+            <h3 className="text-base font-semibold text-foreground">Recent Runs</h3>
             <Link to="/runs">
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
           <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
-            {runsQuery.isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+            {runsQuery.isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
             {recentRuns.length === 0 && !runsQuery.isLoading && (
-              <p className="text-sm text-slate-500">No runs yet</p>
+              <p className="text-sm text-muted-foreground">No runs yet</p>
             )}
             {recentRuns.map((run) => (
               <Link
                 key={run.id}
                 to={`/runs/${run.id}`}
-                className="block rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+                className="block rounded-lg border border-border p-4 transition-colors hover:bg-surface-container-low"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-slate-900">{run.suite?.name ?? "Run"}</p>
+                      <p className="font-medium text-foreground">{run.suite?.name ?? "Run"}</p>
                       <StatusBadge status={run.status} />
                     </div>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-slate-600">
+                    <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                       {run.durationMs != null && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -263,26 +458,26 @@ export function Dashboard() {
         {/* Suites Overview */}
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-900">Test Suites</h3>
+            <h3 className="text-base font-semibold text-foreground">Test Suites</h3>
             <Link to="/suites">
               <Button variant="ghost" size="sm">View all</Button>
             </Link>
           </div>
           <div className="mt-6 space-y-4 max-h-[400px] overflow-y-auto pr-1">
-            {suitesQuery.isLoading && <p className="text-sm text-slate-500">Loading...</p>}
+            {suitesQuery.isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
             {(suitesQuery.data ?? []).length === 0 && !suitesQuery.isLoading && (
-              <p className="text-sm text-slate-500">No suites yet</p>
+              <p className="text-sm text-muted-foreground">No suites yet</p>
             )}
             {(suitesQuery.data ?? []).slice(0, 5).map((suite) => (
               <Link
                 key={suite.id}
                 to={`/suites/${suite.id}`}
-                className="block rounded-lg border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+                className="block rounded-lg border border-border p-4 transition-colors hover:bg-surface-container-low"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900">{suite.name}</p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-slate-600">
+                    <p className="font-medium text-foreground">{suite.name}</p>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <StatusBadge status={suite.status} />
                     </div>
                   </div>

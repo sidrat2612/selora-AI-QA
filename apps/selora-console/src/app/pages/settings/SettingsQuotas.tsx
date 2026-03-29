@@ -23,9 +23,9 @@ export function SettingsQuotas() {
       return { name: key, used: val.used, limit: val.limit, unit: val.unit ?? "" };
     });
   const getProgressColor = (percentage: number) => {
-    if (percentage >= 90) return "bg-red-600";
-    if (percentage >= 75) return "bg-amber-600";
-    return "bg-emerald-600";
+    if (percentage >= 90) return "bg-destructive";
+    if (percentage >= 75) return "bg-warning";
+    return "bg-primary";
   };
 
   return (
@@ -33,8 +33,8 @@ export function SettingsQuotas() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Quotas & Usage</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Quotas & Usage</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Monitor resource usage and quota limits for your workspace
           </p>
         </div>
@@ -59,20 +59,20 @@ export function SettingsQuotas() {
             <Card key={quota.name} className="p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900">{quota.name}</h3>
+                  <h3 className="font-semibold text-foreground">{quota.name}</h3>
 
                   <div className="mt-6">
                     <div className="flex items-baseline justify-between">
                       <div>
-                        <span className="text-3xl font-semibold text-slate-900">
+                        <span className="text-3xl font-semibold text-foreground">
                           {quota.used}
                         </span>
-                        <span className="ml-2 text-sm text-slate-600">
+                        <span className="ml-2 text-sm text-muted-foreground">
                           of {quota.limit} {quota.unit}
                         </span>
                       </div>
                       <span className={`text-sm font-medium ${
-                        percentage >= 90 ? "text-red-600" : percentage >= 75 ? "text-amber-600" : "text-slate-600"
+                        percentage >= 90 ? "text-destructive" : percentage >= 75 ? "text-warning" : "text-muted-foreground"
                       }`}>
                         {percentage.toFixed(1)}%
                       </span>
@@ -100,30 +100,30 @@ export function SettingsQuotas() {
 
       {/* Usage Details */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Usage Thresholds</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Usage Thresholds</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Visual indicators help you monitor resource consumption
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-green-600" />
+            <div className="h-3 w-3 rounded-full bg-primary" />
             <div>
-              <p className="text-sm font-medium text-slate-900">Normal (0-74%)</p>
-              <p className="text-xs text-slate-600">Healthy usage levels</p>
+              <p className="text-sm font-medium text-foreground">Normal (0-74%)</p>
+              <p className="text-xs text-muted-foreground">Healthy usage levels</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-amber-600" />
+            <div className="h-3 w-3 rounded-full bg-warning" />
             <div>
-              <p className="text-sm font-medium text-slate-900">Warning (75-89%)</p>
-              <p className="text-xs text-slate-600">Monitor closely</p>
+              <p className="text-sm font-medium text-foreground">Warning (75-89%)</p>
+              <p className="text-xs text-muted-foreground">Monitor closely</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-red-600" />
+            <div className="h-3 w-3 rounded-full bg-destructive" />
             <div>
-              <p className="text-sm font-medium text-slate-900">Critical (90-100%)</p>
-              <p className="text-xs text-slate-600">Action required</p>
+              <p className="text-sm font-medium text-foreground">Critical (90-100%)</p>
+              <p className="text-xs text-muted-foreground">Action required</p>
             </div>
           </div>
         </div>

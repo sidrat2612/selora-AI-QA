@@ -58,6 +58,7 @@ export function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md p-8">
         <div className="mb-8">
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase mb-2">Security</p>
           <h1 className="text-2xl font-semibold text-foreground mb-2">Set new password</h1>
           <p className="text-sm text-muted-foreground">
             Your new password must be different from previously used passwords.
@@ -77,6 +78,20 @@ export function ResetPassword() {
               minLength={8}
             />
             <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center gap-2">
+                <div className={`h-1 flex-1 rounded-full ${password.length >= 8 ? 'bg-primary' : 'bg-muted'}`} />
+                <div className={`h-1 flex-1 rounded-full ${/[A-Z]/.test(password) ? 'bg-primary' : 'bg-muted'}`} />
+                <div className={`h-1 flex-1 rounded-full ${/[0-9]/.test(password) ? 'bg-primary' : 'bg-muted'}`} />
+                <div className={`h-1 flex-1 rounded-full ${/[^A-Za-z0-9]/.test(password) ? 'bg-primary' : 'bg-muted'}`} />
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span className={password.length >= 8 ? 'text-primary' : ''}>8+ chars</span>
+                <span className={/[A-Z]/.test(password) ? 'text-primary' : ''}>Uppercase</span>
+                <span className={/[0-9]/.test(password) ? 'text-primary' : ''}>Number</span>
+                <span className={/[^A-Za-z0-9]/.test(password) ? 'text-primary' : ''}>Symbol</span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

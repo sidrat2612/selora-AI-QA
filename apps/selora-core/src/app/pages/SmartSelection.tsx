@@ -86,8 +86,8 @@ export function SmartSelection() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Smart Test Selection</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-foreground">Smart Test Selection</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Analyse git diffs to run only affected tests, reducing CI time by up to 80%
         </p>
       </div>
@@ -107,7 +107,7 @@ export function SmartSelection() {
         {/* ─── Analyse ─────────────────────────────────────── */}
         <TabsContent value="analyse">
           <Card className="p-6 space-y-4">
-            <h3 className="text-sm font-medium text-slate-700">Git Diff Analysis</h3>
+            <h3 className="text-sm font-medium text-foreground">Git Diff Analysis</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label>Repo Owner</Label>
@@ -148,34 +148,34 @@ export function SmartSelection() {
           {/* Results */}
           {analysisResult && (
             <Card className="p-6 space-y-4">
-              <h3 className="text-sm font-medium text-slate-700">Selection Results</h3>
+              <h3 className="text-sm font-medium text-foreground">Selection Results</h3>
               <div className="grid md:grid-cols-4 gap-4">
-                <div className="text-center p-3 bg-slate-50 rounded-lg">
-                  <div className="text-2xl font-bold text-slate-900">{analysisResult.totalTests}</div>
-                  <p className="text-xs text-slate-500">Total Tests</p>
+                <div className="text-center p-3 bg-muted/50 rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">{analysisResult.totalTests}</div>
+                  <p className="text-xs text-muted-foreground">Total Tests</p>
                 </div>
                 <div className="text-center p-3 bg-emerald-50 rounded-lg">
                   <div className="text-2xl font-bold text-emerald-600">{analysisResult.selectedCount}</div>
-                  <p className="text-xs text-slate-500">Directly Affected</p>
+                  <p className="text-xs text-muted-foreground">Directly Affected</p>
                 </div>
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">{analysisResult.randomSampleCount}</div>
-                  <p className="text-xs text-slate-500">Safety Sample</p>
+                  <p className="text-xs text-muted-foreground">Safety Sample</p>
                 </div>
                 <div className="text-center p-3 bg-purple-50 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600">{Math.round(analysisResult.coverageConfidence * 100)}%</div>
-                  <p className="text-xs text-slate-500">Confidence</p>
+                  <p className="text-xs text-muted-foreground">Confidence</p>
                 </div>
               </div>
 
               {analysisResult.mappedFiles.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-medium text-slate-600 mb-2">Affected File Mappings</h4>
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2">Affected File Mappings</h4>
                   {analysisResult.mappedFiles.map((mf, i) => (
                     <div key={i} className="flex items-center gap-2 py-1 text-sm">
-                      <GitBranch className="h-3 w-3 text-slate-400" />
-                      <code className="text-xs text-slate-600">{mf.file}</code>
-                      <span className="text-slate-400">→</span>
+                      <GitBranch className="h-3 w-3 text-muted-foreground" />
+                      <code className="text-xs text-muted-foreground">{mf.file}</code>
+                      <span className="text-muted-foreground">→</span>
                       <Badge variant="secondary" className="text-xs">{mf.testIds.length} test(s)</Badge>
                     </div>
                   ))}
@@ -198,7 +198,7 @@ export function SmartSelection() {
         {/* ─── Mappings ────────────────────────────────────── */}
         <TabsContent value="mappings">
           <Card className="p-6 space-y-4">
-            <h3 className="text-sm font-medium text-slate-700">Add File → Test Mapping</h3>
+            <h3 className="text-sm font-medium text-foreground">Add File → Test Mapping</h3>
             <div className="flex gap-3 items-end">
               <div className="flex-1">
                 <Label className="text-xs">Test ID</Label>
@@ -234,7 +234,7 @@ export function SmartSelection() {
               <TableBody>
                 {mappings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No file mappings yet. Add mappings manually or run tests to learn them automatically.
                     </TableCell>
                   </TableRow>
@@ -242,14 +242,14 @@ export function SmartSelection() {
                   mappings.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="font-mono text-xs">{m.filePattern}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-500">{m.routePattern ?? "—"}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{m.routePattern ?? "—"}</TableCell>
                       <TableCell className="font-mono text-xs">{m.canonicalTestId.slice(0, 8)}...</TableCell>
                       <TableCell>
                         <Badge variant={m.confidence >= 0.8 ? "default" : "secondary"} className="text-xs">
                           {Math.round(m.confidence * 100)}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-500">{m.learnedFrom}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{m.learnedFrom}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"

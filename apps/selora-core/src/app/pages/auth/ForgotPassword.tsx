@@ -68,6 +68,7 @@ export function ForgotPassword() {
         </Link>
 
         <div className="mb-8">
+          <p className="text-xs font-semibold tracking-widest text-primary uppercase mb-2">Recovery Module</p>
           <h1 className="text-2xl font-semibold text-foreground mb-2">Forgot password?</h1>
           <p className="text-sm text-muted-foreground">
             No worries, we'll send you reset instructions.

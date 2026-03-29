@@ -51,7 +51,7 @@ export function ApiTestsList() {
 
   const statusColor = (s: string) => {
     if (s === "READY") return "bg-emerald-100 text-emerald-800";
-    if (s === "ARCHIVED") return "bg-slate-100 text-slate-600";
+    if (s === "ARCHIVED") return "bg-muted text-muted-foreground";
     return "bg-amber-100 text-amber-800";
   };
 
@@ -59,8 +59,8 @@ export function ApiTestsList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">API Tests</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold text-foreground">API Tests</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             REST & GraphQL API tests with assertion validation
           </p>
         </div>
@@ -73,26 +73,26 @@ export function ApiTestsList() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <div className="text-2xl font-bold text-slate-900">{data?.totalCount ?? 0}</div>
-          <p className="text-sm text-slate-500">Total Tests</p>
+          <div className="text-2xl font-bold text-foreground">{data?.totalCount ?? 0}</div>
+          <p className="text-sm text-muted-foreground">Total Tests</p>
         </Card>
         <Card className="p-4">
           <div className="text-2xl font-bold text-emerald-600">
             {(data?.items ?? []).filter((t) => t.status === "READY").length}
           </div>
-          <p className="text-sm text-slate-500">Ready</p>
+          <p className="text-sm text-muted-foreground">Ready</p>
         </Card>
         <Card className="p-4">
           <div className="text-2xl font-bold text-amber-600">
             {(data?.items ?? []).filter((t) => t.status === "DRAFT").length}
           </div>
-          <p className="text-sm text-slate-500">Drafts</p>
+          <p className="text-sm text-muted-foreground">Drafts</p>
         </Card>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search API tests..."
           value={search}
@@ -119,19 +119,19 @@ export function ApiTestsList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No API tests yet. Create your first test to get started.
                 </TableCell>
               </TableRow>
             ) : (
               items.map((t) => (
-                <TableRow key={t.id} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/api-tests/${t.id}`)}>
+                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/api-tests/${t.id}`)}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {t.protocol === "GRAPHQL" ? (
@@ -148,16 +148,16 @@ export function ApiTestsList() {
                   <TableCell>
                     <Badge variant="secondary" className="text-xs font-mono">{t.method}</Badge>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate font-mono text-xs text-slate-600">
+                  <TableCell className="max-w-[200px] truncate font-mono text-xs text-muted-foreground">
                     {t.urlTemplate}
                   </TableCell>
                   <TableCell>
                     <Badge className={statusColor(t.status)}>{t.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-slate-600 text-sm">
+                  <TableCell className="text-muted-foreground text-sm">
                     {t.suite?.name ?? "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-slate-600">
+                  <TableCell className="text-sm text-muted-foreground">
                     {t._count?.executions ?? 0}
                   </TableCell>
                   <TableCell>

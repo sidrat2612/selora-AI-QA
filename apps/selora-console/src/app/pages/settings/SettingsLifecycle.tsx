@@ -65,8 +65,8 @@ export function SettingsLifecycle() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Lifecycle Management</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-semibold text-foreground">Lifecycle Management</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage workspace lifecycle status and deletion controls
         </p>
       </div>
@@ -75,39 +75,39 @@ export function SettingsLifecycle() {
       <Card className="p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-base font-semibold text-slate-900">Workspace Status</h3>
-            <p className="mt-1 text-sm text-slate-600">{workspace?.name ?? "Workspace"}</p>
+            <h3 className="text-base font-semibold text-foreground">Workspace Status</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{workspace?.name ?? "Workspace"}</p>
           </div>
           <StatusBadge status={workspace?.status ?? "active"} />
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div>
-            <p className="text-sm text-slate-600">Created</p>
-            <p className="mt-1 font-medium text-slate-900">
+            <p className="text-sm text-muted-foreground">Created</p>
+            <p className="mt-1 font-medium text-foreground">
               {workspace?.createdAt ? new Date(workspace.createdAt).toLocaleDateString() : "—"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-slate-600">Slug</p>
-            <p className="mt-1 font-medium text-slate-900">{workspace?.slug ?? "—"}</p>
+            <p className="text-sm text-muted-foreground">Slug</p>
+            <p className="mt-1 font-medium text-foreground">{workspace?.slug ?? "—"}</p>
           </div>
         </div>
       </Card>
 
       {/* Actions */}
       <Card className="p-6">
-        <h3 className="text-base font-semibold text-slate-900">Workspace Actions</h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <h3 className="text-base font-semibold text-foreground">Workspace Actions</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Perform lifecycle operations on this workspace
         </p>
         <div className="mt-6 space-y-4">
-          <div className="flex items-start justify-between rounded-lg border border-slate-200 p-4">
+          <div className="flex items-start justify-between rounded-lg border border-border p-4">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <Archive className="h-5 w-5 text-slate-600" />
-                <h4 className="font-medium text-slate-900">Archive Workspace</h4>
+                <Archive className="h-5 w-5 text-muted-foreground" />
+                <h4 className="font-medium text-foreground">Archive Workspace</h4>
               </div>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Preserve data but suspend all test execution and AI operations
               </p>
             </div>

@@ -130,11 +130,11 @@ export function SuiteDetail() {
   });
 
   if (!suite && suiteQuery.isLoading) {
-    return <div className="p-8 text-center text-slate-500">Loading...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Loading...</div>;
   }
 
   if (!suite) {
-    return <div className="p-8 text-center text-slate-500">Suite not found</div>;
+    return <div className="p-8 text-center text-muted-foreground">Suite not found</div>;
   }
 
   const openEditDialog = () => {
@@ -172,9 +172,9 @@ export function SuiteDetail() {
       {/* Page Header */}
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-slate-900">{suite.name}</h1>
-          <p className="mt-2 text-sm text-slate-600">{suite.description ?? ""}</p>
-          <div className="mt-3 flex items-center gap-4 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">{suite.name}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{suite.description ?? ""}</p>
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
             <span>Created: {suite.createdAt}</span>
             <span>•</span>
             <span>{suite.testCount ?? suiteTests.length} tests</span>
@@ -235,21 +235,21 @@ export function SuiteDetail() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <FileCheck2 className="h-4 w-4" />
             <span>Total Tests</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{suite.testCount ?? suiteTests.length}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{suite.testCount ?? suiteTests.length}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <PlayCircle className="h-4 w-4" />
             <span>Total Runs</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{suiteRuns.length}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{suiteRuns.length}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <TrendingUp className="h-4 w-4" />
             <span>Status</span>
           </div>
@@ -269,7 +269,7 @@ export function SuiteDetail() {
         <TabsContent value="test-cases">
           <Card>
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-sm font-medium text-slate-700">Business Test Cases</h3>
+              <h3 className="text-sm font-medium text-foreground">Business Test Cases</h3>
               <div className="flex gap-2">
                 {permissions.canAuthorAutomation && (
                   <>
@@ -299,7 +299,7 @@ export function SuiteDetail() {
                 {businessTestCases.map((tc) => (
                   <TableRow key={tc.id}>
                     <TableCell>
-                      <Link to={`/suites/${id}/test-cases/${tc.id}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                      <Link to={`/suites/${id}/test-cases/${tc.id}`} className="font-medium text-foreground hover:text-emerald-600">
                         {tc.title}
                       </Link>
                     </TableCell>
@@ -308,7 +308,7 @@ export function SuiteDetail() {
                         {tc.priority}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-slate-600">{tc.format}</TableCell>
+                    <TableCell className="text-muted-foreground">{tc.format}</TableCell>
                     <TableCell>
                       {(tc.mappedScriptCount ?? 0) > 0 ? (
                         <Badge variant="secondary">{tc.mappedScriptCount} mapped</Badge>
@@ -316,7 +316,7 @@ export function SuiteDetail() {
                         <Badge variant="outline" className="border-amber-300 text-amber-700">Not Covered</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-600">{tc.source === "TESTRAIL_IMPORT" ? "TestRail" : "Manual"}</TableCell>
+                    <TableCell className="text-muted-foreground">{tc.source === "TESTRAIL_IMPORT" ? "TestRail" : "Manual"}</TableCell>
                     <TableCell>
                       <Link to={`/suites/${id}/test-cases/${tc.id}`}>
                         <Button variant="ghost" size="sm">View</Button>
@@ -326,7 +326,7 @@ export function SuiteDetail() {
                 ))}
                 {businessTestCases.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-500 py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No business test cases yet. Create one manually or import from TestRail.
                     </TableCell>
                   </TableRow>
@@ -352,7 +352,7 @@ export function SuiteDetail() {
                 {suiteTests.map((test) => (
                   <TableRow key={test.id}>
                     <TableCell>
-                      <Link to={`/tests/${test.id}`} className="font-medium text-slate-900 hover:text-emerald-600">
+                      <Link to={`/tests/${test.id}`} className="font-medium text-foreground hover:text-emerald-600">
                         {test.name}
                       </Link>
                     </TableCell>
@@ -394,11 +394,11 @@ export function SuiteDetail() {
                         {run.id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-slate-600">{run.createdAt}</TableCell>
+                    <TableCell className="text-muted-foreground">{run.createdAt}</TableCell>
                     <TableCell>
                       <StatusBadge status={run.status} />
                     </TableCell>
-                    <TableCell className="text-slate-600">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{run.durationMs != null ? `${Math.round(run.durationMs / 1000)}s` : "—"}</TableCell>
                     <TableCell>
                       <Link to={`/runs/${run.id}`}>
                         <Button variant="ghost" size="sm">View Details</Button>
@@ -413,8 +413,8 @@ export function SuiteDetail() {
 
         <TabsContent value="settings">
           <Card className="p-6">
-            <h3 className="text-base font-semibold text-slate-900">Suite Settings</h3>
-            <p className="mt-1 text-sm text-slate-600">Configure execution policy and integrations</p>
+            <h3 className="text-base font-semibold text-foreground">Suite Settings</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Configure execution policy and integrations</p>
             <div className="mt-6 space-y-4">
               <ExecutionPolicy policy={suite.executionPolicy ?? null} />
               <GitHubIntegration licenseStatus={licenseQuery.data} integration={suite.linkedSystems?.github ?? null} />

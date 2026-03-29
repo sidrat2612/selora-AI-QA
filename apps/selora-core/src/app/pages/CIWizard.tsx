@@ -125,7 +125,7 @@ export function CIWizard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">CI Integration Wizard</h1>
-        <p className="text-slate-500 mt-1">
+        <p className="text-muted-foreground mt-1">
           Generate a CI pipeline configuration to run your Selora tests automatically.
         </p>
       </div>
@@ -140,20 +140,20 @@ export function CIWizard() {
                   ? "bg-green-100 text-green-700"
                   : i === stepIndex
                     ? "bg-blue-600 text-white"
-                    : "bg-slate-100 text-slate-400"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {i < stepIndex ? <Check className="w-4 h-4" /> : i + 1}
             </div>
             <span
               className={`text-sm capitalize ${
-                i === stepIndex ? "font-medium text-slate-900" : "text-slate-400"
+                i === stepIndex ? "font-medium text-foreground" : "text-muted-foreground"
               }`}
             >
               {s}
             </span>
             {i < steps.length - 1 && (
-              <ChevronRight className="w-4 h-4 text-slate-300" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
         ))}
@@ -171,7 +171,7 @@ export function CIWizard() {
                 className={`p-4 rounded-lg border-2 text-left transition-colors ${
                   platform === p.value
                     ? "border-blue-600 bg-blue-50"
-                    : "border-slate-200 hover:border-slate-300"
+                    : "border-border hover:border-border"
                 }`}
               >
                 <span className="text-2xl block mb-2">{p.icon}</span>
@@ -187,7 +187,7 @@ export function CIWizard() {
         <Card className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Select Suite & Environment</h2>
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-foreground">
               Test Suite
             </label>
             <Select
@@ -211,7 +211,7 @@ export function CIWizard() {
             </Select>
           </div>
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-foreground">
               Environment
             </label>
             <Select value={environmentName} onValueChange={setEnvironmentName}>
@@ -235,7 +235,7 @@ export function CIWizard() {
         <Card className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Configure Trigger</h2>
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-slate-700">
+            <label className="block text-sm font-medium text-foreground">
               Trigger Type
             </label>
             <Select value={trigger} onValueChange={setTrigger}>
@@ -253,11 +253,11 @@ export function CIWizard() {
           </div>
           {(trigger === "push" || trigger === "pull_request") && (
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-foreground">
                 Branch
               </label>
               <div className="flex items-center gap-2">
-                <GitBranch className="w-4 h-4 text-slate-400" />
+                <GitBranch className="w-4 h-4 text-muted-foreground" />
                 <Input
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
@@ -268,7 +268,7 @@ export function CIWizard() {
           )}
           {trigger === "schedule" && (
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-slate-700">
+              <label className="block text-sm font-medium text-foreground">
                 Cron Expression
               </label>
               <Input
@@ -276,7 +276,7 @@ export function CIWizard() {
                 onChange={(e) => setScheduleCron(e.target.value)}
                 placeholder="0 6 * * 1-5"
               />
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Standard 5-field cron (minute hour day month weekday). Example: "0 6 * * 1-5" runs at 6 AM weekdays.
               </p>
             </div>
@@ -307,7 +307,7 @@ export function CIWizard() {
           </div>
 
           {generateMutation.isPending && (
-            <div className="text-center py-8 text-slate-500">
+            <div className="text-center py-8 text-muted-foreground">
               <Terminal className="w-8 h-8 mx-auto mb-2 animate-pulse" />
               Generating configuration...
             </div>
@@ -321,7 +321,7 @@ export function CIWizard() {
 
           {generateMutation.data && (
             <>
-              <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto max-h-[500px] overflow-y-auto">
+              <pre className="bg-foreground text-muted-foreground p-4 rounded-lg text-sm overflow-x-auto max-h-[500px] overflow-y-auto">
                 <code>{generateMutation.data.content}</code>
               </pre>
               <div className="bg-blue-50 rounded-lg p-4">

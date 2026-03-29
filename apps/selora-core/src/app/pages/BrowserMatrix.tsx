@@ -22,7 +22,7 @@ function statusIcon(status: string) {
   if (status === "PASSED") return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
   if (status === "FAILED") return <XCircle className="h-4 w-4 text-red-500" />;
   if (status === "RUNNING") return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />;
-  return <Clock className="h-4 w-4 text-slate-400" />;
+  return <Clock className="h-4 w-4 text-muted-foreground" />;
 }
 
 export function BrowserMatrix() {
@@ -39,20 +39,20 @@ export function BrowserMatrix() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Browser Matrix</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-foreground">Browser Matrix</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Cross-browser test results across Chrome, Firefox, Safari & multiple devices
         </p>
       </div>
 
       {!runId && (
-        <Card className="p-8 text-center text-slate-500">
-          <p>Provide a <code className="text-sm bg-slate-100 px-1 rounded">?runId=...</code> parameter to view the browser matrix for a run.</p>
+        <Card className="p-8 text-center text-muted-foreground">
+          <p>Provide a <code className="text-sm bg-muted px-1 rounded">?runId=...</code> parameter to view the browser matrix for a run.</p>
         </Card>
       )}
 
       {isLoading && (
-        <div className="p-8 text-center text-slate-500">Loading matrix...</div>
+        <div className="p-8 text-center text-muted-foreground">Loading matrix...</div>
       )}
 
       {data && <MatrixGrid data={data} />}
@@ -65,7 +65,7 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
 
   if (columns.length === 0) {
     return (
-      <Card className="p-8 text-center text-slate-500">
+      <Card className="p-8 text-center text-muted-foreground">
         No browser matrix data for this run. Browser matrix results are created when a run uses multi-browser configuration.
       </Card>
     );
@@ -82,22 +82,22 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
-          <div className="text-2xl font-bold text-slate-900">{total}</div>
-          <p className="text-xs text-slate-500">Total Cells</p>
+          <div className="text-2xl font-bold text-foreground">{total}</div>
+          <p className="text-xs text-muted-foreground">Total Cells</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-emerald-600">{passed}</div>
-          <p className="text-xs text-slate-500">Passed</p>
+          <p className="text-xs text-muted-foreground">Passed</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-red-600">{failed}</div>
-          <p className="text-xs text-slate-500">Failed</p>
+          <p className="text-xs text-muted-foreground">Failed</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-blue-600">
             {total > 0 ? `${Math.round((passed / total) * 100)}%` : "—"}
           </div>
-          <p className="text-xs text-slate-500">Pass Rate</p>
+          <p className="text-xs text-muted-foreground">Pass Rate</p>
         </Card>
       </div>
 
@@ -105,16 +105,16 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
       <Card className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50">
-              <th className="text-left p-3 font-medium text-slate-600 min-w-[200px]">Test</th>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left p-3 font-medium text-muted-foreground min-w-[200px]">Test</th>
               {columns.map((col, i) => {
                 const DevIcon = DEVICE_ICONS[col.device];
                 return (
-                  <th key={i} className="text-center p-3 font-medium text-slate-600 min-w-[100px]">
+                  <th key={i} className="text-center p-3 font-medium text-muted-foreground min-w-[100px]">
                     <div className="flex flex-col items-center gap-1">
                       <DevIcon className="h-4 w-4" />
                       <span className="text-xs">{BROWSER_LABELS[col.browserType]}</span>
-                      <span className="text-[10px] text-slate-400">{col.device.toLowerCase()}</span>
+                      <span className="text-[10px] text-muted-foreground">{col.device.toLowerCase()}</span>
                     </div>
                   </th>
                 );
@@ -123,10 +123,10 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.testRunItemId} className="border-b hover:bg-slate-50">
+              <tr key={row.testRunItemId} className="border-b hover:bg-muted/50">
                 <td className="p-3">
-                  <div className="font-medium text-slate-800 truncate max-w-[250px]">{row.testName}</div>
-                  <span className="text-xs text-slate-400">#{row.sequence}</span>
+                  <div className="font-medium text-foreground truncate max-w-[250px]">{row.testName}</div>
+                  <span className="text-xs text-muted-foreground">#{row.sequence}</span>
                 </td>
                 {columns.map((col, ci) => {
                   const result = row.results.find(
@@ -138,7 +138,7 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
                         <div className="flex flex-col items-center gap-1">
                           {statusIcon(result.status)}
                           {result.durationMs != null && (
-                            <span className="text-[10px] text-slate-400">{result.durationMs}ms</span>
+                            <span className="text-[10px] text-muted-foreground">{result.durationMs}ms</span>
                           )}
                           {result.failureSummary && (
                             <span className="text-[10px] text-red-400 truncate max-w-[80px]" title={result.failureSummary}>
@@ -147,7 +147,7 @@ function MatrixGrid({ data }: { data: BrowserMatrixResponse }) {
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-300">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                   );

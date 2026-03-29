@@ -1,12 +1,14 @@
 import type { ConnectionOptions } from 'bullmq';
 import Redis from 'ioredis';
-import {
-  SQSClient,
-  SendMessageCommand,
-  ReceiveMessageCommand,
-  DeleteMessageCommand,
-  type Message,
-} from '@aws-sdk/client-sqs';
+
+// SQS SDK is lazily imported to avoid hard dependency when using bullmq mode
+type SQSClientType = import('@aws-sdk/client-sqs').SQSClient;
+type MessageType = import('@aws-sdk/client-sqs').Message;
+
+async function loadSqs() {
+  return await import('@aws-sdk/client-sqs');
+}
+
 export { Queue, Worker } from 'bullmq';
 export type { Job } from 'bullmq';
 
@@ -121,10 +123,11 @@ export function getSqsQueueUrl(queueName: QueueName): string {
   return url;
 }
 
-let sqsClient: SQSClient | null = null;
+let sqsClient: SQSClientType | null = null;
 
-export function getSqsClient(): SQSClient {
+export async function getSqsClient(): Promise<SQSClientType> {
   if (!sqsClient) {
+    const { SQSClient } = await loadSqs();
     sqsClient = new SQSClient({
       region: process.env['AWS_REGION'] ?? process.env['S3_REGION'] ?? 'us-east-1',
     });
@@ -133,7 +136,8 @@ export function getSqsClient(): SQSClient {
 }
 
 export async function sqsSendMessage<T>(queueName: QueueName, data: T, deduplicationId?: string): Promise<void> {
-  const client = getSqsClient();
+  const { SendMessageCommand } = await loadSqs();
+  const client = await getSqsClient();
   const queueUrl = getSqsQueueUrl(queueName);
   await client.send(
     new SendMessageCommand({
@@ -155,20 +159,27 @@ export interface SqsConsumerOptions<T> {
 export class SqsConsumer<T> {
   private running = false;
   private activeCount = 0;
-  private readonly client: SQSClient;
+  private client!: SQSClientType;
   private readonly queueUrl: string;
   private readonly maxConcurrency: number;
   private readonly waitTimeSeconds: number;
   private readonly visibilityTimeout: number;
   private readonly handler: (data: T) => Promise<void>;
+  private initialized = false;
 
   constructor(options: SqsConsumerOptions<T>) {
-    this.client = getSqsClient();
     this.queueUrl = getSqsQueueUrl(options.queueName);
     this.handler = options.handler;
     this.maxConcurrency = options.maxConcurrency ?? 1;
     this.waitTimeSeconds = options.waitTimeSeconds ?? 20;
     this.visibilityTimeout = options.visibilityTimeout ?? 300;
+  }
+
+  private async ensureClient(): Promise<void> {
+    if (!this.initialized) {
+      this.client = await getSqsClient();
+      this.initialized = true;
+    }
   }
 
   start(): void {
@@ -181,6 +192,8 @@ export class SqsConsumer<T> {
   }
 
   private async pollLoop(): Promise<void> {
+    await this.ensureClient();
+    const { ReceiveMessageCommand } = await loadSqs();
     while (this.running) {
       try {
         const maxMessages = Math.max(1, Math.min(10, this.maxConcurrency - this.activeCount));
@@ -204,7 +217,8 @@ export class SqsConsumer<T> {
     }
   }
 
-  private async processMessage(message: Message): Promise<void> {
+  private async processMessage(message: MessageType): Promise<void> {
+    const { DeleteMessageCommand } = await loadSqs();
     this.activeCount++;
     try {
       const data = JSON.parse(message.Body ?? '{}') as T;

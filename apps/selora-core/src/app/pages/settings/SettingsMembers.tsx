@@ -174,9 +174,9 @@ export function SettingsMembers() {
       case "TENANT_OPERATOR":
         return "bg-blue-100 text-blue-700 border-blue-200";
       case "TENANT_VIEWER":
-        return "bg-slate-100 text-slate-700 border-slate-200";
+        return "bg-muted text-foreground border-border";
       default:
-        return "bg-slate-100 text-slate-700 border-slate-200";
+        return "bg-muted text-foreground border-border";
     }
   };
 
@@ -207,8 +207,8 @@ export function SettingsMembers() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Members</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Members</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage workspace members and their access permissions
           </p>
         </div>
@@ -323,31 +323,31 @@ export function SettingsMembers() {
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Total Members</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{members.length}</p>
+          <p className="text-sm text-muted-foreground">Total Members</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{members.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Active</p>
+          <p className="text-sm text-muted-foreground">Active</p>
           <p className="mt-1 text-2xl font-semibold text-green-600">
             {members.filter(m => m.status.toUpperCase() === "ACTIVE").length}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Pending Invites</p>
+          <p className="text-sm text-muted-foreground">Pending Invites</p>
           <p className="mt-1 text-2xl font-semibold text-amber-600">
             {members.filter(m => m.status.toUpperCase() === "INVITED").length}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Admins</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
+          <p className="text-sm text-muted-foreground">Admins</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">
             {members.filter(m => m.role.toUpperCase().includes("ADMIN")).length}
           </p>
         </Card>
       </div>
 
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search members..."
           value={searchQuery}
@@ -356,7 +356,7 @@ export function SettingsMembers() {
         />
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -376,8 +376,8 @@ export function SettingsMembers() {
                       {(member.user?.name ?? "?").split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <p className="font-medium text-slate-900">{member.user?.name ?? "Unknown"}</p>
-                      <p className="text-sm text-slate-600">{member.user?.email ?? ""}</p>
+                      <p className="font-medium text-foreground">{member.user?.name ?? "Unknown"}</p>
+                      <p className="text-sm text-muted-foreground">{member.user?.email ?? ""}</p>
                     </div>
                   </div>
                 </TableCell>
@@ -397,7 +397,7 @@ export function SettingsMembers() {
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-slate-600">—</TableCell>
+                <TableCell className="text-muted-foreground">—</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

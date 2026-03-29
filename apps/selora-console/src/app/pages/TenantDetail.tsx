@@ -45,11 +45,11 @@ export function TenantDetail() {
     });
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-12 text-slate-600">Loading...</div>;
+    return <div className="flex items-center justify-center py-12 text-muted-foreground">Loading...</div>;
   }
 
   if (!tenant) {
-    return <div className="flex items-center justify-center py-12 text-slate-600">Tenant not found</div>;
+    return <div className="flex items-center justify-center py-12 text-muted-foreground">Tenant not found</div>;
   }
 
   return (
@@ -66,10 +66,10 @@ export function TenantDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-emerald-600" />
+            <Building2 className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">{tenant.name}</h1>
-              <p className="text-sm text-slate-600">Created: {new Date(tenant.createdAt).toLocaleDateString()}</p>
+              <h1 className="text-2xl font-semibold text-foreground">{tenant.name}</h1>
+              <p className="text-sm text-muted-foreground">Created: {new Date(tenant.createdAt).toLocaleDateString()}</p>
             </div>
             <StatusBadge status={tenant.status} />
           </div>
@@ -79,7 +79,7 @@ export function TenantDetail() {
             <Settings className="mr-2 h-4 w-4" />
             Configure
           </Button>
-          <Button variant="outline" className="text-red-600">
+          <Button variant="outline" className="text-destructive">
             <AlertTriangle className="mr-2 h-4 w-4" />
             Suspend
           </Button>
@@ -89,18 +89,18 @@ export function TenantDetail() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Database className="h-4 w-4" />
             <span>Workspaces</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{tenantWorkspaces.length}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{tenantWorkspaces.length}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>Plan</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold text-slate-900">{tenant.plan ?? "—"}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{tenant.plan ?? "—"}</p>
         </Card>
       </div>
 
@@ -128,14 +128,14 @@ export function TenantDetail() {
                   <TableRow key={workspace.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Database className="h-4 w-4 text-slate-400" />
-                        <span className="font-medium text-slate-900">{workspace.name}</span>
+                        <Database className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-foreground">{workspace.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={workspace.status ?? "active"} />
                     </TableCell>
-                    <TableCell className="text-slate-600">{workspace.slug}</TableCell>
+                    <TableCell className="text-muted-foreground">{workspace.slug}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm">View</Button>
                     </TableCell>
@@ -152,18 +152,18 @@ export function TenantDetail() {
               const percentage = quota.limit > 0 ? (quota.used / quota.limit) * 100 : 0;
               return (
                 <Card key={quota.name} className="p-6">
-                  <h3 className="font-semibold text-slate-900">{quota.name}</h3>
+                  <h3 className="font-semibold text-foreground">{quota.name}</h3>
                   <div className="mt-4">
                     <div className="flex items-baseline justify-between">
                       <div>
-                        <span className="text-2xl font-semibold text-slate-900">
+                        <span className="text-2xl font-semibold text-foreground">
                           {quota.used}
                         </span>
-                        <span className="ml-2 text-sm text-slate-600">
+                        <span className="ml-2 text-sm text-muted-foreground">
                           of {quota.limit} {quota.unit}
                         </span>
                       </div>
-                      <span className="text-sm font-medium text-slate-600">
+                      <span className="text-sm font-medium text-muted-foreground">
                         {percentage.toFixed(1)}%
                       </span>
                     </div>
@@ -177,21 +177,21 @@ export function TenantDetail() {
 
         <TabsContent value="settings">
           <Card className="p-6">
-            <h3 className="text-base font-semibold text-slate-900">Tenant Configuration</h3>
-            <p className="mt-1 text-sm text-slate-600">
+            <h3 className="text-base font-semibold text-foreground">Tenant Configuration</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               Platform-level settings and governance controls
             </p>
             <div className="mt-6 space-y-4">
-              <div className="rounded-lg border border-slate-200 p-4">
-                <h4 className="font-medium text-slate-900">Lifecycle Status</h4>
-                <p className="mt-1 text-sm text-slate-600">Current tenant provisioning state</p>
+              <div className="rounded-lg border border-border p-4">
+                <h4 className="font-medium text-foreground">Lifecycle Status</h4>
+                <p className="mt-1 text-sm text-muted-foreground">Current tenant provisioning state</p>
                 <div className="mt-2">
                   <StatusBadge status={tenant.status ?? "active"} />
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 p-4">
-                <h4 className="font-medium text-slate-900">Billing Plan</h4>
-                <p className="mt-1 text-sm text-slate-600">{tenant.plan ?? "—"}</p>
+              <div className="rounded-lg border border-border p-4">
+                <h4 className="font-medium text-foreground">Billing Plan</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{tenant.plan ?? "—"}</p>
               </div>
             </div>
           </Card>

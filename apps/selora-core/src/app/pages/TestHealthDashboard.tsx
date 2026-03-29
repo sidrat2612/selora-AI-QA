@@ -85,7 +85,7 @@ export function TestHealthDashboard() {
 
   if (healthQuery.isLoading) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         Analyzing test health...
       </div>
     );
@@ -98,7 +98,7 @@ export function TestHealthDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">
             Test Maintenance Dashboard
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-muted-foreground mt-1">
             Monitor test health, identify fragile tests, and track AI repair effectiveness.
           </p>
         </div>
@@ -118,7 +118,7 @@ export function TestHealthDashboard() {
       {report && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <Card className="p-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
               <Activity className="w-4 h-4" />
               Total Tests
             </div>
@@ -143,14 +143,14 @@ export function TestHealthDashboard() {
             </div>
           </Card>
           <Card className="p-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
               <HeartPulse className="w-4 h-4" />
               Avg Pass Rate
             </div>
             <div className="text-2xl font-bold">{report.avgPassRate}%</div>
           </Card>
           <Card className="p-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
               <Wrench className="w-4 h-4" />
               Repair Success
             </div>
@@ -160,7 +160,7 @@ export function TestHealthDashboard() {
                 : "—"}
             </div>
             {report.totalRepairs > 0 && (
-              <div className="text-xs text-slate-400 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {report.totalRepairs} attempts
               </div>
             )}
@@ -223,7 +223,7 @@ export function TestHealthDashboard() {
       )}
 
       {report && sortedTests.length === 0 && (
-        <Card className="p-8 text-center text-slate-500">
+        <Card className="p-8 text-center text-muted-foreground">
           No test runs found in the last {days} days.
         </Card>
       )}
@@ -251,7 +251,7 @@ function SortButton({
     >
       {label}
       <ArrowUpDown
-        className={`ml-1 w-3 h-3 ${active ? "text-blue-600" : "text-slate-400"}`}
+        className={`ml-1 w-3 h-3 ${active ? "text-blue-600" : "text-muted-foreground"}`}
       />
       {active && (
         <span className="text-[10px] text-blue-600 ml-0.5">
@@ -290,19 +290,19 @@ function TestRow({ test, trend }: { test: TestHealthEntry; trend?: TestHealthTre
           {test.testName}
         </Link>
         {test.lastFailureSummary && (
-          <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[240px]">
+          <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[240px]">
             {test.lastFailureSummary}
           </p>
         )}
       </TableCell>
       <TableCell>
-        <span className="text-xs text-slate-600">
+        <span className="text-xs text-muted-foreground">
           {test.suiteName ?? "—"}
         </span>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          <div className="w-12 h-2 rounded-full bg-slate-200 overflow-hidden">
+          <div className="w-12 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className={`h-full rounded-full ${healthColor}`}
               style={{ width: `${test.healthScore}%` }}
@@ -313,7 +313,7 @@ function TestRow({ test, trend }: { test: TestHealthEntry; trend?: TestHealthTre
       </TableCell>
       <TableCell>
         <span className="text-sm font-mono">{test.passRate}%</span>
-        <span className="text-xs text-slate-400 ml-1">
+        <span className="text-xs text-muted-foreground ml-1">
           ({test.passed}/{test.runCount})
         </span>
       </TableCell>
@@ -327,7 +327,7 @@ function TestRow({ test, trend }: { test: TestHealthEntry; trend?: TestHealthTre
             {test.repairSuccesses}/{test.repairAttempts}
           </span>
         ) : (
-          <span className="text-slate-400 text-sm">—</span>
+          <span className="text-muted-foreground text-sm">—</span>
         )}
       </TableCell>
       <TableCell>
@@ -357,7 +357,7 @@ function TestRow({ test, trend }: { test: TestHealthEntry; trend?: TestHealthTre
             </ResponsiveContainer>
           </div>
         ) : (
-          <span className="text-slate-400 text-xs">—</span>
+          <span className="text-muted-foreground text-xs">—</span>
         )}
       </TableCell>
       <TableCell>

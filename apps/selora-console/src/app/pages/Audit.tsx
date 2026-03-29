@@ -67,10 +67,10 @@ export function Audit() {
   });
 
   const getEventIcon = (type: string) => {
-    if (type.includes("member") || type.includes("role")) return <User className="h-4 w-4 text-blue-600" />;
-    if (type.includes("environment") || type.includes("suite") || type.includes("test")) return <Settings className="h-4 w-4 text-purple-600" />;
-    if (type.includes("run")) return <FileText className="h-4 w-4 text-green-600" />;
-    return <Shield className="h-4 w-4 text-slate-600" />;
+    if (type.includes("member") || type.includes("role")) return <User className="h-4 w-4 text-primary" />;
+    if (type.includes("environment") || type.includes("suite") || type.includes("test")) return <Settings className="h-4 w-4 text-ai-accent" />;
+    if (type.includes("run")) return <FileText className="h-4 w-4 text-success" />;
+    return <Shield className="h-4 w-4 text-muted-foreground" />;
   };
 
   return (
@@ -78,8 +78,8 @@ export function Audit() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Platform Audit Trail</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">Platform Audit Trail</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Cross-tenant audit log for platform compliance and security monitoring
           </p>
         </div>
@@ -92,12 +92,12 @@ export function Audit() {
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Total Events</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{auditEvents.length}</p>
+          <p className="text-sm text-muted-foreground">Total Events</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{auditEvents.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-slate-600">Unique Actors</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
+          <p className="text-sm text-muted-foreground">Unique Actors</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">
             {new Set(auditEvents.map(e => e.actorUserId)).size}
           </p>
         </Card>
@@ -106,7 +106,7 @@ export function Audit() {
       {/* Filters */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search events, actors, or entities..."
             value={searchQuery}
@@ -130,7 +130,7 @@ export function Audit() {
       </div>
 
       {/* Audit Table */}
-      <div className="rounded-lg border border-slate-200 bg-white max-h-[calc(100vh-280px)] overflow-y-auto">
+      <div className="rounded-lg border border-border bg-card max-h-[calc(100vh-280px)] overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -154,17 +154,17 @@ export function Audit() {
                 <TableCell>
                   <Badge variant="outline">{event.eventType}</Badge>
                 </TableCell>
-                <TableCell className="font-medium text-slate-900">{event.actor?.name ?? event.actor?.email ?? event.actorUserId}</TableCell>
+                <TableCell className="font-medium text-foreground">{event.actor?.name ?? event.actor?.email ?? event.actorUserId}</TableCell>
                 <TableCell>
                   <div>
-                    <p className="font-medium text-slate-900">{event.entityType ?? ""}</p>
-                    <p className="text-xs text-slate-500">{event.entityId ?? ""}</p>
+                    <p className="font-medium text-foreground">{event.entityType ?? ""}</p>
+                    <p className="text-xs text-muted-foreground">{event.entityId ?? ""}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-sm text-slate-600">{event.createdAt}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{event.createdAt}</TableCell>
                 <TableCell>
                   {event.metadataJson && (
-                    <div className="text-sm text-slate-600">
+                    <div className="text-sm text-muted-foreground">
                       {Object.entries(event.metadataJson).slice(0, 2).map(([key, value]) => (
                         <div key={key}>
                           <span className="font-medium">{key}:</span> {String(value)}
@@ -183,7 +183,7 @@ export function Audit() {
       </div>
 
       {/* Summary */}
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-muted-foreground">
         Showing {filteredEvents.length} of {auditEvents.length} events
       </p>
     </div>

@@ -215,8 +215,8 @@ export function SettingsAI() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">AI / LLM Management</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">AI / LLM Management</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage platform-wide AI providers available to all tenants
           </p>
         </div>
@@ -229,18 +229,18 @@ export function SettingsAI() {
       {/* Overview Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4">
-          <div className="text-xs font-medium text-slate-500">Total Providers</div>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{allConfigs.length}</p>
+          <div className="text-xs font-medium text-muted-foreground">Total Providers</div>
+          <p className="mt-1 text-2xl font-bold text-foreground">{allConfigs.length}</p>
         </Card>
         <Card className="p-4">
-          <div className="text-xs font-medium text-slate-500">Active</div>
+          <div className="text-xs font-medium text-muted-foreground">Active</div>
           <p className="mt-1 text-2xl font-bold text-emerald-600">
             {allConfigs.filter((c) => c.isActive).length}
           </p>
         </Card>
         <Card className="p-4">
-          <div className="text-xs font-medium text-slate-500">Provider Types</div>
-          <p className="mt-1 text-2xl font-bold text-slate-900">
+          <div className="text-xs font-medium text-muted-foreground">Provider Types</div>
+          <p className="mt-1 text-2xl font-bold text-foreground">
             {new Set(allConfigs.map((c) => c.provider)).size}
           </p>
         </Card>
@@ -256,7 +256,7 @@ export function SettingsAI() {
         </CardHeader>
         <CardContent>
           {allConfigs.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               No AI providers configured yet. Click "Add Provider" to get started.
             </p>
           ) : (
@@ -287,7 +287,7 @@ export function SettingsAI() {
                           {config.isActive ? "Active" : "Disabled"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-500">
+                      <TableCell className="text-xs text-muted-foreground">
                         {new Date(config.updatedAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
@@ -352,17 +352,17 @@ export function SettingsAI() {
                       className={`flex flex-col items-start rounded-lg border-2 p-3 text-left transition-colors ${
                         isSelected
                           ? "border-indigo-600 bg-indigo-50/50"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          : "border-border hover:border-border hover:bg-muted/50"
                       } cursor-pointer`}
                       onClick={() => handleProviderChange(provider)}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className={`h-4 w-4 ${isSelected ? "text-indigo-600" : "text-slate-500"}`} />
-                        <span className={`text-sm font-medium ${isSelected ? "text-indigo-900" : "text-slate-900"}`}>
+                        <Icon className={`h-4 w-4 ${isSelected ? "text-indigo-600" : "text-muted-foreground"}`} />
+                        <span className={`text-sm font-medium ${isSelected ? "text-indigo-900" : "text-foreground"}`}>
                           {info.label}
                         </span>
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">{info.description}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{info.description}</p>
                     </button>
                   );
                 })}
@@ -426,7 +426,7 @@ export function SettingsAI() {
             <div className="space-y-2">
               <Label>
                 API Key
-                {!meta.requiresKey && <span className="ml-2 text-xs font-normal text-slate-400">(optional)</span>}
+                {!meta.requiresKey && <span className="ml-2 text-xs font-normal text-muted-foreground">(optional)</span>}
               </Label>
               <Input
                 type="password"
@@ -464,10 +464,10 @@ export function SettingsAI() {
             </div>
 
             {/* Repair Model Override */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5">
                 <Label>Different model for AI Repair</Label>
-                <p className="text-xs text-slate-500">Use a cheaper / faster model for automatic test repair</p>
+                <p className="text-xs text-muted-foreground">Use a cheaper / faster model for automatic test repair</p>
               </div>
               <Switch
                 checked={form.useRepairOverride}
@@ -499,10 +499,10 @@ export function SettingsAI() {
             )}
 
             {/* Active Toggle */}
-            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="space-y-0.5">
                 <Label>Active</Label>
-                <p className="text-xs text-slate-500">When disabled, tenants cannot select this provider</p>
+                <p className="text-xs text-muted-foreground">When disabled, tenants cannot select this provider</p>
               </div>
               <Switch
                 checked={form.isActive}

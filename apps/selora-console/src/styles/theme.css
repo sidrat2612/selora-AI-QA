@@ -26,9 +26,24 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: #059669;
+  /* AI Accent Purple — for machine-intelligence states */
+  --ai-accent: #7C3AED;
+  --ai-accent-foreground: #FFFFFF;
+  --ai-accent-muted: #f3f0ff;
+  /* Surface hierarchy — tonal layering */
+  --surface: #FAFAF9;
+  --surface-container-low: #F5F5F4;
+  --surface-container: #E7E5E4;
+  --surface-container-high: #D6D3D1;
+  --surface-container-highest: #C4C0BC;
+  /* Success / Warning tokens */
+  --success: #059669;
+  --success-foreground: #FFFFFF;
+  --warning: #F59E0B;
+  --warning-foreground: #78350F;
   /* Professional chart colors complementing emerald */
   --chart-1: #059669;
-  --chart-2: #3B82F6;
+  --chart-2: #10B981;
   --chart-3: #8B5CF6;
   --chart-4: #F59E0B;
   --chart-5: #EC4899;
@@ -67,7 +82,7 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --chart-1: #10B981;
-  --chart-2: #60A5FA;
+  --chart-2: #34D399;
   --chart-3: #A78BFA;
   --chart-4: #FBBF24;
   --chart-5: #F472B6;
@@ -79,6 +94,21 @@
   --sidebar-accent-foreground: #FAFAF9;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #10B981;
+  /* AI Accent Purple — dark mode */
+  --ai-accent: #A78BFA;
+  --ai-accent-foreground: #FFFFFF;
+  --ai-accent-muted: #1E1B4B;
+  /* Surface hierarchy — dark mode */
+  --surface: #0A0A0A;
+  --surface-container-low: #18181B;
+  --surface-container: #27272A;
+  --surface-container-high: #3F3F46;
+  --surface-container-highest: #52525B;
+  /* Success / Warning — dark mode */
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --warning: #FBBF24;
+  --warning-foreground: #422006;
 }
 
 @theme inline {
@@ -120,6 +150,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* New design tokens */
+  --color-ai-accent: var(--ai-accent);
+  --color-ai-accent-foreground: var(--ai-accent-foreground);
+  --color-ai-accent-muted: var(--ai-accent-muted);
+  --color-surface: var(--surface);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 }
 
 @layer base {
