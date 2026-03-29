@@ -46,7 +46,6 @@ pnpm-debug.log*
 
 archive/
 .github/copilot*
-docs/
 infrastructure/certs
 scripts/
 .playwright-mcp/
