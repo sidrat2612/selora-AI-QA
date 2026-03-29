@@ -11,7 +11,6 @@ import {
   Bell,
   ChevronDown,
   Building2,
-  Shield,
   Menu,
   Plug,
   AlertTriangle,
@@ -22,6 +21,7 @@ import {
   Monitor,
   Globe
 } from "lucide-react";
+import seloraMark from "../../assets/selora-mark.png";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -129,7 +129,7 @@ export function AppLayout() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center border-b border-slate-200 px-6">
-            <Shield className="h-7 w-7 text-emerald-600" />
+            <img src={seloraMark} alt="Selora" className="h-8 w-8" />
             <span className="ml-3 text-xl font-semibold text-slate-900">Selora<sub className="text-[0.55em] font-medium text-slate-500">QA</sub></span>
           </div>
 

@@ -7,6 +7,7 @@ import { Card } from "../../components/ui/card";
 import { Checkbox } from "../../components/ui/checkbox";
 import { auth as authApi, ApiError } from "../../../lib/api-client";
 import { toast } from "sonner";
+import seloraMark from "../../../assets/selora-mark.png";
 
 export function Login() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
+          <img src={seloraMark} alt="Selora" className="mx-auto mb-4 h-16 w-16" />
           <h1 className="text-3xl font-semibold text-foreground mb-2">Selora<sub className="text-[0.55em] font-medium text-muted-foreground">QA</sub></h1>
           <p className="text-sm text-muted-foreground">AI Powered QA Automation</p>
         </div>
