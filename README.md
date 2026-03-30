@@ -9,28 +9,81 @@
 
 <p align="center">
   <a href="https://github.com/sidrat2612/selora-AI-QA/actions/workflows/ci.yml"><img src="https://github.com/sidrat2612/selora-AI-QA/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/sidrat2612/selora-AI-QA/stargazers"><img src="https://img.shields.io/github/stars/sidrat2612/selora-AI-QA?style=social" alt="GitHub stars" /></a>
+  <a href="https://github.com/sidrat2612/selora-AI-QA/network/members"><img src="https://img.shields.io/github/forks/sidrat2612/selora-AI-QA?style=social" alt="GitHub forks" /></a>
+  <a href="https://github.com/sidrat2612/selora-AI-QA/commits/main"><img src="https://img.shields.io/github/last-commit/sidrat2612/selora-AI-QA" alt="Last commit" /></a>
+  <a href="https://github.com/sidrat2612/selora-AI-QA/issues"><img src="https://img.shields.io/github/issues/sidrat2612/selora-AI-QA" alt="Open issues" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-green" alt="AGPL-3.0" /></a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white" alt="NestJS" />
   <img src="https://img.shields.io/badge/Playwright-1.58-2EAD33?logo=playwright&logoColor=white" alt="Playwright" />
   <img src="https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white" alt="Prisma" />
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0-green" alt="AGPL-3.0" /></a>
 </p>
+
+<p align="center">
+  <img src="docs/screenshots/core-dashboard.png" alt="Selora Dashboard" width="80%" />
+</p>
+
+> **Alpha Software** — Selora is under active development. APIs and database schemas may change between releases. See [SECURITY.md](SECURITY.md) before deploying to production.
 
 ---
 
-## The Problem
+## Contents
 
-Writing and maintaining end-to-end tests is painful. Tests break when UI changes, require constant manual updates, and eat up engineering time that should go toward building features.
+- [Quick Start](#quick-start)
+- [Why Selora](#why-selora)
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [How Selora Compares](#how-selora-compares)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Commands](#commands)
+- [Environment Variables](#environment-variables)
+- [Documentation](#documentation)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Built with Selora](#built-with-selora)
+- [License](#license)
 
-## The Solution
+---
 
-**Selora** records your Playwright browser sessions and uses AI to automatically generate, version, execute, and self-heal your test suite — so your tests never go stale.
+## Quick Start
 
+### One-Command Install
+
+```bash
+git clone https://github.com/sidrat2612/selora-AI-QA.git
+cd selora-AI-QA
+bash install.sh            # or: bash install.sh --docker
 ```
-🎬 Record  →  🤖 AI Generates Tests  →  ▶️ Execute  →  🔧 Auto-Repair  →  ✅ Always Green
+
+The installer handles Node.js/pnpm checks, dependencies, database setup, and infrastructure services.
+
+### Docker Zero-Config
+
+```bash
+docker compose up --build -d    # Builds & starts all 10 services
+docker compose ps               # Verify all containers are healthy
 ```
+
+Open **http://localhost:3000** and log in with `admin@selora.local` / `admin123`.
+
+---
+
+## Why Selora
+
+- **Eliminate test maintenance** — AI auto-repairs broken selectors and flows so tests stay green after UI changes
+- **10x faster test creation** — Record once, AI generates production-grade Playwright code with assertions
+- **Full audit trail** — Every AI repair is diffed, versioned, and reviewable before merge
+- **Self-hosted & private** — Your test data, recordings, and AI prompts never leave your infrastructure
+- **GitHub-native** — Tests auto-publish as PRs, with webhook-driven lifecycle management
+
+---
 
 ## Screenshots
 
@@ -115,13 +168,17 @@ Writing and maintaining end-to-end tests is painful. Tests break when UI changes
 
 ## Quick Start
 
-### Prerequisites
+### One-Command Install
 
-- Node.js 20+
-- pnpm 10+
-- Docker & Docker Compose
+```bash
+git clone https://github.com/sidrat2612/selora-AI-QA.git
+cd selora-AI-QA
+bash install.sh            # or: bash install.sh --docker
+```
 
-### Local Development
+The installer handles Node.js/pnpm checks, dependencies, database setup, and infrastructure services.
+
+### Manual Setup
 
 ```bash
 git clone https://github.com/sidrat2612/selora-AI-QA.git
@@ -133,14 +190,14 @@ pnpm db:generate && pnpm db:migrate:dev && pnpm db:seed
 pnpm dev
 ```
 
-Open **http://localhost:3000** and log in with `admin@selora.local` / `admin123`.
-
-### Full Docker Stack
+### Docker Zero-Config
 
 ```bash
 docker compose up --build -d    # Builds & starts all 10 services
 docker compose ps               # Verify all containers are healthy
 ```
+
+Open **http://localhost:3000** and log in with `admin@selora.local` / `admin123`.
 
 ---
 
@@ -210,9 +267,27 @@ See [`.env.production.example`](.env.production.example) for full production con
 
 ## Documentation
 
-- 📐 [Architecture & Tech Stack](docs/ARCHITECTURE.md) — System design, data flows, infrastructure
-- 🚀 [Deployment Guide](docs/DEPLOYMENT.md) — Terraform setup, AWS deployment, CI/CD
-- 🤝 [Contributing](CONTRIBUTING.md) — Development setup, code style, PR guidelines
+- [Architecture & Tech Stack](docs/ARCHITECTURE.md) — System design, data flows, infrastructure
+- [Deployment Guide](docs/DEPLOYMENT.md) — Terraform setup, AWS deployment, CI/CD
+- [Contributing](CONTRIBUTING.md) — Development setup, code style, PR guidelines
+- [Security Policy](SECURITY.md) — Vulnerability reporting and security measures
+- [Code of Conduct](CODE_OF_CONDUCT.md) — Community standards
+- [Changelog](CHANGELOG.md) — Release history
+
+---
+
+## Roadmap
+
+See [open issues](https://github.com/sidrat2612/selora-AI-QA/issues) for planned work. Key areas:
+
+- [ ] Visual regression diffing with screenshot comparison
+- [ ] Scheduled test runs with cron expressions
+- [ ] Slack / Teams notification integration
+- [ ] TestRail bidirectional sync
+- [ ] CLI `selora watch` mode for local development
+- [ ] Multi-browser matrix execution (Chrome, Firefox, WebKit)
+- [ ] AI-generated test descriptions from recordings
+- [ ] Public API documentation (OpenAPI spec)
 
 ---
 
@@ -224,13 +299,27 @@ Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md)
 pnpm turbo typecheck && pnpm lint && pnpm turbo build
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup instructions, branching strategy, and commit conventions.
+
+---
+
+## Built with Selora
+
+Using Selora in your team? We'd love to feature you. [Open an issue](https://github.com/sidrat2612/selora-AI-QA/issues/new?title=Showcase:%20%5BYour%20Project%5D&labels=showcase) with the `showcase` label.
+
 ---
 
 ## License
 
-Licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE) for details.
+Licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
 ---
+
+<p align="center">
+  <a href="https://star-history.com/#sidrat2612/selora-AI-QA&Date">
+    <img src="https://api.star-history.com/svg?repos=sidrat2612/selora-AI-QA&type=Date" alt="Star History Chart" width="600" />
+  </a>
+</p>
 
 <p align="center">
   Built by <a href="https://github.com/sidrat2612">Siddharth Rathore</a>
