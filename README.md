@@ -317,7 +317,11 @@ Licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
 <p align="center">
   <a href="https://star-history.com/#sidrat2612/selora-AI-QA&Date">
-    <img src="https://api.star-history.com/svg?repos=sidrat2612/selora-AI-QA&type=Date" alt="Star History Chart" width="600" />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=sidrat2612/selora-AI-QA&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=sidrat2612/selora-AI-QA&type=Date" />
+      <img src="https://api.star-history.com/svg?repos=sidrat2612/selora-AI-QA&type=Date" alt="Star History Chart" width="600" />
+    </picture>
   </a>
 </p>
 
