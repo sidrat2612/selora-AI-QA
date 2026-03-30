@@ -14,6 +14,9 @@ COPY packages/ ./packages/
 COPY tsconfig.base.json ./
 RUN pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
+# Copy API source code
+COPY apps/api/ ./apps/api/
+
 # Generate Prisma client + build all packages + API
 RUN pnpm --filter @selora/database db:generate
 RUN pnpm --filter @selora/api... build
